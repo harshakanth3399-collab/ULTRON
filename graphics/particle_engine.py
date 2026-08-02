@@ -51,6 +51,13 @@ class ParticleEngine:
         self._brightness = np.random.uniform(0.35, 1.0, count).astype(np.float32)
         self._rotation = 0.0
 
+        # Debug: verify particle creation
+        try:
+            print(f"[ParticleEngine] initialized with count={self.count}")
+            print("[ParticleEngine] first 5 base positions:", self._base[:5].tolist())
+        except Exception:
+            pass
+
     def update(
         self,
         dt: float,
@@ -131,6 +138,12 @@ class ParticleEngine:
             PARTICLE_MAX_SIZE * size_boost,
         ).astype(np.float32)
 
+        # Debug: verify particle positions update
+        try:
+            print("[ParticleEngine] updated first 5 positions:", self._positions[:5].tolist())
+        except Exception:
+            pass
+
     @property
     def positions(self) -> np.ndarray:
         return self._positions
@@ -149,4 +162,11 @@ class ParticleEngine:
         out[:, 0:3] = self._positions
         out[:, 3] = self._size
         out[:, 4] = self._brightness
+
+        # Debug: print first five packed rows so we can inspect VBO uploads
+        try:
+            print("[ParticleEngine] interleaved (first 5):", out[:5].tolist())
+        except Exception:
+            pass
+
         return out
