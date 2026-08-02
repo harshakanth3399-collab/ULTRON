@@ -121,9 +121,43 @@ class UltronRenderer(QOpenGLWidget):
         self._height = max(self.height(), 1)
         ctx.enable(moderngl.BLEND)
         ctx.enable(moderngl.DEPTH_TEST)
-        # Use ModernGL's string-based depth func to stay compatible across versions
+        # use string for compatibility across ModernGL versions
         ctx.depth_func = "<"
         ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE
+
+        # Try to enable program point size via ModernGL constants
+        self._point_size_enabled = False
+        try:
+            if hasattr(moderngl, "PROGRAM_POINT_SIZE"):
+                ctx.enable(moderngl.PROGRAM_POINT_SIZE)
+                self._point_size_enabled = True
+                print("Enabled moderngl.PROGRAM_POINT_SIZE")
+            elif hasattr(moderngl, "VERTEX_PROGRAM_POINT_SIZE"):
+                ctx.enable(moderngl.VERTEX_PROGRAM_POINT_SIZE)
+                self._point_size_enabled = True
+                print("Enabled moderngl.VERTEX_PROGRAM_POINT_SIZE")
+        except Exception:
+            self._point_size_enabled = False
+
+        # Fallback: try to enable the GL capability via PyOpenGL if available
+        try:
+            from OpenGL import GL
+
+            try:
+                GL.glEnable(GL.GL_PROGRAM_POINT_SIZE)
+                GL.glPointSize(6.0)
+                self._point_size_enabled = True
+                print("Enabled GL_PROGRAM_POINT_SIZE via PyOpenGL and set glPointSize=6.0")
+            except Exception:
+                # set a default point size in case program point size isn't used
+                try:
+                    GL.glPointSize(6.0)
+                    print("Set fallback glPointSize=6.0 via PyOpenGL")
+                except Exception:
+                    pass
+        except Exception:
+            # PyOpenGL not available — skip
+            pass
 
         self._particle_prog = ctx.program(
             vertex_shader=PARTICLE_VERT,
