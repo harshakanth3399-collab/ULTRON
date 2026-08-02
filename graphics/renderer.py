@@ -110,6 +110,7 @@ class UltronRenderer(QOpenGLWidget):
             self._init_gl()
         except Exception as exc:
             import sys
+
             print(f"ULTRON GL init failed: {exc}", file=sys.stderr)
             raise
 
@@ -176,8 +177,7 @@ class UltronRenderer(QOpenGLWidget):
         )
         self._glow_vbo = ctx.buffer(glow_verts.tobytes())
         self._glow_vao = ctx.vertex_array(
-            self._glow_prog,
-            [(self._glow_vbo, "2f", "in_uv")],
+            self._glow_prog, [(self._glow_vbo, "2f", "in_uv")]
         )
 
         self._scene_fbo = self._create_scene_fbo(self._width, self._height)
@@ -229,7 +229,9 @@ class UltronRenderer(QOpenGLWidget):
         aspect = self._width / self._height
         proj = _perspective(42.0, aspect, 0.05, 8.0)
         eye = np.array([0.0, 0.05, 1.35], dtype=np.float32)
-        view = _look_at(eye, np.zeros(3, dtype=np.float32), np.array([0.0, 1.0, 0.0], dtype=np.float32))
+        view = _look_at(
+            eye, np.zeros(3, dtype=np.float32), np.array([0.0, 1.0, 0.0], dtype=np.float32)
+        )
         return (proj @ view).astype(np.float32)
 
     def _build_arc_triangles(self, line_verts: np.ndarray) -> np.ndarray:
@@ -276,7 +278,7 @@ class UltronRenderer(QOpenGLWidget):
         return tris
 
     def paintGL(self) -> None:
-       
+
         if not self._ready or self._ctx is None:
             return
 
@@ -318,44 +320,111 @@ class UltronRenderer(QOpenGLWidget):
         self._ctx.clear(0.0, 0.0, 0.0, 1.0)
         self._ctx.enable(moderngl.DEPTH_TEST)
 
-        # Inner volumetric glow
-        self._glow_prog["u_mvp"].write(mvp.tobytes())
-        self._glow_prog["u_radius"].value = SPHERE_RADIUS
-        self._glow_prog["u_time"].value = self._time
-        self._glow_prog["u_intensity"].value = glow * (0.6 + self._audio_level * 0.5)
-        self._glow_prog["u_color_deep"].value = COLOR_DEEP
-        self._glow_vao.render()
+        # Inner volumetric glow (guard uniform writes)
+        try:
+            self._glow_prog["u_mvp"].write(mvp.tobytes())
+        except KeyError:
+            pass
+        try:
+            self._glow_prog["u_radius"].value = SPHERE_RADIUS
+        except KeyError:
+            pass
+        try:
+            self._glow_prog["u_time"].value = self._time
+        except KeyError:
+            pass
+        try:
+            self._glow_prog["u_intensity"].value = glow * (0.6 + self._audio_level * 0.5)
+        except KeyError:
+            pass
+        try:
+            self._glow_prog["u_color_deep"].value = COLOR_DEEP
+        except KeyError:
+            pass
+        # Render glow quad
+        try:
+            self._glow_vao.render()
+        except Exception:
+            pass
 
         # Electric arcs
         arc_data = self._arcs.vertices
         if self._use_geom_shader:
             self._arc_vbo.write(arc_data.tobytes())
-            self._arc_prog["u_mvp"].write(mvp.tobytes())
-            self._arc_prog["u_viewport"].value = (float(self._width), float(self._height))
-            self._arc_prog["u_time"].value = self._time
-            self._arc_prog["u_color_arc"].value = COLOR_ARC
-            self._arc_vao.render(moderngl.LINES, vertices=len(arc_data))
+            try:
+                self._arc_prog["u_mvp"].write(mvp.tobytes())
+            except KeyError:
+                pass
+            try:
+                self._arc_prog["u_viewport"].value = (float(self._width), float(self._height))
+            except KeyError:
+                pass
+            try:
+                self._arc_prog["u_time"].value = self._time
+            except KeyError:
+                pass
+            try:
+                self._arc_prog["u_color_arc"].value = COLOR_ARC
+            except KeyError:
+                pass
+            try:
+                self._arc_vao.render(moderngl.LINES, vertices=len(arc_data))
+            except Exception:
+                pass
         else:
             tri_data = self._build_arc_triangles(arc_data)
             if len(tri_data):
                 self._arc_vbo.write(tri_data.tobytes())
-                self._arc_prog["u_mvp"].write(mvp.tobytes())
-                self._arc_prog["u_time"].value = self._time
-                self._arc_prog["u_color_arc"].value = COLOR_ARC
-                self._arc_vao.render(moderngl.TRIANGLES, vertices=len(tri_data))
+                try:
+                    self._arc_prog["u_mvp"].write(mvp.tobytes())
+                except KeyError:
+                    pass
+                try:
+                    self._arc_prog["u_time"].value = self._time
+                except KeyError:
+                    pass
+                try:
+                    self._arc_prog["u_color_arc"].value = COLOR_ARC
+                except KeyError:
+                    pass
+                try:
+                    self._arc_vao.render(moderngl.TRIANGLES, vertices=len(tri_data))
+                except Exception:
+                    pass
 
         # Particles
         packed = self._engine.interleaved_buffer()
         self._particle_vbo.write(packed.tobytes())
-        self._particle_prog["u_mvp"].write(mvp.tobytes())
-        self._particle_prog["u_time"].value = self._time
-        self._particle_prog["u_glow"].value = glow
-        self._particle_prog["u_color_core"].value = COLOR_CORE
-        self._particle_prog["u_color_glow"].value = COLOR_GLOW
+        try:
+            self._particle_prog["u_mvp"].write(mvp.tobytes())
+        except KeyError:
+            pass
+        try:
+            self._particle_prog["u_time"].value = self._time
+        except KeyError:
+            pass
+        try:
+            self._particle_prog["u_glow"].value = glow
+        except KeyError:
+            pass
+        try:
+            self._particle_prog["u_color_core"].value = COLOR_CORE
+        except KeyError:
+            pass
+        try:
+            self._particle_prog["u_color_glow"].value = COLOR_GLOW
+        except KeyError:
+            pass
         print("Particle Count:", self._engine.count)
-        self._particle_vao.render(moderngl.POINTS, vertices=self._engine.count)
+        try:
+            self._particle_vao.render(moderngl.POINTS, vertices=self._engine.count)
+        except Exception:
+            pass
 
         # Bloom composite to default framebuffer
-        self._ctx.screen.use()
-        self._ctx.viewport = (0, 0, self._width, self._height)
-        self._bloom.apply(self._scene_fbo.color_attachments[0], self._ctx.screen)
+        try:
+            self._ctx.screen.use()
+            self._ctx.viewport = (0, 0, self._width, self._height)
+            self._bloom.apply(self._scene_fbo.color_attachments[0], self._ctx.screen)
+        except Exception:
+            pass
