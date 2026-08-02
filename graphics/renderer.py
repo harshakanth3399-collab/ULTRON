@@ -189,6 +189,10 @@ class UltronRenderer(QOpenGLWidget):
             ],
             mode=moderngl.POINTS,
         )
+        try:
+            print("[Renderer] particle VAO created, vertex_format='3f 1f 1f', mode=POINTS")
+        except Exception:
+            pass
 
         arc_stride = 5 * 4
         self._arc_vbo = ctx.buffer(reserve=self._arcs.vertex_count * arc_stride)
@@ -445,54 +449,65 @@ class UltronRenderer(QOpenGLWidget):
                 except Exception:
                     pass
 
-        # Particles
-        packed = self._engine.interleaved_buffer()
-        # Debug: print renderer-side first 5 packed rows
+        # --- DEBUG particle draw: white large points, VBO/VAO/draw logging
         try:
-            print("[Renderer] interleaved first 5:", packed[:5].tolist())
-        except Exception:
-            pass
+            packed = self._engine.interleaved_buffer()
 
-        # Debug: compute clip-space and NDC for first 5 positions
-        try:
-            first_pos = packed[:5, 0:3].astype(np.float32)
-            ones = np.ones((first_pos.shape[0], 1), dtype=np.float32)
-            hom = np.hstack((first_pos, ones))
-            clip = (mvp @ hom.T).T
-            ndc = clip[:, :3] / clip[:, 3:4]
-            print("[Renderer] first 5 clip coords:", clip.tolist())
-            print("[Renderer] first 5 NDC coords:", ndc.tolist())
-            vis = [(-1.0 <= float(ndc[i, 0]) <= 1.0 and -1.0 <= float(ndc[i, 1]) <= 1.0 and -1.0 <= float(ndc[i, 2]) <= 1.0) for i in range(ndc.shape[0])]
-            print("[Renderer] first 5 NDC visibility:", vis)
-        except Exception as e:
-            print("[Renderer] clip debug failed:", e)
+            # Debug: packed/VBO info
+            try:
+                print("[Renderer] packed.nbytes:", packed.nbytes, "shape:", packed.shape, "dtype:", packed.dtype)
+                print("[Renderer] packed first 5:", packed[:5].tolist())
+            except Exception as e:
+                print("[Renderer] packed info failed:", e)
 
-        self._particle_vbo.write(packed.tobytes())
-        try:
-            self._particle_prog["u_mvp"].write(mvp.tobytes())
-        except KeyError:
-            pass
-        try:
-            self._particle_prog["u_time"].value = self._time
-        except KeyError:
-            pass
-        try:
-            self._particle_prog["u_glow"].value = glow
-        except KeyError:
-            pass
-        try:
-            self._particle_prog["u_color_core"].value = COLOR_CORE
-        except KeyError:
-            pass
-        try:
-            self._particle_prog["u_color_glow"].value = COLOR_GLOW
-        except KeyError:
-            pass
-        print("Particle Count:", self._engine.count)
-        try:
-            self._particle_vao.render(moderngl.POINTS, vertices=self._engine.count)
+            # Upload into VBO
+            self._particle_vbo.write(packed.tobytes())
+            try:
+                # compile debug program if not present
+                if not hasattr(self, "_debug_particle_prog") or self._debug_particle_prog is None:
+                    from graphics.shaders import DEBUG_PARTICLE_VERT, DEBUG_PARTICLE_FRAG
+                    self._debug_particle_prog = self._ctx.program(
+                        vertex_shader=DEBUG_PARTICLE_VERT, fragment_shader=DEBUG_PARTICLE_FRAG,
+                    )
+                    print("[Renderer] compiled debug_particle_prog")
+
+                # Create VAO for the debug program; use same VBO layout string so stride/locations are identical
+                dbg_vao = self._ctx.vertex_array(
+                    self._debug_particle_prog,
+                    [(self._particle_vbo, "3f 1f 1f", "in_pos", "in_size", "in_brightness")],
+                    mode=moderngl.POINTS,
+                )
+                print("[Renderer] debug VAO created for debug program")
+
+                # Disable blending to ensure white points aren't alpha-masked
+                try:
+                    self._ctx.disable(moderngl.BLEND)
+                    print("[Renderer] disabled BLEND for debug draw")
+                except Exception:
+                    pass
+
+                # Upload MVP to debug program
+                try:
+                    self._debug_particle_prog["u_mvp"].write(mvp.tobytes())
+                except Exception:
+                    pass
+
+                # Issue draw and log vertex count submitted
+                print("[Renderer] issuing debug particle draw, vertices =", self._engine.count)
+                dbg_vao.render(moderngl.POINTS, vertices=self._engine.count)
+                dbg_vao.release()
+
+                # Restore blending state
+                try:
+                    self._ctx.enable(moderngl.BLEND)
+                except Exception:
+                    pass
+
+            except Exception as e:
+                print("[Renderer] debug particle render failed:", e)
         except Exception as e:
-            print("[Renderer] particle render failed:", e)
+            print("[Renderer] particle debug block failed:", e)
+        # --- end debug particle block
 
         # Present scene directly (bypass bloom) for debugging
         try:
