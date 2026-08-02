@@ -30,8 +30,18 @@ from graphics.shaders import (
     PARTICLE_VERT,
     SPHERE_GLOW_FRAG,
     SPHERE_GLOW_VERT,
+    FULLSCREEN_VERT,
 )
 from graphics.state import StateManager, UltronState
+
+
+BLIT_FRAG = """
+#version 330 core
+in vec2 v_uv;
+uniform sampler2D u_tex;
+out vec4 frag_color;
+void main() { frag_color = texture(u_tex, v_uv); }
+"""
 
 
 def _perspective(fov_deg: float, aspect: float, near: float, far: float) -> np.ndarray:
@@ -214,6 +224,14 @@ class UltronRenderer(QOpenGLWidget):
         self._glow_vao = ctx.vertex_array(
             self._glow_prog, [(self._glow_vbo, "2f", "in_uv")]
         )
+
+        # Simple blit program to present the scene texture directly (bypass bloom)
+        try:
+            self._blit_prog = ctx.program(vertex_shader=FULLSCREEN_VERT, fragment_shader=BLIT_FRAG)
+            self._blit_vao = ctx.vertex_array(self._blit_prog, [(self._glow_vbo, "2f", "in_uv")])
+        except Exception:
+            self._blit_prog = None
+            self._blit_vao = None
 
         self._scene_fbo = self._create_scene_fbo(self._width, self._height)
         self._bloom = BloomPass(ctx, self._width, self._height)
@@ -429,6 +447,26 @@ class UltronRenderer(QOpenGLWidget):
 
         # Particles
         packed = self._engine.interleaved_buffer()
+        # Debug: print renderer-side first 5 packed rows
+        try:
+            print("[Renderer] interleaved first 5:", packed[:5].tolist())
+        except Exception:
+            pass
+
+        # Debug: compute clip-space and NDC for first 5 positions
+        try:
+            first_pos = packed[:5, 0:3].astype(np.float32)
+            ones = np.ones((first_pos.shape[0], 1), dtype=np.float32)
+            hom = np.hstack((first_pos, ones))
+            clip = (mvp @ hom.T).T
+            ndc = clip[:, :3] / clip[:, 3:4]
+            print("[Renderer] first 5 clip coords:", clip.tolist())
+            print("[Renderer] first 5 NDC coords:", ndc.tolist())
+            vis = [(-1.0 <= float(ndc[i, 0]) <= 1.0 and -1.0 <= float(ndc[i, 1]) <= 1.0 and -1.0 <= float(ndc[i, 2]) <= 1.0) for i in range(ndc.shape[0])]
+            print("[Renderer] first 5 NDC visibility:", vis)
+        except Exception as e:
+            print("[Renderer] clip debug failed:", e)
+
         self._particle_vbo.write(packed.tobytes())
         try:
             self._particle_prog["u_mvp"].write(mvp.tobytes())
@@ -453,13 +491,23 @@ class UltronRenderer(QOpenGLWidget):
         print("Particle Count:", self._engine.count)
         try:
             self._particle_vao.render(moderngl.POINTS, vertices=self._engine.count)
-        except Exception:
-            pass
+        except Exception as e:
+            print("[Renderer] particle render failed:", e)
 
-        # Bloom composite to default framebuffer
+        # Present scene directly (bypass bloom) for debugging
         try:
-            self._ctx.screen.use()
-            self._ctx.viewport = (0, 0, self._width, self._height)
-            self._bloom.apply(self._scene_fbo.color_attachments[0], self._ctx.screen)
-        except Exception:
-            pass
+            if self._blit_prog and self._blit_vao is not None:
+                tex = self._scene_fbo.color_attachments[0]
+                tex.use(0)
+                self._blit_prog["u_tex"].value = 0
+                self._ctx.screen.use()
+                self._ctx.viewport = (0, 0, self._width, self._height)
+                self._blit_vao.render()
+            else:
+                # fallback: simple clear to show contrast
+                self._ctx.screen.use()
+                self._ctx.viewport = (0, 0, self._width, self._height)
+                self._ctx.clear(0.12, 0.12, 0.12, 1.0)
+        except Exception as e:
+            print("[Renderer] blit failed:", e)
+
