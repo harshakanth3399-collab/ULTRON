@@ -1,0 +1,28 @@
+from speech import listen
+from router import process
+from speech_engine import speak
+from personality import greeting
+
+print("=" * 50)
+print("          ULTRON 1.0 ALPHA")
+print("=" * 50)
+
+speak(greeting())
+
+while True:
+
+    command = listen()
+
+    if not command:
+        continue
+
+    print(f"\nHarsha: {command}")
+
+    running, answer = process(command)
+
+    if answer:
+        print(f"\nUltron: {answer}")
+        speak(answer)
+
+    if running is False:
+        break
