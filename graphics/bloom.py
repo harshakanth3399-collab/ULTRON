@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import moderngl
+import numpy as np
 
 from graphics.constants import BLOOM_BLUR_PASSES, BLOOM_DOWNSAMPLE, BLOOM_INTENSITY, BLOOM_THRESHOLD
 from graphics.shaders import BLUR_FRAG, BLOOM_EXTRACT_FRAG, COMPOSITE_FRAG, FULLSCREEN_VERT
@@ -23,7 +24,9 @@ class BloomPass:
         "blur_prog",
         "composite_prog",
         "_quad",
-        "quad_vao",
+        "_extract_vao",
+        "_blur_vao",
+        "_composite_vao",
         "supports_geom",
     )
 
@@ -46,10 +49,19 @@ class BloomPass:
             fragment_shader=COMPOSITE_FRAG,
         )
 
-        self._quad = ctx.buffer(
-            b"\x00\x00\x00\x00\x01\x00\x00\x00\x01\x01\x00\x00\x00\x01\x00\x00"
-        )
-        self.quad_vao = ctx.simple_vertex_array(self.extract_prog, self._quad, "in_uv")
+        # fullscreen quad uvs (triangle strip)
+        quad_uvs = np.array([
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [1.0, 1.0],
+        ], dtype="f4")
+
+        self._quad = ctx.buffer(quad_uvs.tobytes())
+        # Create dedicated VAOs for each program once (reuse)
+        self._extract_vao = ctx.simple_vertex_array(self.extract_prog, self._quad, "in_uv")
+        self._blur_vao = ctx.simple_vertex_array(self.blur_prog, self._quad, "in_uv")
+        self._composite_vao = ctx.simple_vertex_array(self.composite_prog, self._quad, "in_uv")
 
         self._build_targets()
 
@@ -93,7 +105,7 @@ class BloomPass:
         self.extract_prog["u_source"] = 0
         self.extract_prog["u_threshold"] = BLOOM_THRESHOLD
         self.extract_prog["u_knee"] = knee
-        self.quad_vao.render(moderngl.TRIANGLE_STRIP)
+        self._extract_vao.render(moderngl.TRIANGLE_STRIP)
 
         # Separable gaussian blur
         src = self.extract_fbo.color_attachments[0]
@@ -106,14 +118,14 @@ class BloomPass:
             self.blur_prog["u_source"] = 0
             self.blur_prog["u_direction"] = (scale, 0.0)
             self.blur_prog["u_texel"] = texel
-            self._render_blur_quad()
+            self._blur_vao.render(moderngl.TRIANGLE_STRIP)
 
             self.pong.use()
             self.ping.color_attachments[0].use(location=0)
             self.blur_prog["u_source"] = 0
             self.blur_prog["u_direction"] = (0.0, scale)
             self.blur_prog["u_texel"] = texel
-            self._render_blur_quad()
+            self._blur_vao.render(moderngl.TRIANGLE_STRIP)
 
             src = self.pong.color_attachments[0]
 
@@ -125,15 +137,7 @@ class BloomPass:
         self.composite_prog["u_scene"] = 0
         self.composite_prog["u_bloom"] = 1
         self.composite_prog["u_bloom_intensity"] = BLOOM_INTENSITY
-        self._render_composite_quad()
-
-    def _render_blur_quad(self) -> None:
-        vao = self.ctx.simple_vertex_array(self.blur_prog, self._quad, "in_uv")
-        vao.render(moderngl.TRIANGLE_STRIP)
-
-    def _render_composite_quad(self) -> None:
-        vao = self.ctx.simple_vertex_array(self.composite_prog, self._quad, "in_uv")
-        vao.render(moderngl.TRIANGLE_STRIP)
+        self._composite_vao.render(moderngl.TRIANGLE_STRIP)
 
     def release(self) -> None:
         for fbo in (self.extract_fbo, self.ping, self.pong):
