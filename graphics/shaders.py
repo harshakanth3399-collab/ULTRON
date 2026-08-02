@@ -263,3 +263,27 @@ void main() {
     frag_color = vec4(col, alpha);
 }
 """
+
+# Simple debug particle shader: outputs clip position directly and a large white point
+DEBUG_PARTICLE_VERT = """
+#version 330 core
+
+layout(location = 0) in vec3 in_pos;
+
+uniform mat4 u_mvp;
+
+void main() {
+    gl_Position = u_mvp * vec4(in_pos, 1.0);
+    gl_PointSize = 40.0;
+}
+"""
+
+DEBUG_PARTICLE_FRAG = """
+#version 330 core
+
+out vec4 frag_color;
+
+void main() {
+    frag_color = vec4(1.0, 1.0, 1.0, 1.0);
+}
+"""
