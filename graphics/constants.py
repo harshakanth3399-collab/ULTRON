@@ -1,12 +1,12 @@
 """Graphics pipeline constants and tunables."""
 
-# ── Particles ──────────────────────────────────────────────────────────────
-PARTICLE_COUNT = 48_000
+# ── Particles ────────────────────────────────────────────────────────────
+PARTICLE_COUNT = 64_000
 SPHERE_RADIUS = 0.38
 PARTICLE_MIN_SIZE = 1.5
 PARTICLE_MAX_SIZE = 4.5
 
-# ── Electric arcs ───────────────────────────────────────────────────────────
+# ── Electric arcs ──────────────────────────────────────────────────────────
 ARC_COUNT = 14
 ARC_SEGMENTS = 32
 ARC_MAX_LENGTH = 0.55
