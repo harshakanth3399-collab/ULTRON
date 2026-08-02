@@ -471,13 +471,24 @@ class UltronRenderer(QOpenGLWidget):
                     )
                     print("[Renderer] compiled debug_particle_prog")
 
-                # Create VAO for the debug program; use same VBO layout string so stride/locations are identical
-                dbg_vao = self._ctx.vertex_array(
-                    self._debug_particle_prog,
-                    [(self._particle_vbo, "3f 1f 1f", "in_pos", "in_size", "in_brightness")],
-                    mode=moderngl.POINTS,
-                )
-                print("[Renderer] debug VAO created for debug program")
+                # Print declared attributes in program
+                try:
+                    prog_attrs = list(self._debug_particle_prog.attributes.keys())
+                    print("[Renderer] debug program attributes:", prog_attrs)
+                except Exception:
+                    pass
+
+                # Use only the attributes declared by the debug shader. It declares only 'in_pos'.
+                try:
+                    dbg_vao = self._ctx.vertex_array(
+                        self._debug_particle_prog,
+                        [(self._particle_vbo, "3f", "in_pos")],
+                        mode=moderngl.POINTS,
+                    )
+                    print("[Renderer] debug VAO created for debug program with binding:", ("3f", ["in_pos"]))
+                except Exception as e:
+                    print("[Renderer] failed to create debug VAO:", e)
+                    raise
 
                 # Disable blending to ensure white points aren't alpha-masked
                 try:
