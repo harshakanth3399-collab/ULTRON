@@ -121,7 +121,8 @@ class UltronRenderer(QOpenGLWidget):
         self._height = max(self.height(), 1)
         ctx.enable(moderngl.BLEND)
         ctx.enable(moderngl.DEPTH_TEST)
-        ctx.depth_func = moderngl.LESS
+        # Use ModernGL's string-based depth func to stay compatible across versions
+        ctx.depth_func = "<"
         ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE
 
         self._particle_prog = ctx.program(
