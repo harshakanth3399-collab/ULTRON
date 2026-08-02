@@ -141,11 +141,9 @@ class UltronRenderer(QOpenGLWidget):
             if hasattr(moderngl, "PROGRAM_POINT_SIZE"):
                 ctx.enable(moderngl.PROGRAM_POINT_SIZE)
                 self._point_size_enabled = True
-                print("Enabled moderngl.PROGRAM_POINT_SIZE")
             elif hasattr(moderngl, "VERTEX_PROGRAM_POINT_SIZE"):
                 ctx.enable(moderngl.VERTEX_PROGRAM_POINT_SIZE)
                 self._point_size_enabled = True
-                print("Enabled moderngl.VERTEX_PROGRAM_POINT_SIZE")
         except Exception:
             self._point_size_enabled = False
 
@@ -157,12 +155,10 @@ class UltronRenderer(QOpenGLWidget):
                 GL.glEnable(GL.GL_PROGRAM_POINT_SIZE)
                 GL.glPointSize(6.0)
                 self._point_size_enabled = True
-                print("Enabled GL_PROGRAM_POINT_SIZE via PyOpenGL and set glPointSize=6.0")
             except Exception:
                 # set a default point size in case program point size isn't used
                 try:
                     GL.glPointSize(6.0)
-                    print("Set fallback glPointSize=6.0 via PyOpenGL")
                 except Exception:
                     pass
         except Exception:
@@ -189,10 +185,6 @@ class UltronRenderer(QOpenGLWidget):
             ],
             mode=moderngl.POINTS,
         )
-        try:
-            print("[Renderer] particle VAO created, vertex_format='3f 1f 1f', mode=POINTS")
-        except Exception:
-            pass
 
         arc_stride = 5 * 4
         self._arc_vbo = ctx.buffer(reserve=self._arcs.vertex_count * arc_stride)
@@ -375,9 +367,12 @@ class UltronRenderer(QOpenGLWidget):
         # Render scene to HDR framebuffer
         self._scene_fbo.use()
         self._ctx.clear(0.0, 0.0, 0.0, 1.0)
-        self._ctx.enable(moderngl.DEPTH_TEST)
 
-        # Inner volumetric glow (guard uniform writes)
+        # Render inner volumetric glow without modifying depth buffer
+        try:
+            self._ctx.disable(moderngl.DEPTH_TEST)
+        except Exception:
+            pass
         try:
             self._glow_prog["u_mvp"].write(mvp.tobytes())
         except KeyError:
@@ -398,9 +393,12 @@ class UltronRenderer(QOpenGLWidget):
             self._glow_prog["u_color_deep"].value = COLOR_DEEP
         except KeyError:
             pass
-        # Render glow quad
         try:
             self._glow_vao.render()
+        except Exception:
+            pass
+        try:
+            self._ctx.enable(moderngl.DEPTH_TEST)
         except Exception:
             pass
 
@@ -449,76 +447,38 @@ class UltronRenderer(QOpenGLWidget):
                 except Exception:
                     pass
 
-        # --- DEBUG particle draw: white large points, VBO/VAO/draw logging
+        # Particle draw: upload buffer and render with the particle shader
         try:
             packed = self._engine.interleaved_buffer()
-
-            # Debug: packed/VBO info
-            try:
-                print("[Renderer] packed.nbytes:", packed.nbytes, "shape:", packed.shape, "dtype:", packed.dtype)
-                print("[Renderer] packed first 5:", packed[:5].tolist())
-            except Exception as e:
-                print("[Renderer] packed info failed:", e)
-
-            # Upload into VBO
             self._particle_vbo.write(packed.tobytes())
+
             try:
-                # compile debug program if not present
-                if not hasattr(self, "_debug_particle_prog") or self._debug_particle_prog is None:
-                    from graphics.shaders import DEBUG_PARTICLE_VERT, DEBUG_PARTICLE_FRAG
-                    self._debug_particle_prog = self._ctx.program(
-                        vertex_shader=DEBUG_PARTICLE_VERT, fragment_shader=DEBUG_PARTICLE_FRAG,
-                    )
-                    print("[Renderer] compiled debug_particle_prog")
+                self._particle_prog["u_mvp"].write(mvp.tobytes())
+            except Exception:
+                pass
+            try:
+                self._particle_prog["u_time"].value = self._time
+            except Exception:
+                pass
+            try:
+                self._particle_prog["u_glow"].value = glow
+            except Exception:
+                pass
+            try:
+                self._particle_prog["u_color_core"].value = COLOR_CORE
+            except Exception:
+                pass
+            try:
+                self._particle_prog["u_color_glow"].value = COLOR_GLOW
+            except Exception:
+                pass
 
-                # Print declared attributes in program
-                try:
-                    prog_attrs = list(self._debug_particle_prog.attributes.keys())
-                    print("[Renderer] debug program attributes:", prog_attrs)
-                except Exception:
-                    pass
-
-                # Use only the attributes declared by the debug shader. It declares only 'in_pos'.
-                try:
-                    dbg_vao = self._ctx.vertex_array(
-                        self._debug_particle_prog,
-                        [(self._particle_vbo, "3f", "in_pos")],
-                        mode=moderngl.POINTS,
-                    )
-                    print("[Renderer] debug VAO created for debug program with binding:", ("3f", ["in_pos"]))
-                except Exception as e:
-                    print("[Renderer] failed to create debug VAO:", e)
-                    raise
-
-                # Disable blending to ensure white points aren't alpha-masked
-                try:
-                    self._ctx.disable(moderngl.BLEND)
-                    print("[Renderer] disabled BLEND for debug draw")
-                except Exception:
-                    pass
-
-                # Upload MVP to debug program
-                try:
-                    self._debug_particle_prog["u_mvp"].write(mvp.tobytes())
-                except Exception:
-                    pass
-
-                # Issue draw and log vertex count submitted
-                print("[Renderer] issuing debug particle draw, vertices =", self._engine.count)
-                dbg_vao.render(moderngl.POINTS, vertices=self._engine.count)
-                dbg_vao.release()
-
-                # Restore blending state
-                try:
-                    self._ctx.enable(moderngl.BLEND)
-                except Exception:
-                    pass
-
-            except Exception as e:
-                print("[Renderer] debug particle render failed:", e)
-        except Exception as e:
-            print("[Renderer] particle debug block failed:", e)
-        # --- end debug particle block
+            try:
+                self._particle_vao.render(moderngl.POINTS, vertices=self._engine.count)
+            except Exception:
+                pass
+        except Exception:
+            pass
 
         # Present scene directly (bypass bloom) for debugging
         try:
@@ -534,6 +494,6 @@ class UltronRenderer(QOpenGLWidget):
                 self._ctx.screen.use()
                 self._ctx.viewport = (0, 0, self._width, self._height)
                 self._ctx.clear(0.12, 0.12, 0.12, 1.0)
-        except Exception as e:
-            print("[Renderer] blit failed:", e)
+        except Exception:
+            pass
 
