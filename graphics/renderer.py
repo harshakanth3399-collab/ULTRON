@@ -120,7 +120,7 @@ class UltronRenderer(QOpenGLWidget):
         self._height = max(self.height(), 1)
         ctx.enable(moderngl.BLEND)
         ctx.enable(moderngl.DEPTH_TEST)
-        ctx.depth_func = "<"
+        ctx.depth_func = moderngl.LESS
         ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE
 
         self._particle_prog = ctx.program(
@@ -359,10 +359,3 @@ class UltronRenderer(QOpenGLWidget):
         self._ctx.screen.use()
         self._ctx.viewport = (0, 0, self._width, self._height)
         self._bloom.apply(self._scene_fbo.color_attachments[0], self._ctx.screen)
-
-    def initializeGL(self) -> None:
-      try:
-        self._init_gl()
-      except Exception as exc:
-       import sys
-       print(f"ULTRON GL init failed: {exc}", file=sys.stderr)
