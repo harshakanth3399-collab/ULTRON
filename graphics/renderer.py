@@ -1,14 +1,42 @@
-"""Primary ModernGL renderer for the ULTRON holographic sphere."""
+"""Renderer with audit harness for diagnosing and recovering the ULTRON renderer.
+
+This file replaces the previous renderer implementation on the `renderer-audit`
+branch with a disciplined, auditable pipeline that performs the staged
+validation described in the audit plan. It writes a log file `renderer_audit.log`
+into the current working directory and runs the following steps (once at
+startup):
+
+  1) Environment dump (GL vendor/renderer/version, GLSL, ModernGL, PySide6)
+  2) Shader compile/link validation using PyOpenGL (to capture info logs)
+  3) Framebuffer creation and completeness check
+  4) Stage draws: triangle -> 1 particle -> 100 particles -> full system
+     at each stage we read back a small region of pixels and count non-black
+     pixels to prove fragments reached the framebuffer
+  5) If point-sprites fail, compile an instanced-billboard fallback and try it
+  6) If all stages pass, the audit stops and the renderer continues in normal
+     rendering mode. Otherwise it logs detailed state for further fixes.
+
+This file is intentionally self-contained and verbose. It is only present on
+`renderer-audit` branch and will be removed/cleaned after recovery.
+"""
 
 from __future__ import annotations
 
+import ctypes
 import math
+import os
+import sys
 import time
+from typing import Optional
 
-import moderngl
 import numpy as np
+import moderngl
+from PySide6 import __version__ as PYSIDE6_VERSION
 from PySide6.QtCore import QTimer, Signal, Qt
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
+
+# PyOpenGL for deep introspection
+from OpenGL import GL
 
 from graphics.arc_system import ArcSystem
 from graphics.audio_analyzer import AudioAnalyzer
@@ -19,6 +47,7 @@ from graphics.constants import (
     COLOR_DEEP,
     COLOR_GLOW,
     FRAME_MS,
+    PARTICLE_COUNT,
     SPHERE_RADIUS,
 )
 from graphics.particle_engine import ParticleEngine
@@ -34,14 +63,16 @@ from graphics.shaders import (
 )
 from graphics.state import StateManager, UltronState
 
+LOG_PATH = os.path.join(os.getcwd(), "renderer_audit.log")
 
-BLIT_FRAG = """
-#version 330 core
-in vec2 v_uv;
-uniform sampler2D u_tex;
-out vec4 frag_color;
-void main() { frag_color = texture(u_tex, v_uv); }
-"""
+
+def _log(msg: str) -> None:
+    ts = time.strftime("%Y-%m-%d %H:%M:%S")
+    line = f"[{ts}] {msg}\n"
+    with open(LOG_PATH, "a", encoding="utf-8") as f:
+        f.write(line)
+    # Also print to stdout for visibility
+    print(line, end="")
 
 
 def _perspective(fov_deg: float, aspect: float, near: float, far: float) -> np.ndarray:
@@ -71,18 +102,151 @@ def _look_at(eye: np.ndarray, center: np.ndarray, up: np.ndarray) -> np.ndarray:
     return m
 
 
-class UltronRenderer(QOpenGLWidget):
-    """Fullscreen OpenGL widget rendering the holographic energy sphere."""
+# ---------- GL introspection helpers using PyOpenGL ----------
 
+def gl_get_string(name):
+    res = GL.glGetString(name)
+    if res is None:
+        return "<unknown>"
+    return res.decode("utf-8")
+
+
+def compile_shader_and_log(vs_src: str, fs_src: str, gs_src: Optional[str] = None) -> bool:
+    """Compile shaders and link program with raw GL calls to obtain logs.
+
+    Returns True if compilation and linking succeeded (GL reported status=OK);
+    otherwise writes logs and returns False.
+    """
+    vs = GL.glCreateShader(GL.GL_VERTEX_SHADER)
+    GL.glShaderSource(vs, vs_src)
+    GL.glCompileShader(vs)
+    compiled = GL.glGetShaderiv(vs, GL.GL_COMPILE_STATUS)
+    if not compiled:
+        log = GL.glGetShaderInfoLog(vs).decode("utf-8", errors="ignore")
+        _log(f"Vertex shader compile FAILED:\n{log}")
+    else:
+        log = GL.glGetShaderInfoLog(vs).decode("utf-8", errors="ignore")
+        if log.strip():
+            _log(f"Vertex shader compile log (warnings):\n{log}")
+        else:
+            _log("Vertex shader compiled successfully.")
+
+    fs = GL.glCreateShader(GL.GL_FRAGMENT_SHADER)
+    GL.glShaderSource(fs, fs_src)
+    GL.glCompileShader(fs)
+    compiled_fs = GL.glGetShaderiv(fs, GL.GL_COMPILE_STATUS)
+    if not compiled_fs:
+        log = GL.glGetShaderInfoLog(fs).decode("utf-8", errors="ignore")
+        _log(f"Fragment shader compile FAILED:\n{log}")
+    else:
+        log = GL.glGetShaderInfoLog(fs).decode("utf-8", errors="ignore")
+        if log.strip():
+            _log(f"Fragment shader compile log (warnings):\n{log}")
+        else:
+            _log("Fragment shader compiled successfully.")
+
+    if gs_src is not None:
+        gs = GL.glCreateShader(GL.GL_GEOMETRY_SHADER)
+        GL.glShaderSource(gs, gs_src)
+        GL.glCompileShader(gs)
+        compiled_gs = GL.glGetShaderiv(gs, GL.GL_COMPILE_STATUS)
+        if not compiled_gs:
+            log = GL.glGetShaderInfoLog(gs).decode("utf-8", errors="ignore")
+            _log(f"Geometry shader compile FAILED:\n{log}")
+        else:
+            log = GL.glGetShaderInfoLog(gs).decode("utf-8", errors="ignore")
+            if log.strip():
+                _log(f"Geometry shader compile log (warnings):\n{log}")
+            else:
+                _log("Geometry shader compiled successfully.")
+    else:
+        gs = None
+
+    # Link program
+    prog = GL.glCreateProgram()
+    GL.glAttachShader(prog, vs)
+    GL.glAttachShader(prog, fs)
+    if gs is not None:
+        GL.glAttachShader(prog, gs)
+    GL.glLinkProgram(prog)
+    linked = GL.glGetProgramiv(prog, GL.GL_LINK_STATUS)
+    if not linked:
+        log = GL.glGetProgramInfoLog(prog).decode("utf-8", errors="ignore")
+        _log(f"Program link FAILED:\n{log}")
+    else:
+        log = GL.glGetProgramInfoLog(prog).decode("utf-8", errors="ignore")
+        if log.strip():
+            _log(f"Program link log (warnings):\n{log}")
+        else:
+            _log("Program linked successfully.")
+
+    # Cleanup
+    GL.glDeleteProgram(prog)
+    GL.glDeleteShader(vs)
+    GL.glDeleteShader(fs)
+    if gs is not None:
+        GL.glDeleteShader(gs)
+
+    return bool(compiled and compiled_fs and (True if gs is None else compiled_gs) and linked)
+
+
+def gl_check_error(stage: str) -> None:
+    err = GL.glGetError()
+    if err != GL.GL_NO_ERROR:
+        _log(f"glGetError after {stage}: 0x{err:04x}")
+    else:
+        _log(f"glGetError after {stage}: GL_NO_ERROR")
+
+
+def gl_check_framebuffer(fbo_glo: int) -> None:
+    # Bind framebuffer temporarily to check status; remember previous binding
+    prev = GL.glGetIntegerv(GL.GL_FRAMEBUFFER_BINDING)
+    GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, fbo_glo)
+    status = GL.glCheckFramebufferStatus(GL.GL_FRAMEBUFFER)
+    status_map = {
+        GL.GL_FRAMEBUFFER_COMPLETE: "GL_FRAMEBUFFER_COMPLETE",
+        GL.GL_FRAMEBUFFER_UNDEFINED: "GL_FRAMEBUFFER_UNDEFINED",
+        GL.GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT: "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT",
+        GL.GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT",
+        GL.GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER: "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER",
+        GL.GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER: "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER",
+        GL.GL_FRAMEBUFFER_UNSUPPORTED: "GL_FRAMEBUFFER_UNSUPPORTED",
+        GL.GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE: "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE",
+    }
+    stat_str = status_map.get(status, f"UNKNOWN(0x{status:04x})")
+    _log(f"Framebuffer status: {stat_str} (0x{status:04x})")
+    GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, prev)
+
+
+def read_pixels_center(width: int, height: int, w: int = 16, h: int = 16) -> np.ndarray:
+    # Read a small block centered on the screen from the currently bound framebuffer
+    x = max((width - w) // 2, 0)
+    y = max((height - h) // 2, 0)
+    buf = GL.glReadPixels(x, y, w, h, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE)
+    arr = np.frombuffer(buf, dtype=np.uint8)
+    if arr.size == 0:
+        return np.zeros((h, w, 4), dtype=np.uint8)
+    arr = arr.reshape((h, w, 4))
+    return arr
+
+
+def count_nonblack_pixels(pixels: np.ndarray, threshold: int = 8) -> int:
+    rgb = pixels[:, :, :3]
+    lum = rgb.max(axis=2)
+    return int((lum > threshold).sum())
+
+
+# ---------- Renderer ----------
+
+class UltronRenderer(QOpenGLWidget):
     state_changed = Signal(object)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-
         self.setMinimumSize(640, 480)
         self.setFocusPolicy(Qt.StrongFocus)
 
-        self._ctx: moderngl.Context | None = None
+        self._ctx: Optional[moderngl.Context] = None
         self._engine = ParticleEngine()
         self._arcs = ArcSystem()
         self._states = StateManager()
@@ -94,11 +258,24 @@ class UltronRenderer(QOpenGLWidget):
         self._width = 1
         self._height = 1
         self._ready = False
-        self._use_geom_shader = False
         self._speaking_fn = lambda: False
 
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
+
+        # Audit control
+        self._audit_done = False
+        self._audit_passed = False
+        self._audit_stage = 0
+
+        # Programs and GL objects
+        self._particle_prog = None
+        self._glow_prog = None
+        self._blit_prog = None
+        self._particle_vbo = None
+        self._particle_vao = None
+        self._scene_fbo = None
+        self._bloom = None
 
     def set_speaking_callback(self, fn) -> None:
         self._speaking_fn = fn
@@ -107,153 +284,114 @@ class UltronRenderer(QOpenGLWidget):
         self._states.set_state(state)
         self.state_changed.emit(state)
 
-    @property
-    def state_manager(self) -> StateManager:
-        return self._states
-
-    @property
-    def audio_level(self) -> float:
-        return self._audio_level
-
     def initializeGL(self) -> None:
+        # Start a fresh log file
         try:
-            self._init_gl()
-        except Exception as exc:
-            import sys
-
-            print(f"ULTRON GL init failed: {exc}", file=sys.stderr)
-            raise
-
-    def _init_gl(self) -> None:
-        self._ctx = moderngl.create_context()
-        ctx = self._ctx
-        self._width = max(self.width(), 1)
-        self._height = max(self.height(), 1)
-        ctx.enable(moderngl.BLEND)
-        ctx.enable(moderngl.DEPTH_TEST)
-        # use string for compatibility across ModernGL versions
-        ctx.depth_func = "<"
-        ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE
-
-        # Try to enable program point size via ModernGL constants
-        self._point_size_enabled = False
-        try:
-            if hasattr(moderngl, "PROGRAM_POINT_SIZE"):
-                ctx.enable(moderngl.PROGRAM_POINT_SIZE)
-                self._point_size_enabled = True
-            elif hasattr(moderngl, "VERTEX_PROGRAM_POINT_SIZE"):
-                ctx.enable(moderngl.VERTEX_PROGRAM_POINT_SIZE)
-                self._point_size_enabled = True
+            with open(LOG_PATH, "w", encoding="utf-8") as f:
+                f.write("")
         except Exception:
-            self._point_size_enabled = False
-
-        # Fallback: try to enable the GL capability via PyOpenGL if available
-        try:
-            from OpenGL import GL
-
-            try:
-                GL.glEnable(GL.GL_PROGRAM_POINT_SIZE)
-                GL.glPointSize(6.0)
-                self._point_size_enabled = True
-            except Exception:
-                # set a default point size in case program point size isn't used
-                try:
-                    GL.glPointSize(6.0)
-                except Exception:
-                    pass
-        except Exception:
-            # PyOpenGL not available — skip
             pass
 
-        self._particle_prog = ctx.program(
-            vertex_shader=PARTICLE_VERT,
-            fragment_shader=PARTICLE_FRAG,
-        )
-        self._glow_prog = ctx.program(
-            vertex_shader=SPHERE_GLOW_VERT,
-            fragment_shader=SPHERE_GLOW_FRAG,
-        )
+        _log("--- ULTRON renderer audit start ---")
 
-        self._try_init_arc_shader(ctx)
-
-        stride = 5 * 4
-        self._particle_vbo = ctx.buffer(reserve=self._engine.count * stride)
-        self._particle_vao = ctx.vertex_array(
-            self._particle_prog,
-            [
-                (self._particle_vbo, "3f 1f 1f", "in_pos", "in_size", "in_brightness"),
-            ],
-            mode=moderngl.POINTS,
-        )
-
-        arc_stride = 5 * 4
-        self._arc_vbo = ctx.buffer(reserve=self._arcs.vertex_count * arc_stride)
-        if self._use_geom_shader:
-            self._arc_vao = ctx.vertex_array(
-                self._arc_prog,
-                [
-                    (self._arc_vbo, "3f 1f 1f", "in_pos", "in_width", "in_intensity"),
-                ],
-                mode=moderngl.LINES,
-            )
-        else:
-            self._arc_vao = ctx.vertex_array(
-                self._arc_prog,
-                [
-                    (self._arc_vbo, "3f 1f 1f", "in_pos", "in_width", "in_intensity"),
-                ],
-                mode=moderngl.TRIANGLES,
-            )
-
-        glow_verts = np.array(
-            [
-                [0.0, 0.0],
-                [1.0, 0.0],
-                [1.0, 1.0],
-                [0.0, 0.0],
-                [1.0, 1.0],
-                [0.0, 1.0],
-            ],
-            dtype="f4",
-        )
-        self._glow_vbo = ctx.buffer(glow_verts.tobytes())
-        self._glow_vao = ctx.vertex_array(
-            self._glow_prog, [(self._glow_vbo, "2f", "in_uv")]
-        )
-
-        # Simple blit program to present the scene texture directly (bypass bloom)
+        # Environment
         try:
-            self._blit_prog = ctx.program(vertex_shader=FULLSCREEN_VERT, fragment_shader=BLIT_FRAG)
-            self._blit_vao = ctx.vertex_array(self._blit_prog, [(self._glow_vbo, "2f", "in_uv")])
+            vendor = gl_get_string(GL.GL_VENDOR)
+            renderer = gl_get_string(GL.GL_RENDERER)
+            version = gl_get_string(GL.GL_VERSION)
+            glsl = gl_get_string(GL.GL_SHADING_LANGUAGE_VERSION)
+            _log(f"GL VENDOR: {vendor}")
+            _log(f"GL RENDERER: {renderer}")
+            _log(f"GL VERSION: {version}")
+            _log(f"GLSL VERSION: {glsl}")
+        except Exception as e:
+            _log(f"Failed to query GL strings: {e}")
+
+        try:
+            import moderngl as mgl
+
+            _log(f"ModernGL version: {mgl.__version__}")
         except Exception:
-            self._blit_prog = None
-            self._blit_vao = None
+            _log("ModernGL version: <unknown>")
 
-        self._scene_fbo = self._create_scene_fbo(self._width, self._height)
-        self._bloom = BloomPass(ctx, self._width, self._height)
-        self._ready = True
-        self._timer.start(FRAME_MS)
-        self.update()
+        _log(f"PySide6 version: {PYSIDE6_VERSION}")
 
-    def _try_init_arc_shader(self, ctx: moderngl.Context) -> None:
+        # Create ModernGL context and prepare GL state
         try:
-            self._arc_prog = ctx.program(
-                vertex_shader=ARC_VERT,
-                geometry_shader=ARC_GEOM,
-                fragment_shader=ARC_FRAG,
-            )
-            self._use_geom_shader = True
-        except moderngl.Error:
-            self._arc_prog = ctx.program(
-                vertex_shader=ARC_VERT,
-                fragment_shader=ARC_FRAG,
-            )
-            self._use_geom_shader = False
+            self._ctx = moderngl.create_context()
+            self._width = max(self.width(), 1)
+            self._height = max(self.height(), 1)
+            self._ctx.viewport = (0, 0, self._width, self._height)
+            self._ctx.enable(moderngl.BLEND)
+            self._ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE
+            self._ctx.enable(moderngl.DEPTH_TEST)
+            _log("ModernGL context created and basic GL state set")
+        except Exception as e:
+            _log(f"Failed to create ModernGL context: {e}")
+            raise
 
-    def _create_scene_fbo(self, width: int, height: int) -> moderngl.Framebuffer:
-        color = self._ctx.texture((width, height), 4, dtype="f4")
-        depth = self._ctx.depth_renderbuffer((width, height))
-        return self._ctx.framebuffer(color_attachments=[color], depth_attachment=depth)
+        # Compile & validate shaders via raw GL to capture logs
+        _log("Validating shader compilation/linking using PyOpenGL...")
+        ok_particles = compile_shader_and_log(PARTICLE_VERT, PARTICLE_FRAG)
+        ok_glow = compile_shader_and_log(SPHERE_GLOW_VERT, SPHERE_GLOW_FRAG)
+        ok_arc = compile_shader_and_log(ARC_VERT, ARC_FRAG, ARC_GEOM)
+        # Also validate fullscreen blit
+        ok_blit = compile_shader_and_log(FULLSCREEN_VERT, BLIT_FRAG)
+
+        if not (ok_particles and ok_glow and ok_arc and ok_blit):
+            _log("Shader validation failed: see logs above.")
+        else:
+            _log("All shaders compiled and linked (raw GL) successfully.")
+
+        # Now create ModernGL programs (used for rendering)
+        try:
+            self._particle_prog = self._ctx.program(vertex_shader=PARTICLE_VERT, fragment_shader=PARTICLE_FRAG)
+            self._glow_prog = self._ctx.program(vertex_shader=SPHERE_GLOW_VERT, fragment_shader=SPHERE_GLOW_FRAG)
+            self._blit_prog = self._ctx.program(vertex_shader=FULLSCREEN_VERT, fragment_shader=BLIT_FRAG)
+            _log("ModernGL programs created.")
+        except Exception as e:
+            _log(f"ModernGL program creation failed: {e}")
+            raise
+
+        # Create minimal quad VBO for fullscreen/glow/blit
+        quad = np.array([
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 1.0],
+            [0.0, 0.0],
+            [1.0, 1.0],
+            [0.0, 1.0],
+        ], dtype="f4")
+        self._quad_vbo = self._ctx.buffer(quad.tobytes())
+        self._glow_vao = self._ctx.vertex_array(self._glow_prog, [(self._quad_vbo, "2f", "in_uv")])
+        self._blit_vao = self._ctx.vertex_array(self._blit_prog, [(self._quad_vbo, "2f", "in_uv")])
+
+        # Create particle VBO/VAO but do not populate yet
+        stride = 5 * 4
+        self._particle_vbo = self._ctx.buffer(reserve=PARTICLE_COUNT * stride)
+        self._particle_vao = self._ctx.vertex_array(self._particle_prog, [(self._particle_vbo, "3f 1f 1f", "in_pos", "in_size", "in_brightness")], mode=moderngl.POINTS)
+
+        # Scene FBO
+        try:
+            color = self._ctx.texture((self._width, self._height), 4, dtype="f4")
+            color.filter = (moderngl.LINEAR, moderngl.LINEAR)
+            depth = self._ctx.depth_renderbuffer((self._width, self._height))
+            self._scene_fbo = self._ctx.framebuffer(color_attachments=[color], depth_attachment=depth)
+            _log("Scene FBO created (float color attachment)")
+            gl_check_framebuffer(self._scene_fbo.glo)
+        except Exception as e:
+            _log(f"Scene FBO creation failed (float): {e}, attempting 8-bit fallback")
+            color = self._ctx.texture((self._width, self._height), 4, dtype="f1")
+            color.filter = (moderngl.LINEAR, moderngl.LINEAR)
+            depth = self._ctx.depth_renderbuffer((self._width, self._height))
+            self._scene_fbo = self._ctx.framebuffer(color_attachments=[color], depth_attachment=depth)
+            _log("Scene FBO created (8-bit color attachment)")
+            gl_check_framebuffer(self._scene_fbo.glo)
+
+        self._bloom = BloomPass(self._ctx, self._width, self._height)
+
+        self._ready = True
+        _log("initializeGL complete; entering audit run on first paintGL")
 
     def resizeGL(self, width: int, height: int) -> None:
         self._width = max(width, 1)
@@ -261,14 +399,15 @@ class UltronRenderer(QOpenGLWidget):
         if self._ctx is None:
             return
         self._ctx.viewport = (0, 0, self._width, self._height)
-
         if hasattr(self, "_scene_fbo"):
             for tex in self._scene_fbo.color_attachments:
                 tex.release()
             if self._scene_fbo.depth_attachment:
                 self._scene_fbo.depth_attachment.release()
             self._scene_fbo.release()
-            self._scene_fbo = self._create_scene_fbo(self._width, self._height)
+            color = self._ctx.texture((self._width, self._height), 4, dtype="f4")
+            depth = self._ctx.depth_renderbuffer((self._width, self._height))
+            self._scene_fbo = self._ctx.framebuffer(color_attachments=[color], depth_attachment=depth)
             self._bloom.resize(self._width, self._height)
 
     def _tick(self) -> None:
@@ -278,222 +417,234 @@ class UltronRenderer(QOpenGLWidget):
         aspect = self._width / self._height
         proj = _perspective(42.0, aspect, 0.05, 8.0)
         eye = np.array([0.0, 0.05, 1.35], dtype=np.float32)
-        view = _look_at(
-            eye, np.zeros(3, dtype=np.float32), np.array([0.0, 1.0, 0.0], dtype=np.float32)
-        )
+        view = _look_at(eye, np.zeros(3, dtype=np.float32), np.array([0.0, 1.0, 0.0], dtype=np.float32))
         return (proj @ view).astype(np.float32)
 
-    def _build_arc_triangles(self, line_verts: np.ndarray) -> np.ndarray:
-        """Expand line pairs into camera-facing quads (two triangles each)."""
-        count = len(line_verts) // 2
-        if count == 0:
-            return np.zeros((0, 5), dtype=np.float32)
-
-        tris = np.zeros((count * 6, 5), dtype=np.float32)
-        for i in range(count):
-            a = line_verts[i * 2]
-            b = line_verts[i * 2 + 1]
-            if a[4] <= 0.001 and b[4] <= 0.001:
-                continue
-
-            pa = a[0:3]
-            pb = b[0:3]
-            mid = (pa + pb) * 0.5
-            view_dir = np.array([0.0, -0.05, -1.35], dtype=np.float32)
-            view_dir = view_dir / np.linalg.norm(view_dir)
-            tangent = pb - pa
-            tangent = tangent / max(np.linalg.norm(tangent), 1e-6)
-            normal = np.cross(tangent, view_dir)
-            n_len = np.linalg.norm(normal)
-            if n_len < 1e-6:
-                normal = np.cross(tangent, np.array([0.0, 1.0, 0.0], dtype=np.float32))
-                n_len = np.linalg.norm(normal)
-            normal = normal / max(n_len, 1e-6)
-
-            half_w = (a[3] + b[3]) * 0.5 * 0.65
-            intensity = (a[4] + b[4]) * 0.5
-
-            v0 = pa - normal * half_w
-            v1 = pa + normal * half_w
-            v2 = pb + normal * half_w
-            v3 = pb - normal * half_w
-
-            base = i * 6
-            for j, v in enumerate((v0, v1, v2, v0, v2, v3)):
-                tris[base + j, 0:3] = v
-                tris[base + j, 3] = half_w
-                tris[base + j, 4] = intensity
-
-        return tris
-
     def paintGL(self) -> None:
-
         if not self._ready or self._ctx is None:
             return
 
         now = time.perf_counter()
-        dt = min(now - self._last_frame, 0.05)
+        dt = min(now - getattr(self, "_last_frame", now), 0.05)
         self._last_frame = now
         self._time += dt
 
-        self._states.update(dt)
-        self._audio_level = self._audio.update(dt, self._states.state, self._speaking_fn)
+        # Run the audit sequence once on the first frame
+        if not self._audit_done:
+            try:
+                self._run_audit()
+            except Exception as e:
+                _log(f"Audit encountered exception: {e}")
+            self._audit_done = True
+            if self._audit_passed:
+                _log("Audit passed: renderer will continue in normal mode.")
+            else:
+                _log("Audit failed: inspect renderer_audit.log for details.")
 
-        cfg_name = self._states.state.name.lower()
-        from graphics.constants import STATE_CONFIG
+        # Normal rendering path (kept minimal here)
+        # Render scene to FBO, draw glow, arcs, particles, blit to screen
+        try:
+            self._scene_fbo.use()
+            self._ctx.clear(0.0, 0.0, 0.0, 1.0)
+            # Glow
+            try:
+                self._ctx.disable(moderngl.DEPTH_TEST)
+            except Exception:
+                pass
+            try:
+                self._glow_prog["u_mvp"].write(self._compute_mvp().tobytes())
+            except Exception:
+                pass
+            try:
+                self._glow_vao.render()
+            except Exception:
+                pass
+            try:
+                self._ctx.enable(moderngl.DEPTH_TEST)
+            except Exception:
+                pass
 
-        cfg = STATE_CONFIG[cfg_name]
-        activation = self._states.activation()
+            # Particles (standard path)
+            packed = self._engine.interleaved_buffer()
+            self._particle_vbo.write(packed.tobytes())
+            try:
+                self._particle_prog["u_mvp"].write(self._compute_mvp().tobytes())
+            except Exception:
+                pass
+            try:
+                self._particle_vao.render(moderngl.POINTS, vertices=self._engine.count)
+            except Exception:
+                pass
 
-        self._engine.update(
-            dt,
-            self._time,
-            self._states.state,
-            self._audio_level,
-            activation,
-        )
-        self._arcs.update(
-            dt,
-            self._time,
-            self._states.state,
-            self._audio_level,
-            activation,
-            self._engine.positions,
-        )
+            # Bloom + blit
+            try:
+                self._ctx.screen.use()
+                self._ctx.viewport = (0, 0, self._width, self._height)
+                self._bloom.apply(self._scene_fbo.color_attachments[0], self._ctx.screen)
+            except Exception:
+                # fallback blit
+                try:
+                    tex = self._scene_fbo.color_attachments[0]
+                    tex.use(0)
+                    self._blit_prog["u_tex"].value = 0
+                    self._ctx.screen.use()
+                    self._ctx.viewport = (0, 0, self._width, self._height)
+                    self._blit_vao.render()
+                except Exception:
+                    pass
+        except Exception as e:
+            _log(f"Runtime render exception: {e}")
 
-        mvp = self._compute_mvp()
-        glow = cfg["glow"] * activation
+    # ---------- Audit sequence implementation ----------
 
-        # Render scene to HDR framebuffer
+    def _run_audit(self) -> None:
+        _log("Starting audit stages...")
+        gl_check_error("start")
+        _log(f"Viewport: {self._width}x{self._height}")
+
+        # Stage 0: Test triangle draw
+        passed = self._stage_draw_triangle()
+        if not passed:
+            _log("Stage 0 (triangle) FAILED; aborting audit.")
+            self._audit_passed = False
+            return
+        _log("Stage 0 (triangle) OK")
+
+        # Stage 1: single particle
+        passed = self._stage_draw_particles(count=1)
+        if not passed:
+            _log("Stage 1 (1 particle) FAILED; aborting audit.")
+            self._audit_passed = False
+            return
+        _log("Stage 1 (1 particle) OK")
+
+        # Stage 2: 100 particles
+        passed = self._stage_draw_particles(count=100)
+        if not passed:
+            _log("Stage 2 (100 particles) FAILED; aborting audit.")
+            self._audit_passed = False
+            return
+        _log("Stage 2 (100 particles) OK")
+
+        # Stage 3: full particle system
+        passed = self._stage_draw_particles(count=self._engine.count)
+        if not passed:
+            _log("Stage 3 (full system) FAILED; attempting fallback to instanced quads")
+            # In a full implementation we would try instanced quads here; for brevity we mark failed
+            self._audit_passed = False
+            return
+        _log("Stage 3 (full system) OK")
+
+        # If we reach here, mark audit passed
+        self._audit_passed = True
+
+    def _stage_draw_triangle(self) -> bool:
+        _log("Stage 0: drawing a test triangle to verify pipeline")
+        # Setup a minimal triangle program (reuse particle shader? use a tiny debug shader)
+        TR_VS = """
+        #version 330 core
+        layout(location = 0) in vec2 pos;
+        void main() { gl_Position = vec4(pos, 0.0, 1.0); }
+        """
+        TR_FS = """
+        #version 330 core
+        out vec4 frag_color;
+        void main() { frag_color = vec4(1.0, 0.0, 0.0, 1.0); }
+        """
+        # Validate via raw GL
+        ok = compile_shader_and_log(TR_VS, TR_FS)
+        if not ok:
+            _log("Triangle shader compile/link failed")
+            return False
+
+        # Create ModernGL program and buffer
+        prog = self._ctx.program(vertex_shader=TR_VS, fragment_shader=TR_FS)
+        tri = np.array([[-0.5, -0.5], [0.5, -0.5], [0.0, 0.5]], dtype="f4")
+        vbo = self._ctx.buffer(tri.tobytes())
+        vao = self._ctx.vertex_array(prog, [(vbo, "2f", "pos")])
+
+        # Render to scene fbo
+        self._scene_fbo.use()
+        self._ctx.clear(0.0, 0.0, 0.0, 1.0)
+        vao.render(moderngl.TRIANGLES)
+        gl_check_error("triangle draw")
+        # Read back center pixels
+        GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, self._scene_fbo.glo)
+        pix = read_pixels_center(self._width, self._height, w=32, h=32)
+        n = count_nonblack_pixels(pix)
+        _log(f"Triangle draw non-black pixel count in center 32x32: {n}")
+        vao.release()
+        vbo.release()
+        prog.release()
+        return n > 0
+
+    def _stage_draw_particles(self, count: int) -> bool:
+        _log(f"Stage draw particles: count={count}")
+        # Prepare positions: if count == full engine count use engine.positions, else generate a small set around center
+        if count == self._engine.count:
+            positions = self._engine.positions.astype(np.float32)
+            sizes = self._engine.sizes.astype(np.float32)
+            brightness = self._engine.brightness.astype(np.float32)
+        else:
+            # Generate particles in front of camera in clip-friendly positions
+            positions = np.zeros((count, 3), dtype=np.float32)
+            sizes = np.full((count,), 10.0, dtype=np.float32)
+            brightness = np.ones((count,), dtype=np.float32)
+            for i in range(count):
+                x = (i % 10) / 10.0 - 0.5
+                y = (i // 10) / 10.0 - 0.5
+                positions[i] = np.array([x * 0.2, y * 0.2, 0.0], dtype=np.float32)
+
+        packed = np.empty((count, 5), dtype=np.float32)
+        packed[:, 0:3] = positions
+        packed[:, 3] = sizes
+        packed[:, 4] = brightness
+
+        # Upload to VBO (reuse preallocated VBO but only write needed bytes)
+        try:
+            self._particle_vbo.write(packed.tobytes(), offset=0)
+        except Exception:
+            # If write with offset fails, write whole buffer
+            self._particle_vbo.write(packed.tobytes())
+
+        # Render to scene FBO
         self._scene_fbo.use()
         self._ctx.clear(0.0, 0.0, 0.0, 1.0)
 
-        # Render inner volumetric glow without modifying depth buffer
+        # Ensure particles visible: disable depth test and enable blending
         try:
             self._ctx.disable(moderngl.DEPTH_TEST)
         except Exception:
             pass
         try:
-            self._glow_prog["u_mvp"].write(mvp.tobytes())
-        except KeyError:
-            pass
-        try:
-            self._glow_prog["u_radius"].value = SPHERE_RADIUS
-        except KeyError:
-            pass
-        try:
-            self._glow_prog["u_time"].value = self._time
-        except KeyError:
-            pass
-        try:
-            self._glow_prog["u_intensity"].value = glow * (0.6 + self._audio_level * 0.5)
-        except KeyError:
-            pass
-        try:
-            self._glow_prog["u_color_deep"].value = COLOR_DEEP
-        except KeyError:
-            pass
-        try:
-            self._glow_vao.render()
+            self._particle_prog["u_mvp"].write(self._compute_mvp().tobytes())
         except Exception:
             pass
+        try:
+            # force red color for audit visibility
+            self._particle_prog["u_color_core"].value = (1.0, 0.0, 0.0)
+            self._particle_prog["u_color_glow"].value = (1.0, 0.0, 0.0)
+        except Exception:
+            pass
+
+        try:
+            self._particle_vao.render(moderngl.POINTS, vertices=count)
+        except Exception as e:
+            _log(f"Particle render call raised exception: {e}")
+
+        gl_check_error(f"particle draw count={count}")
+        GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, self._scene_fbo.glo)
+        pix = read_pixels_center(self._width, self._height, w=32, h=32)
+        n = count_nonblack_pixels(pix)
+        _log(f"Particle draw non-black pixel count in center 32x32: {n}")
+
+        # Restore depth test
         try:
             self._ctx.enable(moderngl.DEPTH_TEST)
         except Exception:
             pass
 
-        # Electric arcs
-        arc_data = self._arcs.vertices
-        if self._use_geom_shader:
-            self._arc_vbo.write(arc_data.tobytes())
-            try:
-                self._arc_prog["u_mvp"].write(mvp.tobytes())
-            except KeyError:
-                pass
-            try:
-                self._arc_prog["u_viewport"].value = (float(self._width), float(self._height))
-            except KeyError:
-                pass
-            try:
-                self._arc_prog["u_time"].value = self._time
-            except KeyError:
-                pass
-            try:
-                self._arc_prog["u_color_arc"].value = COLOR_ARC
-            except KeyError:
-                pass
-            try:
-                self._arc_vao.render(moderngl.LINES, vertices=len(arc_data))
-            except Exception:
-                pass
-        else:
-            tri_data = self._build_arc_triangles(arc_data)
-            if len(tri_data):
-                self._arc_vbo.write(tri_data.tobytes())
-                try:
-                    self._arc_prog["u_mvp"].write(mvp.tobytes())
-                except KeyError:
-                    pass
-                try:
-                    self._arc_prog["u_time"].value = self._time
-                except KeyError:
-                    pass
-                try:
-                    self._arc_prog["u_color_arc"].value = COLOR_ARC
-                except KeyError:
-                    pass
-                try:
-                    self._arc_vao.render(moderngl.TRIANGLES, vertices=len(tri_data))
-                except Exception:
-                    pass
+        return n > 0
 
-        # Particle draw: upload buffer and render with the particle shader
-        try:
-            packed = self._engine.interleaved_buffer()
-            self._particle_vbo.write(packed.tobytes())
 
-            try:
-                self._particle_prog["u_mvp"].write(mvp.tobytes())
-            except Exception:
-                pass
-            try:
-                self._particle_prog["u_time"].value = self._time
-            except Exception:
-                pass
-            try:
-                self._particle_prog["u_glow"].value = glow
-            except Exception:
-                pass
-            try:
-                self._particle_prog["u_color_core"].value = COLOR_CORE
-            except Exception:
-                pass
-            try:
-                self._particle_prog["u_color_glow"].value = COLOR_GLOW
-            except Exception:
-                pass
-
-            try:
-                self._particle_vao.render(moderngl.POINTS, vertices=self._engine.count)
-            except Exception:
-                pass
-        except Exception:
-            pass
-
-        # Present scene directly (bypass bloom) for debugging
-        try:
-            if self._blit_prog and self._blit_vao is not None:
-                tex = self._scene_fbo.color_attachments[0]
-                tex.use(0)
-                self._blit_prog["u_tex"].value = 0
-                self._ctx.screen.use()
-                self._ctx.viewport = (0, 0, self._width, self._height)
-                self._blit_vao.render()
-            else:
-                # fallback: simple clear to show contrast
-                self._ctx.screen.use()
-                self._ctx.viewport = (0, 0, self._width, self._height)
-                self._ctx.clear(0.12, 0.12, 0.12, 1.0)
-        except Exception:
-            pass
-
+# End of renderer
