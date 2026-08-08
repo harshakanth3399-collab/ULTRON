@@ -51,6 +51,17 @@ def process(command: str):
         success, msg = check_and_apply_safe_updates()
         return True, msg
 
+    if "volume" in raw_command or "system status" in raw_command or "battery" in raw_command or "cpu" in raw_command:
+        from core.system_automation import execute_system_command
+        sys_res = execute_system_command(raw_command)
+        if sys_res:
+            return True, sys_res
+
+    if "connect phone" in raw_command or "mobile link" in raw_command or "phone link" in raw_command:
+        from web_server import get_local_ip, PORT
+        ip = get_local_ip()
+        return True, f"To connect your phone, Harsha: Open your phone browser and go to http://{ip}:{PORT}"
+
     if "check photos" in raw_command or "my photos" in raw_command:
         from modules.vision import check_new_photos
         photo_msg = check_new_photos()
