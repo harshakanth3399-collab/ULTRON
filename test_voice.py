@@ -1,4 +1,4 @@
-"""Voice Sample Generator for Harsha's Approved ULTRON Voice Selection."""
+"""Expanded Voice Suite Preview Tool for ULTRON."""
 
 import sys
 import asyncio
@@ -8,10 +8,16 @@ import tempfile
 import time
 
 VOICE_OPTIONS = {
-    "1": ("en-IN-PrabhatNeural", "-8%", "-8Hz", "Deep Male Indian English Neural Voice"),
-    "2": ("en-GB-RyanNeural", "-12%", "-20Hz", "Deep British J.A.R.V.I.S. Male Voice"),
-    "3": ("en-US-ChristopherNeural", "-6%", "-6Hz", "High-Testosterone Alpha Male Voice"),
-    "4": ("en-US-AndrewNeural", "-10%", "-2Hz", "Standard American Male Voice"),
+    "1": ("en-IN-PrabhatNeural", "-8%", "-8Hz", "Deep Male Indian English Accent (Currently Active)"),
+    "2": ("en-GB-RyanNeural", "-12%", "-20Hz", "Deep 40yo British MCU J.A.R.V.I.S. Accent"),
+    "3": ("en-GB-ThomasNeural", "-8%", "-10Hz", "Authoritative British Gentleman Accent"),
+    "4": ("en-US-ChristopherNeural", "-6%", "-6Hz", "High-Testosterone Alpha Male Accent"),
+    "5": ("en-US-EricNeural", "-10%", "-8Hz", "Commanding Cybernetic Male Accent"),
+    "6": ("en-US-GuyNeural", "-8%", "-10Hz", "Deep Classic American Male Accent"),
+    "7": ("en-US-SteffanNeural", "-8%", "-8Hz", "Deep Energetic Male Accent"),
+    "8": ("en-AU-WilliamNeural", "-8%", "-8Hz", "Deep Australian Male Accent"),
+    "9": ("en-CA-LiamNeural", "-8%", "-8Hz", "Deep Canadian Male Accent"),
+    "10": ("en-IE-ConnorNeural", "-8%", "-8Hz", "Deep Irish Male Accent"),
 }
 
 async def generate_sample(voice, rate, pitch, text, filename):
@@ -20,27 +26,63 @@ async def generate_sample(voice, rate, pitch, text, filename):
 
 def preview_voice(option_key):
     if option_key not in VOICE_OPTIONS:
-        print("Invalid option.")
+        print(f"Invalid option '{option_key}'. Choose 1 through 10.")
         return
 
     voice, rate, pitch, desc = VOICE_OPTIONS[option_key]
-    print(f"\n🔊 Playing Voice [{option_key}]: {desc} ({voice})...")
+    print(f"\n🔊 Playing Voice [{option_key}]: {desc}")
+    print(f"   Model: {voice} | Rate: {rate} | Pitch: {pitch}...")
 
     pygame.mixer.init()
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
         filename = f.name
 
-    text = f"Hey Harsha, what can I help you with? ULTRON online and ready."
-    asyncio.run(generate_sample(voice, rate, pitch, text, filename))
+    text = "Hey Harsha, what can I help you with? ULTRON online and ready for you."
+    try:
+        asyncio.run(generate_sample(voice, rate, pitch, text, filename))
 
-    pygame.mixer.music.load(filename)
-    pygame.mixer.music.play()
+        pygame.mixer.music.load(filename)
+        pygame.mixer.music.play()
 
-    while pygame.mixer.music.get_busy():
-        time.sleep(0.05)
+        while pygame.mixer.music.get_busy():
+            time.sleep(0.05)
 
-    pygame.mixer.music.unload()
+        pygame.mixer.music.unload()
+    except Exception as e:
+        print(f"Voice generation note: {e}")
+
+def set_active_voice(option_key):
+    if option_key not in VOICE_OPTIONS:
+        print(f"Invalid option '{option_key}'.")
+        return
+
+    voice, rate, pitch, desc = VOICE_OPTIONS[option_key]
+
+    with open("speech_engine.py", "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Update VOICE line
+    import re
+    content = re.sub(r'VOICE\s*=\s*".*?"', f'VOICE = "{voice}"', content)
+    content = re.sub(r'rate\s*=\s*".*?"', f'rate="{rate}"', content)
+    content = re.sub(r'pitch\s*=\s*".*?"', f'pitch="{pitch}"', content)
+
+    with open("speech_engine.py", "w", encoding="utf-8") as f:
+        f.write(content)
+
+    print(f"\n✅ SUCCESS! Locked ULTRON voice to [{option_key}]: {desc} ({voice})!")
 
 if __name__ == "__main__":
-    opt = sys.argv[1] if len(sys.argv) > 1 else "1"
-    preview_voice(opt)
+    if len(sys.argv) > 1:
+        cmd = sys.argv[1]
+        if len(sys.argv) > 2 and sys.argv[2] == "set":
+            set_active_voice(cmd)
+        else:
+            preview_voice(cmd)
+    else:
+        print("=== ULTRON VOICE SUITE ===")
+        for key, info in VOICE_OPTIONS.items():
+            print(f"  [{key}] {info[3]}")
+        print("\nUsage:")
+        print("  python test_voice.py 1       # Preview voice 1")
+        print("  python test_voice.py 1 set   # Set voice 1 as active ULTRON voice")
