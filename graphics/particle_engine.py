@@ -16,61 +16,58 @@ from graphics.state import UltronState
 
 
 def _generate_jarvis_matrix(count: int) -> np.ndarray:
-    """Generates MCU J.A.R.V.I.S. consciousness matrix: 4 concentric orbital ring disks + radial filaments + core."""
+    """Generates MCU J.A.R.V.I.S. consciousness matrix matching Tony Stark's lab screenshot."""
     pts = np.zeros((count, 3), dtype=np.float32)
 
-    # 1. 75% Concentric Orbital Ring Disks
-    ring_count = int(count * 0.75)
-    radii = [0.18, 0.30, 0.42, 0.54]
-    tilts = [(0.35, 0.4), (-0.45, 0.25), (0.55, -0.65), (-0.25, -0.35)]
+    # 1. 40% Swirling Spiral Galaxy Core (Center Swirl from photo)
+    core_count = int(count * 0.40)
+    theta = np.linspace(0, 16.0 * np.pi, core_count, dtype=np.float32)
+    r_spiral = 0.02 + (theta / (16.0 * np.pi)) * 0.26 + np.random.normal(0.0, 0.008, core_count).astype(np.float32)
+    # 3 Spiral arms
+    arm_offset = (np.arange(core_count) % 3) * (2.0 * np.pi / 3.0)
+    final_theta = theta + arm_offset
 
-    per_ring = ring_count // 4
-    for r_idx in range(4):
-        start = r_idx * per_ring
-        end = (r_idx + 1) * per_ring if r_idx < 3 else ring_count
-        n_pts = end - start
+    pts[0:core_count, 0] = np.cos(final_theta) * r_spiral
+    pts[0:core_count, 1] = np.sin(final_theta) * r_spiral
+    pts[0:core_count, 2] = np.random.normal(0.0, 0.01, core_count).astype(np.float32)
 
-        angles = np.random.uniform(0.0, 2.0 * np.pi, n_pts).astype(np.float32)
-        r_var = (radii[r_idx] + np.random.normal(0.0, 0.015, n_pts)).astype(np.float32)
-        h_var = np.random.normal(0.0, 0.01, n_pts).astype(np.float32)
+    # 2. 35% 2 Concentric Ring Tracks with Tick Marks (Inner Track r=0.32, Outer Track r=0.45)
+    track_count = int(count * 0.35)
+    t_start = core_count
+    t_end = t_start + track_count
+    n_track = t_end - t_start
 
-        x_local = np.cos(angles) * r_var
-        y_local = np.sin(angles) * r_var
-        z_local = h_var
+    t_angles = np.random.uniform(0.0, 2.0 * np.pi, n_track).astype(np.float32)
+    # Choose track 1 or track 2
+    track_select = np.random.choice([0.32, 0.45], size=n_track, p=[0.45, 0.55]).astype(np.float32)
+    track_r = track_select + np.random.normal(0.0, 0.006, n_track).astype(np.float32)
 
-        pitch, yaw = tilts[r_idx]
-        cp, sp = np.cos(pitch), np.sin(pitch)
-        cy, sy = np.cos(yaw), np.sin(yaw)
+    pts[t_start:t_end, 0] = np.cos(t_angles) * track_r
+    pts[t_start:t_end, 1] = np.sin(t_angles) * track_r
+    pts[t_start:t_end, 2] = np.random.normal(0.0, 0.008, n_track).astype(np.float32)
 
-        x = x_local * cy + z_local * sy
-        y = y_local * cp - (z_local * cy - x_local * sy) * sp
-        z = y_local * sp + (z_local * cy - x_local * sy) * cp
+    # 3. 25% Outer Radial Frequency Spikes (Radiating from 0.45 to 0.58 in 48 spokes)
+    spike_start = t_end
+    n_spike = count - spike_start
 
-        pts[start:end] = np.stack((x, y, z), axis=1)
+    spoke_id = np.random.randint(0, 48, n_spike)
+    spoke_base_angle = spoke_id * (2.0 * np.pi / 48.0)
+    spoke_angle = spoke_base_angle + np.random.normal(0.0, 0.005, n_spike).astype(np.float32)
+    spike_dist = np.random.uniform(0.45, 0.58, n_spike).astype(np.float32)
 
-    # 2. 15% Radial Filament Spokes (Spikes bursting from center)
-    spoke_count = int(count * 0.15)
-    spoke_start = ring_count
-    spoke_end = spoke_start + spoke_count
+    pts[spike_start:, 0] = np.cos(spoke_angle) * spike_dist
+    pts[spike_start:, 1] = np.sin(spoke_angle) * spike_dist
+    pts[spike_start:, 2] = np.random.normal(0.0, 0.008, n_spike).astype(np.float32)
 
-    spoke_angles = ((np.arange(spoke_count) % 36) * (2.0 * np.pi / 36.0) + np.random.normal(0.0, 0.02, spoke_count)).astype(np.float32)
-    dist = np.random.uniform(0.05, 0.58, spoke_count).astype(np.float32)
-    h_spoke = np.random.normal(0.0, 0.02, spoke_count).astype(np.float32)
+    # Global subtle 3D tilt plane (like the screenshot perspective)
+    pitch, yaw = 0.25, 0.15
+    cp, sp = np.cos(pitch), np.sin(pitch)
+    cy, sy = np.cos(yaw), np.sin(yaw)
 
-    pts[spoke_start:spoke_end, 0] = np.cos(spoke_angles) * dist
-    pts[spoke_start:spoke_end, 1] = np.sin(spoke_angles) * dist
-    pts[spoke_start:spoke_end, 2] = h_spoke
-
-    # 3. 10% Swirling Central Core Cluster
-    core_start = spoke_end
-    n_core = count - core_start
-    core_r = np.random.uniform(0.0, 0.12, n_core).astype(np.float32)
-    core_phi = np.random.uniform(0.0, 2.0 * np.pi, n_core).astype(np.float32)
-    core_theta = np.random.uniform(0.0, np.pi, n_core).astype(np.float32)
-
-    pts[core_start:, 0] = core_r * np.sin(core_theta) * np.cos(core_phi)
-    pts[core_start:, 1] = core_r * np.sin(core_theta) * np.sin(core_phi)
-    pts[core_start:, 2] = core_r * np.cos(core_theta)
+    x_orig, y_orig, z_orig = pts[:, 0].copy(), pts[:, 1].copy(), pts[:, 2].copy()
+    pts[:, 0] = x_orig * cy + z_orig * sy
+    pts[:, 1] = y_orig * cp - (z_orig * cy - x_orig * sy) * sp
+    pts[:, 2] = y_orig * sp + (z_orig * cy - x_orig * sy) * cp
 
     return pts
 

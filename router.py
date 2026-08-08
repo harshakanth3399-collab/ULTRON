@@ -46,6 +46,15 @@ def process(command: str):
             return True, f"Local model training complete, Harsha! ULTRON is now running on your custom 'ultron-harsha' model weights."
         return True, f"Training note: {msg}"
 
+    if raw_command.startswith("search the web for") or raw_command.startswith("search web for") or raw_command.startswith("search for"):
+        from modules.internet import search_web_live
+        query = raw_command.replace("search the web for", "").replace("search web for", "").replace("search for", "").strip()
+        web_info = search_web_live(query)
+        if web_info:
+            ai_summary = ask_ai(f"Based on these live web search results for '{query}', answer Harsha directly in 1-2 short sentences:\n{web_info}")
+            return True, ai_summary
+        return True, f"I searched the web for '{query}', Harsha, but found no recent updates."
+
     corrected_cmd = correct(raw_command)
     tasks = plan(corrected_cmd)
     replies = []
