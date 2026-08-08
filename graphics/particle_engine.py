@@ -46,17 +46,17 @@ def _generate_jarvis_matrix(count: int) -> np.ndarray:
     pts[t_start:t_end, 1] = np.sin(t_angles) * track_r
     pts[t_start:t_end, 2] = np.random.normal(0.0, 0.008, n_track).astype(np.float32)
 
-    # 3. 25% Outer Radial Frequency Spikes (Radiating from 0.45 to 0.58 in 48 spokes)
+    # 3. 25% Organic Neural Filaments & Curved Wave Arcs (Movie Neural Matrix)
     spike_start = t_end
     n_spike = count - spike_start
 
-    spoke_id = np.random.randint(0, 48, n_spike)
-    spoke_base_angle = spoke_id * (2.0 * np.pi / 48.0)
-    spoke_angle = spoke_base_angle + np.random.normal(0.0, 0.005, n_spike).astype(np.float32)
-    spike_dist = np.random.uniform(0.45, 0.58, n_spike).astype(np.float32)
+    sp_angles = np.random.uniform(0.0, 2.0 * np.pi, n_spike).astype(np.float32)
+    # Logarithmic curved filaments bridging across tracks
+    curve_wave = 0.42 + 0.12 * np.sin(sp_angles * 7.0 + np.cos(sp_angles * 3.0) * 2.0)
+    sp_dist = (curve_wave + np.random.normal(0.0, 0.012, n_spike)).astype(np.float32)
 
-    pts[spike_start:, 0] = np.cos(spoke_angle) * spike_dist
-    pts[spike_start:, 1] = np.sin(spoke_angle) * spike_dist
+    pts[spike_start:, 0] = np.cos(sp_angles) * sp_dist
+    pts[spike_start:, 1] = np.sin(sp_angles) * sp_dist
     pts[spike_start:, 2] = np.random.normal(0.0, 0.008, n_spike).astype(np.float32)
 
     # Global subtle 3D tilt plane (like the screenshot perspective)

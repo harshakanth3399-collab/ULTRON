@@ -88,46 +88,48 @@ class MicButton(QWidget):
         painter.setPen(pen)
         painter.drawEllipse(int(cx - r), int(cy - r), int(r * 2), int(r * 2))
 
-        painter.setPen(Qt.NoPen)
-        painter.setBrush(QColor(255, 220, 210, 230))
+        # Futuristic HUD Mic Icon Vector Rendering
+        mic_r = r * 0.28
+        mic_capsule_h = r * 0.42
 
-        mic_w = r * 0.34
-        mic_h = r * 0.48
-        mic_x = cx - mic_w * 0.5
-        mic_y = cy - mic_h * 0.55
+        # Capsule Body
+        capsule_pen = QPen(QColor(255, 240, 230, 240))
+        capsule_pen.setWidthF(2.5)
+        painter.setPen(capsule_pen)
+        painter.setBrush(QColor(255, 240, 230, 240))
         painter.drawRoundedRect(
-            int(mic_x), int(mic_y), int(mic_w), int(mic_h), int(mic_w * 0.45), int(mic_w * 0.45)
+            int(cx - mic_r * 0.5),
+            int(cy - mic_capsule_h * 0.55),
+            int(mic_r),
+            int(mic_capsule_h),
+            int(mic_r * 0.5),
+            int(mic_r * 0.5)
         )
 
-        arc_r = mic_w * 0.72
-        arc_pen = QPen(QColor(255, 220, 210, 220))
-        arc_pen.setWidthF(max(2.0, r * 0.07))
-        arc_pen.setCapStyle(Qt.RoundCap)
-        painter.setPen(arc_pen)
+        # U-shaped Outer Pickup Arc
+        u_pen = QPen(QColor(255, 240, 230, 240))
+        u_pen.setWidthF(2.8)
+        u_pen.setCapStyle(Qt.RoundCap)
+        painter.setPen(u_pen)
         painter.setBrush(Qt.NoBrush)
-        rect_x = cx - arc_r
-        rect_y = cy - arc_r * 0.35
+
+        u_r = mic_r * 0.85
         painter.drawArc(
-            int(rect_x),
-            int(rect_y),
-            int(arc_r * 2),
-            int(arc_r * 2),
-            30 * 16,
-            120 * 16,
+            int(cx - u_r),
+            int(cy - u_r * 0.3),
+            int(u_r * 2),
+            int(u_r * 2),
+            -15 * 16,
+            -150 * 16
         )
 
-        stem_pen = QPen(QColor(255, 220, 210, 220))
-        stem_pen.setWidthF(max(2.0, r * 0.07))
-        stem_pen.setCapStyle(Qt.RoundCap)
-        painter.setPen(stem_pen)
-        painter.drawLine(int(cx), int(cy + arc_r * 0.55), int(cx), int(cy + r * 0.55))
+        # Vertical Stand Stem
+        stem_y_start = cy + u_r * 0.7
+        stem_y_end = cy + r * 0.45
+        painter.drawLine(int(cx), int(stem_y_start), int(cx), int(stem_y_end))
 
-        base_w = mic_w * 0.9
-        painter.drawLine(
-            int(cx - base_w * 0.5),
-            int(cy + r * 0.55),
-            int(cx + base_w * 0.5),
-            int(cy + r * 0.55),
-        )
+        # Horizontal Stand Base
+        base_w = r * 0.35
+        painter.drawLine(int(cx - base_w * 0.5), int(stem_y_end), int(cx + base_w * 0.5), int(stem_y_end))
 
         painter.end()

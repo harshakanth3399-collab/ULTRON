@@ -35,6 +35,7 @@ class UltronWindow(QMainWindow):
 
         self._pulse_time = 0.0
         self._busy = False
+        self._is_floating = False
         self._listen_thread: threading.Thread | None = None
 
         self._ui_timer = QTimer(self)
@@ -42,6 +43,25 @@ class UltronWindow(QMainWindow):
         self._ui_timer.start(FRAME_MS)
 
         self.showFullScreen()
+
+    def toggle_floating_mode(self) -> None:
+        """Toggles between Fullscreen and 1-inch Always-on-Top Floating Desktop Widget mode."""
+        self._is_floating = not self._is_floating
+        if self._is_floating:
+            self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Tool)
+            screen_geo = self.screen().geometry()
+            widget_w, widget_h = 160, 160
+            self.setGeometry(screen_geo.width() - widget_w - 30, screen_geo.height() - widget_h - 60, widget_w, widget_h)
+            self._mic.hide()
+            self.show()
+        else:
+            self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint)
+            self._mic.show()
+            self.showFullScreen()
+
+    def mouseDoubleClickEvent(self, event) -> None:
+        self.toggle_floating_mode()
+        super().mouseDoubleClickEvent(event)
 
     def _is_speaking(self) -> bool:
         try:
@@ -53,9 +73,10 @@ class UltronWindow(QMainWindow):
 
     def resizeEvent(self, event) -> None:
         self._renderer.setGeometry(self._container.rect())
-        mic_x = self.width() - self._mic.width() - 40
-        mic_y = self.height() - self._mic.height() - 40
-        self._mic.move(mic_x, mic_y)
+        if not self._is_floating:
+            mic_x = self.width() - self._mic.width() - 40
+            mic_y = self.height() - self._mic.height() - 40
+            self._mic.move(mic_x, mic_y)
         super().resizeEvent(event)
 
     def _update_ui(self) -> None:
@@ -114,6 +135,8 @@ class UltronWindow(QMainWindow):
     def keyPressEvent(self, event) -> None:
         if event.key() == Qt.Key_Escape:
             self.close()
+        elif event.key() in (Qt.Key_F11, Qt.Key_Tab):
+            self.toggle_floating_mode()
         elif event.key() in (Qt.Key_Return, Qt.Key_Space):
             self._on_mic_pressed()
         super().keyPressEvent(event)
