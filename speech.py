@@ -34,10 +34,11 @@ model = WhisperModel(
 print("[VOICE] Faster-Whisper English model ready.")
 
 recognizer = sr.Recognizer()
-recognizer.dynamic_energy_threshold = True
-recognizer.pause_threshold = 0.6
-recognizer.non_speaking_duration = 0.2
-recognizer.phrase_threshold = 0.3
+recognizer.energy_threshold = 150  # Ultra-high microphone sensitivity
+recognizer.dynamic_energy_threshold = False  # Prevent threshold from drifting up
+recognizer.pause_threshold = 0.8
+recognizer.non_speaking_duration = 0.3
+recognizer.phrase_threshold = 0.25
 
 WAKE_WORDS = {"ultron", "hey ultron", "hi ultron", "ok ultron", "okay ultron", "hello ultron"}
 
@@ -124,7 +125,6 @@ def listen_for_audio(timeout: float = 6.0, phrase_time_limit: float = 8.0) -> by
 
     try:
         with sr.Microphone(sample_rate=16000) as source:
-            recognizer.adjust_for_ambient_noise(source, duration=0.1)
             audio = recognizer.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
             return audio.get_wav_data()
     except sr.WaitTimeoutError:
