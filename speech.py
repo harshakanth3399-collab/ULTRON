@@ -1,39 +1,49 @@
-from faster_whisper import WhisperModel
-import speech_recognition as sr
-import tempfile
-import os
+"""Speech Recognition & Wake Word Detection Engine for ULTRON."""
+
+from __future__ import annotations
+
 import io
+import os
+import time
 import wave
 import audioop
+import tempfile
+import speech_recognition as sr
+from faster_whisper import WhisperModel
 
-# Try to import local corrector; fall back to identity if missing
 try:
     from corrector import correct
 except Exception:
-    def correct(text):
+    def correct(text: str) -> str:
         return text
 
-print("Loading Faster-Whisper model (for English commands)...")
+try:
+    from speech_engine import speaking
+except Exception:
+    def speaking() -> bool:
+        return False
 
+
+# Faster-Whisper Model locked to English only
+print("[VOICE] Loading Faster-Whisper English model...")
 model = WhisperModel(
     "tiny.en",
     device="cpu",
     compute_type="int8"
 )
-
-print("Faster-Whisper instant engine loaded.")
+print("[VOICE] Faster-Whisper English model ready.")
 
 recognizer = sr.Recognizer()
-
-# Instant timing tuning
 recognizer.dynamic_energy_threshold = True
-recognizer.pause_threshold = 0.5
+recognizer.pause_threshold = 0.6
 recognizer.non_speaking_duration = 0.2
-recognizer.phrase_threshold = 0.2
+recognizer.phrase_threshold = 0.3
+
+WAKE_WORDS = {"ultron", "hey ultron", "hi ultron", "ok ultron", "okay ultron", "hello ultron"}
 
 
-def _normalize_wav_bytes(wav_bytes: bytes, target_rate: int = 16000) -> bytes:
-    """Normalize WAV audio amplitude to near-full scale without clipping."""
+def _normalize_wav_bytes(wav_bytes: bytes) -> bytes:
+    """Normalize WAV audio amplitude safely."""
     try:
         bio = io.BytesIO(wav_bytes)
         with wave.open(bio, 'rb') as r:
@@ -63,30 +73,27 @@ def _normalize_wav_bytes(wav_bytes: bytes, target_rate: int = 16000) -> bytes:
         return wav_bytes
 
 
-def listen():
+def _wait_if_speaking() -> None:
+    """Prevents ULTRON from hearing its own TTS voice."""
+    if speaking():
+        print("[VOICE] TTS playback active — pausing microphone capture.")
+        while speaking():
+            time.sleep(0.05)
+        time.sleep(0.25)  # 250ms grace period for speaker echo to dissipate
 
+
+def transcribe_audio_bytes(wav_bytes: bytes) -> str:
+    """Transcribes audio bytes strictly to English using Faster-Whisper."""
+    if not wav_bytes:
+        return ""
+
+    normalized = _normalize_wav_bytes(wav_bytes)
+    filename = ""
     try:
-        with sr.Microphone(sample_rate=16000) as source:
-
-            print("\n🎤 Listening...")
-
-            # Quick 0.1s ambient check for instant start
-            recognizer.adjust_for_ambient_noise(source, duration=0.1)
-
-            audio = recognizer.listen(
-                source,
-                timeout=8,
-                phrase_time_limit=12
-            )
-
-        raw_wav = audio.get_wav_data()
-        normalized_wav = _normalize_wav_bytes(raw_wav, target_rate=16000)
-
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
-            f.write(normalized_wav)
+            f.write(normalized)
             filename = f.name
 
-        # Fast 0.2s transcription using base.en model
         segments, info = model.transcribe(
             filename,
             language="en",
@@ -97,30 +104,39 @@ def listen():
             condition_on_previous_text=False
         )
 
-        # Build raw transcription from segments
         raw_text = "".join(segment.text for segment in segments).strip()
-
-        # Print raw transcription
-        print("Raw transcription:", raw_text)
-
-        # Apply spelling/word corrections used by router
         final_text = correct(raw_text)
-
-        # Print final corrected command
-        print("Final corrected command:", final_text)
-
-        # Clean up temp file
-        if os.path.exists(filename):
-            os.remove(filename)
-
         return final_text
-
-    except sr.WaitTimeoutError:
-        return ""
-
-    except KeyboardInterrupt:
-        return ""
-
     except Exception as e:
-        print("Speech Error:", e)
+        print(f"[VOICE] Transcription exception: {e}")
         return ""
+    finally:
+        if filename and os.path.exists(filename):
+            try:
+                os.remove(filename)
+            except Exception:
+                pass
+
+
+def listen_for_audio(timeout: float = 6.0, phrase_time_limit: float = 8.0) -> bytes:
+    """Captures microphone audio safely with TTS self-hearing protection."""
+    _wait_if_speaking()
+
+    try:
+        with sr.Microphone(sample_rate=16000) as source:
+            recognizer.adjust_for_ambient_noise(source, duration=0.1)
+            audio = recognizer.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
+            return audio.get_wav_data()
+    except sr.WaitTimeoutError:
+        return b""
+    except Exception as e:
+        print(f"[VOICE] Microphone capture error: {e}")
+        return b""
+
+
+def listen() -> str:
+    """Backward-compatible single-shot listen function."""
+    wav_bytes = listen_for_audio(timeout=6.0, phrase_time_limit=8.0)
+    if not wav_bytes:
+        return ""
+    return transcribe_audio_bytes(wav_bytes)
