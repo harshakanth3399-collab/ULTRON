@@ -9,6 +9,7 @@ from typing import Callable, List, Optional
 
 class VoiceState(Enum):
     IDLE = "IDLE"
+    WAKE_LISTENING = "WAKE LISTENING"
     WAKE_DETECTED = "WAKE DETECTED"
     GREETING = "GREETING"
     LISTENING = "LISTENING"
