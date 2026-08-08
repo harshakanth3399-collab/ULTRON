@@ -40,7 +40,11 @@ recognizer.pause_threshold = 0.8
 recognizer.non_speaking_duration = 0.3
 recognizer.phrase_threshold = 0.25
 
-WAKE_WORDS = {"ultron", "hey ultron", "hi ultron", "ok ultron", "okay ultron", "hello ultron"}
+WAKE_WORDS = {
+    "ultron", "hey ultron", "hi ultron", "ok ultron", "okay ultron", "hello ultron",
+    "yo ultron", "bro ultron", "ultram", "ultra", "altron", "all tron", "old tron",
+    "ul tron", "hey ultra", "hi ultra", "hey altron"
+}
 
 
 def _normalize_wav_bytes(wav_bytes: bytes) -> bytes:

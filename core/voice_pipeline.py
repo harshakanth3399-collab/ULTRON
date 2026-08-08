@@ -61,7 +61,7 @@ class VoicePipeline:
         time.sleep(0.2)  # Echo grace period
 
     def _extract_wake_word_and_command(self, text: str) -> tuple[bool, str]:
-        """Checks if text contains a wake word and extracts any appended command."""
+        """Checks if text contains any wake word or phonetic variant for instant awakening."""
         clean = text.lower().strip()
         if not clean:
             return False, ""
@@ -73,10 +73,12 @@ class VoicePipeline:
                 cmd = clean[len(wake):].strip()
                 return True, cmd
 
-        # Also match if 'ultron' is present anywhere in the text
-        if "ultron" in clean:
-            cmd = clean.replace("hey ultron", "").replace("hi ultron", "").replace("ultron", "").strip()
-            return True, cmd
+        import re
+        wake_triggers = ["ultron", "ultra", "ultram", "altron", "alltron", "oldtron", "tron"]
+        for trig in wake_triggers:
+            if trig in clean:
+                cmd = re.sub(r'^(hey|hi|hello|ok|okay|yo|bro)?\s*(ultron|ultra|ultram|altron|alltron|oldtron|tron)\s*', '', clean).strip()
+                return True, cmd
 
         return False, ""
 
