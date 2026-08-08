@@ -38,7 +38,7 @@ def preview_voice(option_key):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
         filename = f.name
 
-    text = f"Voice Option {option_key}. {desc}. Hey Harsha, what can I help you with? ULTRON online."
+    text = f"Voice Option {option_key}. {desc}. Hey Har-sha, what can I help you with? ULTRON online."
     try:
         asyncio.run(generate_sample(voice, rate, pitch, text, filename))
 

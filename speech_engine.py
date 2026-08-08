@@ -13,10 +13,16 @@ _current_thread = None
 _is_speaking = False
 
 
+def _fix_phonetics(text: str) -> str:
+    """Ensures smooth single-word pronunciation of 'Harsha' without gaps or 'Her Shaw' breaks."""
+    return text.replace("Harsha", "Har-sha").replace("harsha", "har-sha")
+
+
 async def _generate(text, filename):
 
+    clean_text = _fix_phonetics(text)
     communicate = edge_tts.Communicate(
-        text=text,
+        text=clean_text,
         voice=VOICE,
         rate="-10%",
         pitch="-14Hz"
