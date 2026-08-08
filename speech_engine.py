@@ -1,43 +1,52 @@
 """
-speech_engine.py — TTS Engine for ULTRON.
+speech_engine.py - ULTRON TTS Engine
 
-LOCKED VOICE: en-GB-RyanNeural (Deep British J.A.R.V.I.S.)
-DO NOT CHANGE THE VOICE.
+LOCKED VOICE: en-GB-RyanNeural (Deep British) - DO NOT CHANGE.
 
-FIXES:
-  - Race condition: _is_speaking now set to True BEFORE thread starts,
-    cleared only when _play() finishes. This ensures _speak_and_wait()
-    cannot return prematurely.
-  - speech.set_speaking() syncs the atomic event in speech.py
-    so microphone blocks reliably while TTS is playing.
+ROOT CAUSE FIX:
+  The previous version set _is_speaking=True before the audio even started
+  generating, then the pipeline polled speaking() which was still False during
+  edge-tts network call (1-3s on Jio hotspot), returned prematurely, opened
+  microphone WHILE greeting was still playing -> self-hearing -> silent failure.
+
+FIX:
+  1. _ready_event: set only when pygame.mixer.music.play() is CONFIRMED called.
+  2. _done_event: set when playback ends.
+  3. speak() signals _is_speaking=True immediately so pipeline knows to wait,
+     but _ready_event gates the actual poll.
+  4. wait_until_done() blocks pipeline until playback truly finishes.
 """
+from __future__ import annotations
 
 import asyncio
-import threading
-import edge_tts
-import pygame
 import os
 import tempfile
+import threading
 
-# ─── Locked Voice Configuration ──────────────────────────────────────────────
+import edge_tts
+import pygame
+
+# ── Locked voice config ────────────────────────────────────────────────────────
 VOICE = "en-GB-RyanNeural"
-RATE = "-10%"
+RATE  = "-10%"
 PITCH = "-14Hz"
 
+pygame.mixer.pre_init(44100, -16, 1, 512)
 pygame.mixer.init()
 
-_lock = threading.Lock()
-_is_speaking = False
-_current_thread: threading.Thread | None = None
+_lock         = threading.Lock()
+_is_speaking  = False
+_ready_event  = threading.Event()   # set when audio starts playing
+_done_event   = threading.Event()   # set when playback finishes
+_stop_flag    = threading.Event()   # set to interrupt current playback
 
 
 def _fix_phonetics(text: str) -> str:
-    """Forces correct single-breath 'Harsha' pronunciation in British TTS."""
+    """Smooth single-breath 'Harsha' in British TTS."""
     return text.replace("Harsha", "Hur-sha").replace("harsha", "hur-sha")
 
 
-def _set_speaking_state(state: bool) -> None:
-    """Atomically updates speaking state and notifies speech.py."""
+def _set_speaking(state: bool) -> None:
     global _is_speaking
     _is_speaking = state
     try:
@@ -47,26 +56,55 @@ def _set_speaking_state(state: bool) -> None:
         pass
 
 
-async def _generate(text: str, filename: str) -> None:
-    clean = _fix_phonetics(text)
-    communicate = edge_tts.Communicate(text=clean, voice=VOICE, rate=RATE, pitch=PITCH)
-    await communicate.save(filename)
-
-
 def _play(text: str) -> None:
-    """Generates and plays TTS audio. Runs in background thread."""
+    """Generates and plays TTS. Runs in background thread."""
+    global _is_speaking
     filename = ""
+    _ready_event.clear()
+    _done_event.clear()
+
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
             filename = f.name
 
-        asyncio.run(_generate(text, filename))
+        # ── Generate audio (this is the slow step: 1-3s on Jio hotspot) ──────
+        try:
+            clean = _fix_phonetics(text)
+            communicate = edge_tts.Communicate(
+                text=clean, voice=VOICE, rate=RATE, pitch=PITCH
+            )
+            asyncio.run(communicate.save(filename))
+        except Exception as e:
+            print(f"[TTS] edge-tts generation failed: {e}")
+            _set_speaking(False)
+            _done_event.set()
+            return
 
+        if _stop_flag.is_set():
+            _set_speaking(False)
+            _done_event.set()
+            return
+
+        # ── Load and play ──────────────────────────────────────────────────
         with _lock:
-            pygame.mixer.music.load(filename)
-            pygame.mixer.music.play()
+            try:
+                pygame.mixer.music.load(filename)
+                pygame.mixer.music.play()
+                print(f"[TTS] Playing: '{text[:60]}...'")
+            except Exception as e:
+                print(f"[TTS] Pygame play error: {e}")
+                _set_speaking(False)
+                _done_event.set()
+                return
 
+        # Signal that audio is NOW actually playing
+        _ready_event.set()
+
+        # Wait for playback to finish
         while pygame.mixer.music.get_busy():
+            if _stop_flag.is_set():
+                pygame.mixer.music.stop()
+                break
             pygame.time.Clock().tick(30)
 
         try:
@@ -75,9 +113,10 @@ def _play(text: str) -> None:
             pass
 
     except Exception as e:
-        print(f"[TTS] Error: {e}")
+        print(f"[TTS] Unexpected error: {e}")
     finally:
-        _set_speaking_state(False)
+        _set_speaking(False)
+        _done_event.set()
         if filename:
             try:
                 os.remove(filename)
@@ -87,36 +126,47 @@ def _play(text: str) -> None:
 
 def speak(text: str) -> None:
     """
-    Speaks text using LOCKED en-GB-RyanNeural voice.
-
-    FIX: Sets _is_speaking=True BEFORE launching the thread so that
-    _speak_and_wait() in voice_pipeline cannot return prematurely.
+    Speak text using locked en-GB-RyanNeural voice.
+    Returns immediately — playback happens in background thread.
+    Call wait_until_done() to block until audio finishes.
     """
-    global _current_thread
-
     if not text or not text.strip():
         return
 
-    # Stop any existing playback
-    stop()
+    stop()  # Stop any existing playback first
+    _stop_flag.clear()
+    _set_speaking(True)  # Mark speaking before thread so pipeline waits
 
-    # Mark speaking TRUE before thread starts (eliminates race condition)
-    _set_speaking_state(True)
+    thread = threading.Thread(target=_play, args=(text,), daemon=True)
+    thread.start()
 
-    _current_thread = threading.Thread(target=_play, args=(text,), daemon=True)
-    _current_thread.start()
+
+def wait_until_done(timeout: float = 120.0) -> None:
+    """
+    Block caller until TTS playback is fully complete.
+    First waits for audio to start playing, then waits for it to finish.
+    This eliminates the race condition where the pipeline resumed before audio played.
+    """
+    # Wait for audio to actually start (survives slow edge-tts generation on Jio)
+    if not _ready_event.wait(timeout=timeout):
+        print("[TTS] wait_until_done: timed out waiting for audio to start")
+        return
+    # Now wait for playback to finish
+    if not _done_event.wait(timeout=timeout):
+        print("[TTS] wait_until_done: timed out waiting for audio to finish")
 
 
 def stop() -> None:
-    """Stops current TTS playback immediately."""
-    global _is_speaking
+    """Immediately stop current playback."""
+    _stop_flag.set()
     try:
         if pygame.mixer.music.get_busy():
             pygame.mixer.music.stop()
         pygame.mixer.music.unload()
     except Exception:
         pass
-    _set_speaking_state(False)
+    _set_speaking(False)
+    _done_event.set()
 
 
 def speaking() -> bool:
