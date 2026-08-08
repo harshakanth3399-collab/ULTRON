@@ -15,20 +15,68 @@ from graphics.noise import fbm3, simplex3
 from graphics.state import UltronState
 
 
-def _fibonacci_sphere(count: int, radius: float) -> np.ndarray:
-    """Even distribution of points on a sphere."""
-    golden = np.pi * (3.0 - np.sqrt(5.0))
-    i = np.arange(count, dtype=np.float32)
-    y = 1.0 - (2.0 * i + 1.0) / count
-    r = np.sqrt(np.clip(1.0 - y * y, 0.0, None))
-    theta = golden * i
-    x = np.cos(theta) * r
-    z = np.sin(theta) * r
-    return np.stack((x, y, z), axis=1) * radius
+def _generate_jarvis_matrix(count: int) -> np.ndarray:
+    """Generates MCU J.A.R.V.I.S. consciousness matrix: 4 concentric orbital ring disks + radial filaments + core."""
+    pts = np.zeros((count, 3), dtype=np.float32)
+
+    # 1. 75% Concentric Orbital Ring Disks
+    ring_count = int(count * 0.75)
+    radii = [0.18, 0.30, 0.42, 0.54]
+    tilts = [(0.35, 0.4), (-0.45, 0.25), (0.55, -0.65), (-0.25, -0.35)]
+
+    per_ring = ring_count // 4
+    for r_idx in range(4):
+        start = r_idx * per_ring
+        end = (r_idx + 1) * per_ring if r_idx < 3 else ring_count
+        n_pts = end - start
+
+        angles = np.random.uniform(0.0, 2.0 * np.pi, n_pts).astype(np.float32)
+        r_var = (radii[r_idx] + np.random.normal(0.0, 0.015, n_pts)).astype(np.float32)
+        h_var = np.random.normal(0.0, 0.01, n_pts).astype(np.float32)
+
+        x_local = np.cos(angles) * r_var
+        y_local = np.sin(angles) * r_var
+        z_local = h_var
+
+        pitch, yaw = tilts[r_idx]
+        cp, sp = np.cos(pitch), np.sin(pitch)
+        cy, sy = np.cos(yaw), np.sin(yaw)
+
+        x = x_local * cy + z_local * sy
+        y = y_local * cp - (z_local * cy - x_local * sy) * sp
+        z = y_local * sp + (z_local * cy - x_local * sy) * cp
+
+        pts[start:end] = np.stack((x, y, z), axis=1)
+
+    # 2. 15% Radial Filament Spokes (Spikes bursting from center)
+    spoke_count = int(count * 0.15)
+    spoke_start = ring_count
+    spoke_end = spoke_start + spoke_count
+
+    spoke_angles = ((np.arange(spoke_count) % 36) * (2.0 * np.pi / 36.0) + np.random.normal(0.0, 0.02, spoke_count)).astype(np.float32)
+    dist = np.random.uniform(0.05, 0.58, spoke_count).astype(np.float32)
+    h_spoke = np.random.normal(0.0, 0.02, spoke_count).astype(np.float32)
+
+    pts[spoke_start:spoke_end, 0] = np.cos(spoke_angles) * dist
+    pts[spoke_start:spoke_end, 1] = np.sin(spoke_angles) * dist
+    pts[spoke_start:spoke_end, 2] = h_spoke
+
+    # 3. 10% Swirling Central Core Cluster
+    core_start = spoke_end
+    n_core = count - core_start
+    core_r = np.random.uniform(0.0, 0.12, n_core).astype(np.float32)
+    core_phi = np.random.uniform(0.0, 2.0 * np.pi, n_core).astype(np.float32)
+    core_theta = np.random.uniform(0.0, np.pi, n_core).astype(np.float32)
+
+    pts[core_start:, 0] = core_r * np.sin(core_theta) * np.cos(core_phi)
+    pts[core_start:, 1] = core_r * np.sin(core_theta) * np.sin(core_phi)
+    pts[core_start:, 2] = core_r * np.cos(core_theta)
+
+    return pts
 
 
 class ParticleEngine:
-    """Maintains tens of thousands of particles locked to a turbulent sphere shell."""
+    """Maintains tens of thousands of particles forming the MCU J.A.R.V.I.S. Matrix."""
 
     __slots__ = (
         "count",
@@ -43,7 +91,7 @@ class ParticleEngine:
 
     def __init__(self, count: int = PARTICLE_COUNT) -> None:
         self.count = count
-        self._base = _fibonacci_sphere(count, SPHERE_RADIUS).astype(np.float32)
+        self._base = _generate_jarvis_matrix(count)
         self._positions = self._base.copy()
         self._velocity = np.zeros((count, 3), dtype=np.float32)
         self._phase = np.random.uniform(0.0, 6.28318, count).astype(np.float32)
@@ -90,26 +138,15 @@ class ParticleEngine:
         audio_pulse = audio * 0.22 * (1.0 + np.sin(time * 12.0 + self._phase * 3.0))
 
         displacement = np.stack((n1, n2, n3), axis=1).astype(np.float32)
-        displacement *= 0.055 * (turbulence + audio * 1.8)
+        displacement *= 0.035 * (turbulence + audio * 1.5)
 
-        radius_mod = SPHERE_RADIUS * (1.0 + pulse + audio_pulse)
-        direction = self._base / (np.linalg.norm(self._base, axis=1, keepdims=True) + 1e-8)
+        radius_mod = 1.0 + pulse + audio_pulse
+        self._positions = self._base * radius_mod[:, np.newaxis] + displacement
 
-        self._positions = direction * radius_mod[:, np.newaxis] + displacement
-
-        # Plasma swirl: tangential drift along surface (Jarvis/Ultron orb effect)
-        tangent = np.cross(direction, np.array([0.0, 1.0, 0.0], dtype=np.float32))
-        t_len = np.linalg.norm(tangent, axis=1, keepdims=True)
-        fallback = np.cross(direction, np.array([1.0, 0.0, 0.0], dtype=np.float32))
-        tangent = np.where(t_len > 1e-4, tangent / np.maximum(t_len, 1e-4), fallback)
-
-        swirl_strength = 0.006 * (turbulence + audio * 2.5)
-        self._positions += tangent * (n3 * swirl_strength)[:, np.newaxis]
-
-        # Re-normalize to shell with voice-driven thickness expansion
-        shell_radius = np.linalg.norm(self._positions, axis=1, keepdims=True)
-        target_r = SPHERE_RADIUS * (1.0 + pulse[:, np.newaxis] * 0.5 + audio * 0.18)
-        self._positions *= target_r / np.maximum(shell_radius, 1e-6)
+        # Plasma swirl along orbital plane
+        swirl_strength = 0.004 * (turbulence + audio * 2.0)
+        self._positions[:, 0] += n3 * swirl_strength
+        self._positions[:, 1] += n1 * swirl_strength
 
         # Brightness reacts dynamically to audio level and state
         glow = cfg["glow"] * max(activation, 0.6)

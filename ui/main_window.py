@@ -53,8 +53,8 @@ class UltronWindow(QMainWindow):
 
     def resizeEvent(self, event) -> None:
         self._renderer.setGeometry(self._container.rect())
-        mic_x = self.width() // 2 - self._mic.width() // 2
-        mic_y = self.height() - MIC_BUTTON_Y_OFFSET - self._mic.height() // 2
+        mic_x = self.width() - self._mic.width() - 40
+        mic_y = self.height() - self._mic.height() - 40
         self._mic.move(mic_x, mic_y)
         super().resizeEvent(event)
 
