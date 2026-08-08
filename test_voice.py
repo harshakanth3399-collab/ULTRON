@@ -1,4 +1,4 @@
-"""Expanded Voice Suite Preview Tool for ULTRON."""
+"""Expanded Voice Suite Preview Tool for ULTRON — Supports 'all' auto-play sequence."""
 
 import sys
 import asyncio
@@ -37,7 +37,7 @@ def preview_voice(option_key):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
         filename = f.name
 
-    text = "Hey Harsha, what can I help you with? ULTRON online and ready for you."
+    text = f"Voice Option {option_key}. {desc}. Hey Harsha, what can I help you with? ULTRON online."
     try:
         asyncio.run(generate_sample(voice, rate, pitch, text, filename))
 
@@ -51,6 +51,14 @@ def preview_voice(option_key):
     except Exception as e:
         print(f"Voice generation note: {e}")
 
+def play_all_voices():
+    print("\n==================================================")
+    print("🎧 PLAYING ALL 10 MALE NEURAL VOICES IN SEQUENCE")
+    print("==================================================")
+    for key in range(1, 11):
+        preview_voice(str(key))
+        time.sleep(0.5)
+
 def set_active_voice(option_key):
     if option_key not in VOICE_OPTIONS:
         print(f"Invalid option '{option_key}'.")
@@ -61,7 +69,6 @@ def set_active_voice(option_key):
     with open("speech_engine.py", "r", encoding="utf-8") as f:
         content = f.read()
 
-    # Update VOICE line
     import re
     content = re.sub(r'VOICE\s*=\s*".*?"', f'VOICE = "{voice}"', content)
     content = re.sub(r'rate\s*=\s*".*?"', f'rate="{rate}"', content)
@@ -74,8 +81,10 @@ def set_active_voice(option_key):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        cmd = sys.argv[1]
-        if len(sys.argv) > 2 and sys.argv[2] == "set":
+        cmd = sys.argv[1].lower()
+        if cmd == "all":
+            play_all_voices()
+        elif len(sys.argv) > 2 and sys.argv[2] == "set":
             set_active_voice(cmd)
         else:
             preview_voice(cmd)
@@ -84,5 +93,6 @@ if __name__ == "__main__":
         for key, info in VOICE_OPTIONS.items():
             print(f"  [{key}] {info[3]}")
         print("\nUsage:")
+        print("  python test_voice.py all     # Play all 10 voices back-to-back")
         print("  python test_voice.py 1       # Preview voice 1")
         print("  python test_voice.py 1 set   # Set voice 1 as active ULTRON voice")
