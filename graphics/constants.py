@@ -22,11 +22,11 @@ AUDIO_ATTACK = 0.42
 AUDIO_RELEASE = 0.08
 AUDIO_GAIN = 2.8
 
-# ── Palette (linear RGB - J.A.R.V.I.S. Holographic Theme) ─────────────────────
-COLOR_CORE = (0.0, 0.85, 1.0)     # Bright Cyan
-COLOR_GLOW = (1.0, 0.75, 0.15)    # Jarvis Gold
-COLOR_ARC = (0.2, 0.95, 1.0)     # Electric Holographic Cyan
-COLOR_DEEP = (0.02, 0.12, 0.35)   # Deep Cosmic Blue
+# ── Palette (linear RGB - MCU J.A.R.V.I.S. Amber Gold Matrix) ───────────────
+COLOR_CORE = (1.0, 0.65, 0.12)     # Radiant Amber Gold Core
+COLOR_GLOW = (1.0, 0.42, 0.05)     # Fiery Copper Orange Glow
+COLOR_ARC = (1.0, 0.78, 0.22)      # Glowing Electric Gold Filaments
+COLOR_DEEP = (0.25, 0.06, 0.01)    # Deep Amber Space Shadow
 
 # ── State multipliers ───────────────────────────────────────────────────────
 STATE_CONFIG = {

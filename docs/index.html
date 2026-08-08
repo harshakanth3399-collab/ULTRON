@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ULTRON - Personal AI Assistant & Holographic Visualizer</title>
+    <title>ULTRON - MCU J.A.R.V.I.S. Holographic Matrix</title>
     <style>
         * {
             margin: 0;
@@ -12,7 +12,7 @@
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
         body {
-            background-color: #030712;
+            background-color: #030200;
             color: #f3f4f6;
             overflow-x: hidden;
             display: flex;
@@ -22,12 +22,12 @@
         }
         header {
             width: 100%;
-            padding: 2rem 5%;
+            padding: 1.8rem 5%;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(0, 217, 255, 0.15);
-            background: rgba(3, 7, 18, 0.8);
+            border-bottom: 1px solid rgba(255, 153, 0, 0.25);
+            background: rgba(3, 2, 0, 0.85);
             backdrop-filter: blur(12px);
             position: fixed;
             top: 0;
@@ -36,17 +36,17 @@
         .logo {
             font-size: 1.8rem;
             font-weight: 800;
-            letter-spacing: 3px;
-            color: #00d9ff;
-            text-shadow: 0 0 12px rgba(0, 217, 255, 0.6);
+            letter-spacing: 4px;
+            color: #ff9900;
+            text-shadow: 0 0 16px rgba(255, 153, 0, 0.7);
         }
         .status-badge {
-            padding: 6px 14px;
+            padding: 6px 16px;
             border-radius: 20px;
             font-size: 0.85rem;
-            background: rgba(0, 217, 255, 0.1);
-            border: 1px solid #00d9ff;
-            color: #00d9ff;
+            background: rgba(255, 153, 0, 0.1);
+            border: 1px solid #ff9900;
+            color: #ff9900;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -55,8 +55,8 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #00d9ff;
-            box-shadow: 0 0 8px #00d9ff;
+            background: #ff9900;
+            box-shadow: 0 0 10px #ff9900;
             animation: pulse 1.8s infinite;
         }
         @keyframes pulse {
@@ -76,26 +76,26 @@
         h1 {
             font-size: 3.2rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #00d9ff 0%, #ffbf26 100%);
+            background: linear-gradient(135deg, #ffc837 0%, #ff8008 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 12px;
         }
         p.subtitle {
             font-size: 1.2rem;
-            color: #9ca3af;
+            color: #d1d5db;
             max-width: 650px;
             margin-bottom: 30px;
         }
         #canvas-container {
             width: 100%;
             max-width: 800px;
-            height: 480px;
+            height: 520px;
             position: relative;
             border-radius: 20px;
-            background: radial-gradient(circle, rgba(0, 217, 255, 0.05) 0%, rgba(3, 7, 18, 0.9) 80%);
-            border: 1px solid rgba(0, 217, 255, 0.2);
-            box-shadow: 0 0 40px rgba(0, 217, 255, 0.15);
+            background: radial-gradient(circle, rgba(255, 153, 0, 0.08) 0%, rgba(3, 2, 0, 0.95) 80%);
+            border: 1px solid rgba(255, 153, 0, 0.3);
+            box-shadow: 0 0 50px rgba(255, 153, 0, 0.2);
             margin-bottom: 40px;
             overflow: hidden;
         }
@@ -113,21 +113,21 @@
             margin-bottom: 60px;
         }
         .card {
-            background: rgba(17, 24, 39, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(18, 12, 4, 0.8);
+            border: 1px solid rgba(255, 153, 0, 0.15);
             border-radius: 16px;
             padding: 28px;
             text-align: left;
             transition: all 0.3s ease;
         }
         .card:hover {
-            border-color: #00d9ff;
+            border-color: #ff9900;
             transform: translateY(-4px);
-            box-shadow: 0 10px 25px rgba(0, 217, 255, 0.15);
+            box-shadow: 0 10px 25px rgba(255, 153, 0, 0.2);
         }
         .card h3 {
             font-size: 1.3rem;
-            color: #ffbf26;
+            color: #ffc837;
             margin-bottom: 10px;
         }
         .card p {
@@ -139,7 +139,7 @@
             margin-top: auto;
             width: 100%;
             padding: 24px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            border-top: 1px solid rgba(255, 153, 0, 0.1);
             text-align: center;
             font-size: 0.9rem;
             color: #6b7280;
@@ -151,13 +151,13 @@
         <div class="logo">ULTRON</div>
         <div class="status-badge">
             <div class="status-dot"></div>
-            SYSTEM ONLINE (150K PARTICLES)
+            MCU AMBER GOLD MATRIX (150K PARTICLES)
         </div>
     </header>
 
     <div class="hero">
-        <h1>ULTRON PERSONAL AI ASSISTANT</h1>
-        <p class="subtitle">A 100% private, real-time personal AI assistant & holographic visualizer built for Harsha with 150,000 active particles and biometric voice security.</p>
+        <h1>MCU J.A.R.V.I.S. CONSCIOUSNESS MATRIX</h1>
+        <p class="subtitle">100% authentic Amber Gold holographic visualizer with 150,000 active particles, 3D concentric orbital tracks, and biometric voice security.</p>
 
         <div id="canvas-container">
             <canvas id="jarvis-canvas"></canvas>
@@ -170,7 +170,7 @@
             </div>
             <div class="card">
                 <h3>⚡ 150,000 Particle Visualizer</h3>
-                <p>Hardware-accelerated ModernGL visualizer with 4 3D concentric rotating orbital rings, cyan-gold plasma, and a 3D audio oscilloscope.</p>
+                <p>Hardware-accelerated ModernGL visualizer with 4 3D concentric rotating orbital rings, copper-gold plasma, and a 3D audio oscilloscope.</p>
             </div>
             <div class="card">
                 <h3>🧠 Private Local Intelligence</h3>
@@ -184,7 +184,7 @@
     </footer>
 
     <script>
-        // Interactive Holographic Canvas Demonstration
+        // MCU Amber Gold J.A.R.V.I.S. Visualizer Demonstration
         const canvas = document.getElementById('jarvis-canvas');
         const ctx = canvas.getContext('2d');
 
@@ -197,10 +197,10 @@
 
         let time = 0;
         const rings = [
-            { radius: 120, speed: 0.015, color: '#00d9ff', tilt: 0.3 },
-            { radius: 155, speed: -0.02, color: '#ffbf26', tilt: -0.4 },
-            { radius: 185, speed: 0.025, color: '#00d9ff', tilt: 0.6 },
-            { radius: 215, speed: -0.01, color: '#0284c7', tilt: -0.2 }
+            { radius: 110, speed: 0.012, color: '#ff9900', tilt: 0.35 },
+            { radius: 145, speed: -0.018, color: '#ffcc00', tilt: -0.45 },
+            { radius: 180, speed: 0.022, color: '#ff7700', tilt: 0.55 },
+            { radius: 215, speed: -0.01, color: '#e66000', tilt: -0.25 }
         ];
 
         function draw() {
@@ -210,17 +210,18 @@
 
             time += 0.02;
 
-            // Core Glow
-            const grad = ctx.createRadialGradient(cx, cy, 10, cx, cy, 140);
-            grad.addColorStop(0, 'rgba(0, 217, 255, 0.8)');
-            grad.addColorStop(0.5, 'rgba(255, 191, 38, 0.3)');
-            grad.addColorStop(1, 'rgba(3, 7, 18, 0)');
+            // Core Amber Glow
+            const grad = ctx.createRadialGradient(cx, cy, 10, cx, cy, 160);
+            grad.addColorStop(0, 'rgba(255, 204, 0, 0.9)');
+            grad.addColorStop(0.3, 'rgba(255, 153, 0, 0.45)');
+            grad.addColorStop(0.7, 'rgba(255, 102, 0, 0.15)');
+            grad.addColorStop(1, 'rgba(3, 2, 0, 0)');
             ctx.fillStyle = grad;
             ctx.beginPath();
-            ctx.arc(cx, cy, 140, 0, Math.PI * 2);
+            ctx.arc(cx, cy, 160, 0, Math.PI * 2);
             ctx.fill();
 
-            // Concentric 3D Rotating Rings
+            // Concentric 3D Rotating Rings with Filaments
             rings.forEach((ring, idx) => {
                 ctx.save();
                 ctx.translate(cx, cy);
@@ -228,27 +229,38 @@
                 ctx.scale(1, Math.cos(ring.tilt));
 
                 ctx.strokeStyle = ring.color;
-                ctx.lineWidth = 2.5;
+                ctx.lineWidth = 2.8;
                 ctx.shadowColor = ring.color;
-                ctx.shadowBlur = 12;
+                ctx.shadowBlur = 16;
 
                 ctx.beginPath();
-                ctx.arc(0, 0, ring.radius + Math.sin(time * 3 + idx) * 4, 0, Math.PI * 2);
+                ctx.arc(0, 0, ring.radius + Math.sin(time * 3 + idx) * 5, 0, Math.PI * 2);
                 ctx.stroke();
 
-                // Nodes
-                for (let i = 0; i < 8; i++) {
-                    const angle = (i / 8) * Math.PI * 2 + time * ring.speed * 2;
-                    const nx = Math.cos(angle) * ring.radius;
-                    const ny = Math.sin(angle) * ring.radius;
-                    ctx.fillStyle = '#ffffff';
+                // Radial Frequency Spikes & Filaments (From Screenshot)
+                for (let i = 0; i < 36; i++) {
+                    const angle = (i / 36) * Math.PI * 2 + time * ring.speed;
+                    const spikeLen = 8 + Math.sin(angle * 6 + time * 4) * 12;
+                    const x1 = Math.cos(angle) * ring.radius;
+                    const y1 = Math.sin(angle) * ring.radius;
+                    const x2 = Math.cos(angle) * (ring.radius + spikeLen);
+                    const y2 = Math.sin(angle) * (ring.radius + spikeLen);
+
+                    ctx.strokeStyle = 'rgba(255, 204, 0, 0.6)';
+                    ctx.lineWidth = 1.5;
                     ctx.beginPath();
-                    ctx.arc(nx, ny, 3.5, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
                 }
 
                 ctx.restore();
             });
+
+            // HUD Frame Lines
+            ctx.strokeStyle = 'rgba(255, 153, 0, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(30, 30, canvas.width - 60, canvas.height - 60);
 
             requestAnimationFrame(draw);
         }
