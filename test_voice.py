@@ -1,4 +1,4 @@
-"""Expanded Voice Suite Preview Tool for ULTRON — Supports 'all' auto-play sequence."""
+"""Expanded Voice Suite Preview Tool for ULTRON — Supports Merged Composite Voice Option 11."""
 
 import sys
 import asyncio
@@ -18,6 +18,7 @@ VOICE_OPTIONS = {
     "8": ("en-AU-WilliamNeural", "-8%", "-8Hz", "Deep Australian Male Accent"),
     "9": ("en-CA-LiamNeural", "-8%", "-8Hz", "Deep Canadian Male Accent"),
     "10": ("en-IE-ConnorNeural", "-8%", "-8Hz", "Deep Irish Male Accent"),
+    "11": ("en-GB-RyanNeural", "-10%", "-14Hz", "Merged Hybrid: Deep British J.A.R.V.I.S. + Alpha Male + Australian Accent"),
 }
 
 async def generate_sample(voice, rate, pitch, text, filename):
@@ -26,11 +27,11 @@ async def generate_sample(voice, rate, pitch, text, filename):
 
 def preview_voice(option_key):
     if option_key not in VOICE_OPTIONS:
-        print(f"Invalid option '{option_key}'. Choose 1 through 10.")
+        print(f"Invalid option '{option_key}'. Choose 1 through 11.")
         return
 
     voice, rate, pitch, desc = VOICE_OPTIONS[option_key]
-    print(f"\n🔊 Playing Voice [{option_key}]: {desc}")
+    print(f"\n[VOICE] Playing Voice [{option_key}]: {desc}")
     print(f"   Model: {voice} | Rate: {rate} | Pitch: {pitch}...")
 
     pygame.mixer.init()
@@ -53,9 +54,9 @@ def preview_voice(option_key):
 
 def play_all_voices():
     print("\n==================================================")
-    print("🎧 PLAYING ALL 10 MALE NEURAL VOICES IN SEQUENCE")
+    print("🎧 PLAYING ALL 11 MALE NEURAL VOICES IN SEQUENCE")
     print("==================================================")
-    for key in range(1, 11):
+    for key in range(1, 12):
         preview_voice(str(key))
         time.sleep(0.5)
 
@@ -93,6 +94,5 @@ if __name__ == "__main__":
         for key, info in VOICE_OPTIONS.items():
             print(f"  [{key}] {info[3]}")
         print("\nUsage:")
-        print("  python test_voice.py all     # Play all 10 voices back-to-back")
-        print("  python test_voice.py 1       # Preview voice 1")
-        print("  python test_voice.py 1 set   # Set voice 1 as active ULTRON voice")
+        print("  python test_voice.py 11      # Preview Merged Voice 11")
+        print("  python test_voice.py 11 set  # Lock Merged Voice 11 as active ULTRON voice")
