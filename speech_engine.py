@@ -18,8 +18,8 @@ async def _generate(text, filename):
     communicate = edge_tts.Communicate(
         text=text,
         voice=VOICE,
-        rate="-8%",
-        pitch="-8Hz"
+        rate="-10%",
+        pitch="-14Hz"
     )
 
     await communicate.save(filename)

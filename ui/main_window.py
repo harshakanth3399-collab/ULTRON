@@ -139,6 +139,8 @@ class UltronWindow(QMainWindow):
             self._set_state(UltronState.IDLE)
         finally:
             self._busy = False
+            # Continuous Always-Listening Loop (like YouTube video)
+            QTimer.singleShot(1500, self._on_mic_pressed)
 
     def _wait_until_done_speaking(self) -> None:
         deadline = time.time() + 120.0
