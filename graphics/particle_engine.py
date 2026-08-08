@@ -51,13 +51,6 @@ class ParticleEngine:
         self._brightness = np.random.uniform(0.35, 1.0, count).astype(np.float32)
         self._rotation = 0.0
 
-        # Debug: verify particle creation
-        try:
-            print(f"[ParticleEngine] initialized with count={self.count}")
-            print("[ParticleEngine] first 5 base positions:", self._base[:5].tolist())
-        except Exception:
-            pass
-
     def update(
         self,
         dt: float,
@@ -71,9 +64,8 @@ class ParticleEngine:
         pulse_speed = cfg["pulse_speed"]
         pulse_amp = cfg["pulse_amp"]
         rotation_speed = cfg["rotation"]
-        audio = audio_level * cfg["audio_influence"] * activation
-
-        self._rotation += dt * rotation_speed
+        audio = audio_level * cfg["audio_influence"]
+        self._rotation += dt * (rotation_speed + audio * 0.45)
 
         cos_r = np.cos(self._rotation)
         sin_r = np.sin(self._rotation)
@@ -84,65 +76,61 @@ class ParticleEngine:
         rot_x = bx * cos_r - bz * sin_r
         rot_z = bx * sin_r + bz * cos_r
 
-        noise_scale = 1.6 + turbulence * 0.4
-        nx = rot_x * noise_scale + time * 0.31
-        ny = by * noise_scale + time * 0.27
-        nz = rot_z * noise_scale + time * 0.23
+        noise_scale = 1.6 + turbulence * 0.4 + audio * 0.8
+        nx = rot_x * noise_scale + time * (0.31 + audio * 0.5)
+        ny = by * noise_scale + time * (0.27 + audio * 0.5)
+        nz = rot_z * noise_scale + time * (0.23 + audio * 0.5)
 
         n1 = fbm3(nx, ny, nz, octaves=3)
         n2 = fbm3(nx + 13.7, ny + 7.3, nz + 4.1, octaves=2)
-        n3 = simplex3(nx * 2.1 + 50.0, ny * 2.1, nz * 2.1 + time * 0.5)
+        n3 = simplex3(nx * 2.1 + 50.0, ny * 2.1, nz * 2.1 + time * (0.5 + audio * 1.5))
 
         pulse = np.sin(time * pulse_speed + self._phase) * pulse_amp
         pulse += np.sin(time * pulse_speed * 2.3 + self._phase * 1.7) * pulse_amp * 0.35
-        audio_pulse = audio * 0.08 * (1.0 + np.sin(time * 8.0 + self._phase * 3.0))
+        audio_pulse = audio * 0.22 * (1.0 + np.sin(time * 12.0 + self._phase * 3.0))
 
         displacement = np.stack((n1, n2, n3), axis=1).astype(np.float32)
-        displacement *= 0.045 * turbulence * (1.0 + audio * 0.6)
+        displacement *= 0.055 * (turbulence + audio * 1.8)
 
         radius_mod = SPHERE_RADIUS * (1.0 + pulse + audio_pulse)
         direction = self._base / (np.linalg.norm(self._base, axis=1, keepdims=True) + 1e-8)
 
         self._positions = direction * radius_mod[:, np.newaxis] + displacement
 
-        # Plasma swirl: tangential drift along surface
+        # Plasma swirl: tangential drift along surface (Jarvis/Ultron orb effect)
         tangent = np.cross(direction, np.array([0.0, 1.0, 0.0], dtype=np.float32))
         t_len = np.linalg.norm(tangent, axis=1, keepdims=True)
         fallback = np.cross(direction, np.array([1.0, 0.0, 0.0], dtype=np.float32))
         tangent = np.where(t_len > 1e-4, tangent / np.maximum(t_len, 1e-4), fallback)
 
-        swirl_strength = 0.0025 * turbulence * (1.0 + audio * 1.2)
+        swirl_strength = 0.006 * (turbulence + audio * 2.5)
         self._positions += tangent * (n3 * swirl_strength)[:, np.newaxis]
 
-        # Re-normalize to shell with slight thickness variation
+        # Re-normalize to shell with voice-driven thickness expansion
         shell_radius = np.linalg.norm(self._positions, axis=1, keepdims=True)
-        target_r = SPHERE_RADIUS * (1.0 + pulse[:, np.newaxis] * 0.5 + audio * 0.04)
+        target_r = SPHERE_RADIUS * (1.0 + pulse[:, np.newaxis] * 0.5 + audio * 0.18)
         self._positions *= target_r / np.maximum(shell_radius, 1e-6)
 
-        # Brightness reacts to audio and state
-        glow = cfg["glow"] * activation
+        # Brightness reacts dynamically to audio level and state
+        glow = cfg["glow"] * max(activation, 0.6)
         self._brightness = np.clip(
-            0.35
+            0.4
             + 0.45 * glow
-            + 0.25 * np.abs(n1)
-            + audio * 0.55
-            + np.sin(time * 3.0 + self._phase) * 0.08,
-            0.15,
+            + 0.3 * np.abs(n1)
+            + audio * 0.75
+            + np.sin(time * 4.0 + self._phase) * 0.1,
+            0.2,
             1.0,
         ).astype(np.float32)
 
-        size_boost = 1.0 + audio * 0.45 + glow * 0.15
+        size_boost = 1.0 + audio * 0.85 + glow * 0.25
         self._size = np.clip(
-            self._size * 0.98 + np.random.uniform(PARTICLE_MIN_SIZE, PARTICLE_MAX_SIZE, self.count) * 0.02,
+            self._size * 0.96 + np.random.uniform(PARTICLE_MIN_SIZE, PARTICLE_MAX_SIZE, self.count) * 0.04,
             PARTICLE_MIN_SIZE,
             PARTICLE_MAX_SIZE * size_boost,
         ).astype(np.float32)
 
-        # Debug: verify particle positions update
-        try:
-            print("[ParticleEngine] updated first 5 positions:", self._positions[:5].tolist())
-        except Exception:
-            pass
+
 
     @property
     def positions(self) -> np.ndarray:
@@ -162,11 +150,5 @@ class ParticleEngine:
         out[:, 0:3] = self._positions
         out[:, 3] = self._size
         out[:, 4] = self._brightness
-
-        # Debug: print first five packed rows so we can inspect VBO uploads
-        try:
-            print("[ParticleEngine] interleaved (first 5):", out[:5].tolist())
-        except Exception:
-            pass
 
         return out

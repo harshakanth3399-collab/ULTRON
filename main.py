@@ -1,28 +1,15 @@
-from speech import listen
-from router import process
-from speech_engine import speak
-from personality import greeting
+"""ULTRON Assistant Main Entry Point."""
 
-print("=" * 50)
-print("          ULTRON 1.0 ALPHA")
-print("=" * 50)
+import sys
+from app import main as launch_app
 
-speak(greeting())
 
-while True:
+def run():
+    print("=" * 50)
+    print("          ULTRON 1.0 - HOLOGRAPHIC AI")
+    print("=" * 50)
+    return launch_app()
 
-    command = listen()
 
-    if not command:
-        continue
-
-    print(f"\nHarsha: {command}")
-
-    running, answer = process(command)
-
-    if answer:
-        print(f"\nUltron: {answer}")
-        speak(answer)
-
-    if running is False:
-        break
+if __name__ == "__main__":
+    raise SystemExit(run())

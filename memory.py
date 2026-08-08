@@ -1,28 +1,17 @@
-import json
-import os
+from modules.memory.profile_manager import get_profile_manager
 
-FILE = "memory/data.json"
 
 def remember(key, value):
-    os.makedirs("memory", exist_ok=True)
-
-    data = {}
-
-    if os.path.exists(FILE):
-        with open(FILE, "r") as f:
-            data = json.load(f)
-
-    data[key] = value
-
-    with open(FILE, "w") as f:
-        json.dump(data, f, indent=4)
+    pm = get_profile_manager()
+    if key == "note":
+        pm.add_note(value)
+    else:
+        pm.set_preference(key, value)
 
 
 def recall(key):
-    if not os.path.exists(FILE):
-        return None
-
-    with open(FILE, "r") as f:
-        data = json.load(f)
-
-    return data.get(key)
+    pm = get_profile_manager()
+    if key == "note":
+        notes = pm.get_notes()
+        return notes[-1] if notes else None
+    return pm.get_preference(key)

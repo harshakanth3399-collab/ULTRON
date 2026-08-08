@@ -30,11 +30,11 @@ void main() {
     vec4 clip = u_mvp * vec4(in_pos, 1.0);
     gl_Position = clip;
 
-    float perspective = clamp(1.8 / max(-clip.z, 0.05), 0.4, 3.5);
-    gl_PointSize = in_size * perspective * (1.0 + u_glow * 0.35);
+    float perspective = clamp(1.8 / max(clip.w, 0.05), 0.4, 3.5);
+    gl_PointSize = in_size * perspective * (1.0 + u_glow * 0.35 + sin(u_time * 0.001) * 0.0001);
 
     v_brightness = in_brightness * (0.85 + u_glow * 0.4);
-    v_depth = -clip.z;
+    v_depth = clip.z;
 }
 """
 
@@ -53,18 +53,14 @@ void main() {
     vec2 uv = gl_PointCoord - 0.5;
     float dist = length(uv);
 
-    if (dist > 0.5) {
-        discard;
-    }
-
-    float core = exp(-dist * dist * 28.0);
-    float halo = exp(-dist * 12.0) * 0.55;
-    float intensity = (core * 1.4 + halo) * v_brightness;
+    float core = exp(-dist * dist * 16.0);
+    float halo = exp(-dist * 6.0) * 0.6;
+    float intensity = (core * 1.5 + halo) * v_brightness;
 
     vec3 col = mix(u_color_glow, u_color_core, core);
-    col *= 1.0 + intensity * 0.6;
+    col *= (1.0 + intensity * 0.8);
+    float alpha = clamp(intensity * 0.9, 0.0, 1.0);
 
-    float alpha = clamp(intensity, 0.0, 1.0);
     frag_color = vec4(col * intensity, alpha);
 }
 """
@@ -287,3 +283,68 @@ void main() {
     frag_color = vec4(1.0, 1.0, 1.0, 1.0);
 }
 """
+
+BLIT_FRAG = """
+#version 330 core
+
+in vec2 v_uv;
+out vec4 frag_color;
+
+uniform sampler2D u_tex;
+
+void main() {
+    frag_color = texture(u_tex, v_uv);
+}
+"""
+
+BILLBOARD_VERT = """
+#version 330 core
+
+layout(location = 0) in vec2 in_quad;
+layout(location = 1) in vec3 in_pos;
+layout(location = 2) in float in_size;
+layout(location = 3) in float in_brightness;
+
+uniform mat4 u_mvp;
+uniform vec2 u_viewport;
+uniform float u_glow;
+
+out float v_brightness;
+out vec2 v_uv;
+
+void main() {
+    v_uv = in_quad + 0.5;
+    vec4 clip_center = u_mvp * vec4(in_pos, 1.0);
+    float perspective = clamp(1.8 / max(clip_center.w, 0.05), 0.4, 3.5);
+    float size_pixels = in_size * perspective * (1.0 + u_glow * 0.35);
+    vec2 offset = (in_quad * size_pixels) / u_viewport * 2.0 * clip_center.w;
+
+    gl_Position = clip_center + vec4(offset, 0.0, 0.0);
+    v_brightness = in_brightness * (0.85 + u_glow * 0.4);
+}
+"""
+
+BILLBOARD_FRAG = """
+#version 330 core
+
+in float v_brightness;
+in vec2 v_uv;
+
+uniform vec3 u_color_core;
+uniform vec3 u_color_glow;
+
+out vec4 frag_color;
+
+void main() {
+    vec2 uv = v_uv - 0.5;
+    float dist = length(uv);
+    float core = exp(-dist * dist * 16.0);
+    float halo = exp(-dist * 6.0) * 0.6;
+    float intensity = (core * 1.5 + halo) * v_brightness;
+    vec3 col = mix(u_color_glow, u_color_core, core);
+    col *= (1.0 + intensity * 0.8);
+    float alpha = clamp(intensity * 0.9, 0.0, 1.0);
+    frag_color = vec4(col * intensity, alpha);
+}
+"""
+

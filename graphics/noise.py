@@ -71,10 +71,10 @@ def simplex3(x: np.ndarray, y: np.ndarray, z: np.ndarray) -> np.ndarray:
     gi2 = _PERM[ii + i2 + _PERM[jj + j2 + _PERM[kk + (1 - i2 - j2)]]] % 12
     gi3 = _PERM[ii + 1 + _PERM[jj + 1 + _PERM[kk + 1]]] % 12
 
-    t0 = np.clip(0.6 - x0 * x0 - y0 * y0 - z0 * z0, 0.0, None)
-    t1 = np.clip(0.6 - x1 * x1 - y1 * y1 - z1 * z1, 0.0, None)
-    t2 = np.clip(0.6 - x2 * x2 - y2 * y2 - z2 * z2, 0.0, None)
-    t3 = np.clip(0.6 - x3 * x3 - y3 * y3 - z3 * z3, 0.0, None)
+    t0 = np.maximum(0.6 - x0 * x0 - y0 * y0 - z0 * z0, 0.0)
+    t1 = np.maximum(0.6 - x1 * x1 - y1 * y1 - z1 * z1, 0.0)
+    t2 = np.maximum(0.6 - x2 * x2 - y2 * y2 - z2 * z2, 0.0)
+    t3 = np.maximum(0.6 - x3 * x3 - y3 * y3 - z3 * z3, 0.0)
 
     t0 *= t0
     t1 *= t1

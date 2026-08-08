@@ -1,7 +1,7 @@
 """Graphics pipeline constants and tunables."""
 
 # ── Particles ────────────────────────────────────────────────────────────
-PARTICLE_COUNT = 64_000
+PARTICLE_COUNT = 150_000
 SPHERE_RADIUS = 0.38
 PARTICLE_MIN_SIZE = 1.5
 PARTICLE_MAX_SIZE = 4.5
@@ -22,11 +22,11 @@ AUDIO_ATTACK = 0.42
 AUDIO_RELEASE = 0.08
 AUDIO_GAIN = 2.8
 
-# ── Palette (linear RGB) ────────────────────────────────────────────────────
-COLOR_CORE = (1.0, 0.08, 0.04)
-COLOR_GLOW = (1.0, 0.22, 0.06)
-COLOR_ARC = (1.0, 0.45, 0.18)
-COLOR_DEEP = (0.55, 0.02, 0.01)
+# ── Palette (linear RGB - J.A.R.V.I.S. Holographic Theme) ─────────────────────
+COLOR_CORE = (0.0, 0.85, 1.0)     # Bright Cyan
+COLOR_GLOW = (1.0, 0.75, 0.15)    # Jarvis Gold
+COLOR_ARC = (0.2, 0.95, 1.0)     # Electric Holographic Cyan
+COLOR_DEEP = (0.02, 0.12, 0.35)   # Deep Cosmic Blue
 
 # ── State multipliers ───────────────────────────────────────────────────────
 STATE_CONFIG = {

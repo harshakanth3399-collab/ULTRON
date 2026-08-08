@@ -14,3 +14,7 @@ __pycache__/
 
 # Environment Variables
 .env
+
+# Audit Logs & Memory
+renderer_audit.log
+memory/

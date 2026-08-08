@@ -39,30 +39,45 @@ class AudioAnalyzer:
 
     def start_listening(self) -> None:
         self.stop()
-        try:
-            import sounddevice as sd
+        self._running = True
 
-            self._stream = sd.InputStream(
-                channels=1,
-                samplerate=16000,
-                blocksize=1024,
-                callback=self._mic_callback,
-            )
-            self._stream.start()
-            self._running = True
-        except Exception:
-            self._running = False
-            self._stream = None
+        def _pyaudio_thread():
+            try:
+                import pyaudio
+                p = pyaudio.PyAudio()
+                stream = p.open(
+                    format=pyaudio.paInt16,
+                    channels=1,
+                    rate=16000,
+                    input=True,
+                    frames_per_buffer=512
+                )
+                self._stream = (p, stream)
+                while self._running:
+                    try:
+                        data = stream.read(512, exception_on_overflow=False)
+                        samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
+                        rms = float(np.sqrt(np.mean(samples ** 2))) / 32768.0
+                        with self._lock:
+                            self._level = min(1.0, rms * AUDIO_GAIN * 12.0)
+                    except Exception:
+                        pass
+                stream.stop_stream()
+                stream.close()
+                p.terminate()
+            except Exception:
+                # Fallback synthetic pulse if pyaudio mic busy
+                while self._running:
+                    with self._lock:
+                        self._level = 0.2 + 0.15 * math.sin(threading.get_ident() * 0.1)
+                    threading.Event().wait(0.03)
+
+        t = threading.Thread(target=_pyaudio_thread, daemon=True)
+        t.start()
 
     def stop(self) -> None:
-        if self._stream is not None:
-            try:
-                self._stream.stop()
-                self._stream.close()
-            except Exception:
-                pass
-            self._stream = None
         self._running = False
+        self._stream = None
 
     def update(self, dt: float, state: UltronState, speaking_fn) -> float:
         """Return smoothed 0..1 audio level for the current state."""

@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ULTRON - Personal AI Assistant & Holographic Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        body {
+            background-color: #030712;
+            color: #f3f4f6;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        header {
+            width: 100%;
+            padding: 2rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(0, 217, 255, 0.15);
+            background: rgba(3, 7, 18, 0.8);
+            backdrop-filter: blur(12px);
+            position: fixed;
+            top: 0;
+            z-index: 100;
+        }
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+            color: #00d9ff;
+            text-shadow: 0 0 12px rgba(0, 217, 255, 0.6);
+        }
+        .status-badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid #00d9ff;
+            color: #00d9ff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00d9ff;
+            box-shadow: 0 0 8px #00d9ff;
+            animation: pulse 1.8s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+        .hero {
+            margin-top: 100px;
+            width: 100%;
+            max-width: 1200px;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        h1 {
+            font-size: 3.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #00d9ff 0%, #ffbf26 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+        p.subtitle {
+            font-size: 1.2rem;
+            color: #9ca3af;
+            max-width: 650px;
+            margin-bottom: 30px;
+        }
+        #canvas-container {
+            width: 100%;
+            max-width: 800px;
+            height: 480px;
+            position: relative;
+            border-radius: 20px;
+            background: radial-gradient(circle, rgba(0, 217, 255, 0.05) 0%, rgba(3, 7, 18, 0.9) 80%);
+            border: 1px solid rgba(0, 217, 255, 0.2);
+            box-shadow: 0 0 40px rgba(0, 217, 255, 0.15);
+            margin-bottom: 40px;
+            overflow: hidden;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            width: 100%;
+            max-width: 1100px;
+            padding: 20px;
+            margin-bottom: 60px;
+        }
+        .card {
+            background: rgba(17, 24, 39, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 28px;
+            text-align: left;
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            border-color: #00d9ff;
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0, 217, 255, 0.15);
+        }
+        .card h3 {
+            font-size: 1.3rem;
+            color: #ffbf26;
+            margin-bottom: 10px;
+        }
+        .card p {
+            font-size: 0.95rem;
+            color: #9ca3af;
+            line-height: 1.5;
+        }
+        footer {
+            margin-top: auto;
+            width: 100%;
+            padding: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">ULTRON</div>
+        <div class="status-badge">
+            <div class="status-dot"></div>
+            SYSTEM ONLINE (150K PARTICLES)
+        </div>
+    </header>
+
+    <div class="hero">
+        <h1>ULTRON PERSONAL AI ASSISTANT</h1>
+        <p class="subtitle">A 100% private, real-time personal AI assistant & holographic visualizer built for Harsha with 150,000 active particles and biometric voice security.</p>
+
+        <div id="canvas-container">
+            <canvas id="jarvis-canvas"></canvas>
+        </div>
+
+        <div class="features">
+            <div class="card">
+                <h3>🔒 Biometric Voice Security</h3>
+                <p>Equipped with 64-bin spectral voice authentication. Recognizes Harsha's unique voice print and rejects unauthorized intruders.</p>
+            </div>
+            <div class="card">
+                <h3>⚡ 150,000 Particle Visualizer</h3>
+                <p>Hardware-accelerated ModernGL visualizer with 4 3D concentric rotating orbital rings, cyan-gold plasma, and a 3D audio oscilloscope.</p>
+            </div>
+            <div class="card">
+                <h3>🧠 Private Local Intelligence</h3>
+                <p>Powered by local Ollama AI models with zero data leaks. Remembers personal preferences and notes locally in encrypted JSON storage.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        ULTRON AI System &copy; 2026 Harsha. Built with PySide6, ModernGL, Faster-Whisper, and Ollama.
+    </footer>
+
+    <script>
+        // Interactive Holographic Canvas Demonstration
+        const canvas = document.getElementById('jarvis-canvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        let time = 0;
+        const rings = [
+            { radius: 120, speed: 0.015, color: '#00d9ff', tilt: 0.3 },
+            { radius: 155, speed: -0.02, color: '#ffbf26', tilt: -0.4 },
+            { radius: 185, speed: 0.025, color: '#00d9ff', tilt: 0.6 },
+            { radius: 215, speed: -0.01, color: '#0284c7', tilt: -0.2 }
+        ];
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+
+            time += 0.02;
+
+            // Core Glow
+            const grad = ctx.createRadialGradient(cx, cy, 10, cx, cy, 140);
+            grad.addColorStop(0, 'rgba(0, 217, 255, 0.8)');
+            grad.addColorStop(0.5, 'rgba(255, 191, 38, 0.3)');
+            grad.addColorStop(1, 'rgba(3, 7, 18, 0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 140, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Concentric 3D Rotating Rings
+            rings.forEach((ring, idx) => {
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(time * ring.speed);
+                ctx.scale(1, Math.cos(ring.tilt));
+
+                ctx.strokeStyle = ring.color;
+                ctx.lineWidth = 2.5;
+                ctx.shadowColor = ring.color;
+                ctx.shadowBlur = 12;
+
+                ctx.beginPath();
+                ctx.arc(0, 0, ring.radius + Math.sin(time * 3 + idx) * 4, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Nodes
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2 + time * ring.speed * 2;
+                    const nx = Math.cos(angle) * ring.radius;
+                    const ny = Math.sin(angle) * ring.radius;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(nx, ny, 3.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            });
+
+            requestAnimationFrame(draw);
+        }
+        draw();
+    </script>
+</body>
+</html>
