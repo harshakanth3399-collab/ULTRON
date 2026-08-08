@@ -30,10 +30,9 @@ void main() {
     vec4 clip = u_mvp * vec4(in_pos, 1.0);
     gl_Position = clip;
 
-    float perspective = clamp(1.8 / max(clip.w, 0.05), 0.4, 3.5);
-    gl_PointSize = in_size * perspective * (1.0 + u_glow * 0.35 + sin(u_time * 0.001) * 0.0001);
+    gl_PointSize = in_size * (1.2 + u_glow * 0.2);
 
-    v_brightness = in_brightness * (0.85 + u_glow * 0.4);
+    v_brightness = in_brightness * (0.9 + u_glow * 0.3);
     v_depth = clip.z;
 }
 """
