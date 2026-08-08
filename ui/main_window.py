@@ -48,10 +48,15 @@ class UltronWindow(QMainWindow):
     def _greet_harsha(self) -> None:
         def _speak_greeting():
             try:
-                from speech_engine import speak
+                from speech_engine import speak, speaking
                 self._set_state(UltronState.SPEAKING)
                 speak("Hey Harsha, what's up bro? ULTRON online and ready for you.")
+                time.sleep(0.5)
+                while speaking():
+                    time.sleep(0.05)
+                time.sleep(0.2)
                 self._set_state(UltronState.IDLE)
+                QTimer.singleShot(0, self._on_mic_pressed)
             except Exception:
                 self._set_state(UltronState.IDLE)
 

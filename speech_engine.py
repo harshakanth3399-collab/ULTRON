@@ -5,7 +5,7 @@ import pygame
 import os
 import tempfile
 
-VOICE = "en-GB-RyanNeural"
+VOICE = "en-IN-PrabhatNeural"
 
 pygame.mixer.init()
 
@@ -18,8 +18,8 @@ async def _generate(text, filename):
     communicate = edge_tts.Communicate(
         text=text,
         voice=VOICE,
-        rate="-12%",
-        pitch="-20Hz"
+        rate="-8%",
+        pitch="-8Hz"
     )
 
     await communicate.save(filename)
