@@ -402,22 +402,8 @@ class UltronRenderer(QOpenGLWidget):
         self._scene_fbo.use()
         self._ctx.clear(0.0, 0.0, 0.0, 1.0, depth=1.0)
 
-        # 1a. Core Glow
-        try:
-            self._ctx.disable(moderngl.DEPTH_TEST)
-            if "u_mvp" in self._glow_prog:
-                self._glow_prog["u_mvp"].write(mvp.tobytes())
-            if "u_radius" in self._glow_prog:
-                self._glow_prog["u_radius"].value = SPHERE_RADIUS
-            if "u_time" in self._glow_prog:
-                self._glow_prog["u_time"].value = self._time
-            if "u_intensity" in self._glow_prog:
-                self._glow_prog["u_intensity"].value = 0.85 + audio_level * 0.45
-            if "u_color_deep" in self._glow_prog:
-                self._glow_prog["u_color_deep"].value = COLOR_DEEP
-            self._glow_vao.render(moderngl.TRIANGLES)
-        except Exception:
-            pass
+        # 1a. Core Glow (Disabled to keep background pitch black for crisp MCU details)
+        pass
 
         # 1b. Electric Arcs & J.A.R.V.I.S. 3D Rings + Oscilloscope
         try:

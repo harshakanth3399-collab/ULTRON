@@ -3,8 +3,8 @@
 # ── Particles ────────────────────────────────────────────────────────────
 PARTICLE_COUNT = 150_000
 SPHERE_RADIUS = 0.38
-PARTICLE_MIN_SIZE = 1.5
-PARTICLE_MAX_SIZE = 4.5
+PARTICLE_MIN_SIZE = 0.6
+PARTICLE_MAX_SIZE = 1.4
 
 # ── Electric arcs ──────────────────────────────────────────────────────────
 ARC_COUNT = 14
@@ -12,9 +12,9 @@ ARC_SEGMENTS = 32
 ARC_MAX_LENGTH = 0.55
 
 # ── Framebuffer / bloom ─────────────────────────────────────────────────────
-BLOOM_THRESHOLD = 0.55
-BLOOM_INTENSITY = 1.35
-BLOOM_BLUR_PASSES = 6
+BLOOM_THRESHOLD = 0.75
+BLOOM_INTENSITY = 0.35
+BLOOM_BLUR_PASSES = 2
 BLOOM_DOWNSAMPLE = 2
 
 # ── Audio smoothing ─────────────────────────────────────────────────────────
