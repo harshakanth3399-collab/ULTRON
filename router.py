@@ -46,6 +46,18 @@ def process(command: str):
             return True, f"Local model training complete, Harsha! ULTRON is now running on your custom 'ultron-harsha' model weights."
         return True, f"Training note: {msg}"
 
+    if "update ultron" in raw_command or "check update" in raw_command or "auto update" in raw_command:
+        from modules.updater import check_and_apply_safe_updates
+        success, msg = check_and_apply_safe_updates()
+        return True, msg
+
+    if "check photos" in raw_command or "my photos" in raw_command:
+        from modules.vision import check_new_photos
+        photo_msg = check_new_photos()
+        if photo_msg:
+            return True, photo_msg
+        return True, "No new uploaded photos in data/my_photos/ right now, Harsha."
+
     if raw_command.startswith("search the web for") or raw_command.startswith("search web for") or raw_command.startswith("search for"):
         from modules.internet import search_web_live
         query = raw_command.replace("search the web for", "").replace("search web for", "").replace("search for", "").strip()

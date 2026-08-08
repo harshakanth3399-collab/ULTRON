@@ -43,6 +43,19 @@ class UltronWindow(QMainWindow):
         self._ui_timer.start(FRAME_MS)
 
         self.showFullScreen()
+        QTimer.singleShot(800, self._greet_harsha)
+
+    def _greet_harsha(self) -> None:
+        def _speak_greeting():
+            try:
+                from speech_engine import speak
+                self._set_state(UltronState.SPEAKING)
+                speak("Hey Harsha, what's up bro? ULTRON online and ready for you.")
+                self._set_state(UltronState.IDLE)
+            except Exception:
+                self._set_state(UltronState.IDLE)
+
+        threading.Thread(target=_speak_greeting, daemon=True).start()
 
     def toggle_floating_mode(self) -> None:
         """Toggles between Fullscreen and 1-inch Always-on-Top Floating Desktop Widget mode."""
