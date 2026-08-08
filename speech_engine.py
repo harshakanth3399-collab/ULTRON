@@ -14,8 +14,8 @@ _is_speaking = False
 
 
 def _fix_phonetics(text: str) -> str:
-    """Ensures smooth single-word pronunciation of 'Harsha' without gaps or 'Her Shaw' breaks."""
-    return text.replace("Harsha", "Har-sha").replace("harsha", "har-sha")
+    """Ensures flawless single-word pronunciation of 'Harsha' without 'Hoor' or 'Shaw' breaks."""
+    return text.replace("Harsha", "Hur-sha").replace("harsha", "hur-sha")
 
 
 async def _generate(text, filename):
