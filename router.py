@@ -42,7 +42,31 @@ def process(command: str) -> tuple:
 
     LAST_ACTIVITY = time.time()
 
+    # ── High Priority Phone Target Actions ────────────────────────────────────
+    if any(k in raw for k in ["in my phone", "on my phone", "on phone", "in phone", "in my mobile", "on my mobile", "in mobile", "on mobile"]):
+        from modules.adb_bridge import adb_bridge
+
+        raw_phone = raw.replace("what's up", "whatsapp").replace("whats up", "whatsapp").replace("whatup", "whatsapp")
+
+        app_map = {
+            "whatsapp": "whatsapp",
+            "youtube": "youtube",
+            "instagram": "instagram",
+            "chrome": "chrome",
+            "spotify": "spotify",
+            "camera": "camera",
+            "settings": "settings",
+            "gallery": "gallery",
+            "photos": "photos",
+            "maps": "maps",
+        }
+        for kw, app_name in app_map.items():
+            if kw in raw_phone:
+                return True, adb_bridge.open_app(app_name)
+        return True, "Triggered action on your smartphone, Harsha!"
+
     # ── Security ────────────────────────────────────────────────────────────────
+
     if raw == "intruder_detected":
         return True, "Get lost! This is Harsha's laptop. You are NOT authorised."
 

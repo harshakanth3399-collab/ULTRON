@@ -179,11 +179,16 @@ class ADBBridge:
             "spotify": "com.spotify.music",
             "settings": "com.android.settings",
             "camera": "com.android.camera",
+            "gallery": "com.google.android.apps.photos",
+            "photos": "com.google.android.apps.photos",
+            "maps": "com.google.android.apps.maps",
         }
-        pkg = packages.get(app_name.lower().strip())
+        name_clean = app_name.lower().strip()
+        pkg = packages.get(name_clean)
         if pkg:
             self._run_adb("shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1")
-            return f"Launched {app_name.capitalize()} on your smartphone, Harsha!"
+            return f"Opening {app_name.capitalize()} on your smartphone screen right now, Harsha!"
+
         
         # Generic launcher attempt
         self._run_adb("shell", "input", "keyevent", "3")
