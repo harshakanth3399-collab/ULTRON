@@ -136,9 +136,10 @@ class UltronWindow(QMainWindow):
         self._renderer = UltronRenderer(self._root)
         self._renderer.set_speaking_callback(self._is_speaking)
 
-        # ── Transparent overlay ───────────────────────────────────────────
-        self._ov = QWidget(self._root)
+        # ── Transparent overlay (child of renderer to guarantee 60 FPS repaints) ──
+        self._ov = QWidget(self._renderer)
         self._ov.setStyleSheet("background:transparent;")
+
 
         # ── Wordmark ──────────────────────────────────────────────────────
         self._wm = QLabel(self._ov)

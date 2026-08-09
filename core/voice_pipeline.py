@@ -99,23 +99,15 @@ class VoicePipeline:
 
         clean_norm = re.sub(r'[^\w\s]', '', clean)
 
-        # 1. Exact or prefix match from WAKE_WORDS set
-        for wake in sorted(WAKE_WORDS, key=len, reverse=True):
-            if clean_norm == wake:
-                return True, ""
-            if clean_norm.startswith(wake + " "):
-                return True, clean_norm[len(wake):].strip()
-
-        # 2. Comprehensive phonetic regex for all Whisper variations of "Hey Ultron"
-        phonetic_patterns = [
-            r"\b(hey|hi|hello|ok|okay|yo|bro)?\s*(ultron|ultra|ultram|altron|alltron|all\s+tron|ul\s+tron|outron|autron|eltron|oltron|aultron|ol\s+tron|haltron|alteron|outeron|hail\s*tron|hailtron|hail|hay\s*tron|haytron|hell\s*tron|heil\s*tron)\b",
-            r"\b(ultron|altron|outron|autron|eltron|oltron|ultra|ultram|hailtron|hail\s*tron|hail)\b",
-            r"ultr", r"altr", r"oltr", r"autr", r"eltr", r"hail", r"tron"
+        # Triggers: any phrase containing ultron, ultra, altron, outron, autron, hail, tron, hey, hi, hello, etc.
+        wake_tokens = [
+            "ultron", "ultra", "ultram", "altron", "alltron", "ul tron",
+            "outron", "autron", "eltron", "oltron", "aultron", "haltron",
+            "hail", "tron", "hey", "hi", "hello", "ok", "okay", "bro", "yo", "assistant"
         ]
 
-        for pat in phonetic_patterns:
-            if re.search(pat, clean_norm):
-                # Extract inline command after wake word if present
+        for tok in wake_tokens:
+            if tok in clean_norm:
                 cmd = re.sub(
                     r'^\s*(hey|hi|hello|ok|okay|yo|bro)?\s*'
                     r'(ultron|ultra|ultram|altron|alltron|all\s+tron|ul\s+tron|outron|autron|eltron|oltron|aultron|ol\s+tron|haltron|alteron|outeron|hail\s*tron|hailtron|hail|hay\s*tron|haytron|hell\s*tron|heil\s*tron|tron)?\s*',
@@ -123,8 +115,13 @@ class VoicePipeline:
                 ).strip()
                 return True, cmd
 
+        # Fallback: any short spoken input (1-5 words) while waiting in wake mode triggers session!
+        words = clean_norm.split()
+        if len(words) <= 5:
+            return True, clean_norm
 
         return False, ""
+
 
 
     # ── Main loop ──────────────────────────────────────────────────────────────

@@ -159,17 +159,17 @@ class ParticleEngine:
         self._shockwave = max(0.0, self._shockwave - dt * 2.5)   # decay
         self._prev_audio = audio_level
 
-        # ── Rotation accumulation ─────────────────────────────────────────────
-        # Audio energy spins the whole system faster — feel the voice!
+        # ── Rotation accumulation (fast continuous 60 FPS motion) ─────────────
         spin_boost = 1.0 + audio * 3.5
-        self._rotation += dt * (rotation_spd + audio * 0.8) * spin_boost
+        self._rotation += dt * (rotation_spd * 3.0 + audio * 1.5) * spin_boost
 
         n_core   = int(self.count * 0.25)
         n_shell  = int(self.count * 0.45)
         n_tracks = self.count - n_core - n_shell
 
-        cos_r = math.cos(self._rotation * 0.18)
-        sin_r = math.sin(self._rotation * 0.18)
+        cos_r = math.cos(self._rotation * 0.35)
+        sin_r = math.sin(self._rotation * 0.35)
+
 
         # ─── 1. NUCLEUS: breathes dramatically with audio ─────────────────────
         # Hard pulse on voice — nucleus expands visibly when Harsha speaks

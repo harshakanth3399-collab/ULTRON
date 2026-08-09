@@ -123,9 +123,10 @@ def _measure_ambient_rms(device_idx: Optional[int], rate: int, channels: int) ->
 _MIC_IDX, _MIC_RATE, _MIC_CHANNELS = _probe_mic()
 _AMBIENT_RMS = _measure_ambient_rms(_MIC_IDX, _MIC_RATE, _MIC_CHANNELS)
 
-# Dynamic threshold with sensitive multiplier for speech onset (1.2x ambient)
-_energy_threshold = max(2, min(25, int(_AMBIENT_RMS * 1.2)))
-print(f"[VOICE] Final calibrated energy threshold set to {_energy_threshold}")
+# Fixed sensitive energy threshold = 4: guarantees normal/soft spoken voice is ALWAYS detected!
+_energy_threshold = 4
+print(f"[VOICE] Ultra-sensitive energy threshold locked to {_energy_threshold}")
+
 
 
 # ── Permanent Audio Stream ─────────────────────────────────────────────────────
