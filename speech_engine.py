@@ -101,12 +101,26 @@ def _play(text: str) -> None:
         # Signal that audio is NOW actually playing
         _ready_event.set()
 
-        # Wait for playback to finish
+        # Wait for playback to finish (with live voice barge-in detection)
         while pygame.mixer.music.get_busy():
             if _stop_flag.is_set():
                 pygame.mixer.music.stop()
                 break
+
+            # Live voice barge-in: cut off TTS immediately if Harsha speaks over ULTRON
+            try:
+                from speech import get_latest_mic_rms, _energy_threshold
+                rms = get_latest_mic_rms()
+                if rms > max(35.0, float(_energy_threshold) * 2.5):
+                    print(f"[TTS BARGE-IN] Harsha's voice detected (RMS={rms:.1f}) — stopping ULTRON speech!")
+                    _stop_flag.set()
+                    pygame.mixer.music.stop()
+                    break
+            except Exception:
+                pass
+
             pygame.time.Clock().tick(30)
+
 
         try:
             pygame.mixer.music.unload()

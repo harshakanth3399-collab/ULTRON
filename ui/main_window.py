@@ -362,8 +362,14 @@ class UltronWindow(QMainWindow):
     # ── Mic button handler ────────────────────────────────────────────────────
 
     def _on_mic(self) -> None:
+        try:
+            from speech_engine import stop as stop_tts
+            stop_tts()
+        except Exception:
+            pass
         if voice_pipeline._running:
             voice_state_manager.transition_to(VoiceState.LISTENING, "Manual activation")
+
 
     # ── Keys ──────────────────────────────────────────────────────────────────
 
