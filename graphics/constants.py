@@ -1,11 +1,11 @@
 """Graphics pipeline constants and tunables."""
 
 # ── Particles ────────────────────────────────────────────────────────────
-# 6000 particles — optimal for Intel Iris Xe (150k caused VBO shape crash)
-PARTICLE_COUNT = 6_000
-SPHERE_RADIUS = 0.38
-PARTICLE_MIN_SIZE = 1.2
-PARTICLE_MAX_SIZE = 2.8
+# 25,000 particles — visually rich, verified safe for Intel Iris Xe
+PARTICLE_COUNT = 25_000
+SPHERE_RADIUS  = 0.42
+PARTICLE_MIN_SIZE = 2.5
+PARTICLE_MAX_SIZE = 6.0
 
 # ── Electric arcs ──────────────────────────────────────────────────────────
 ARC_COUNT = 14
