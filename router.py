@@ -36,9 +36,24 @@ def _extract(text: str, *remove_words: str) -> str:
 def process(command: str) -> tuple:
     global AWAKE, LAST_ACTIVITY
 
+    print(f"[ROUTER] Received: '{command}'")
+
     raw = command.lower().strip()
     if not raw:
-        return True, None
+        return True, "I'm listening, Harsha. Speak your command!"
+
+    # Clean Whisper artifacts/prefixes (e.g. "i draw them", "i draw then")
+    _NOISE_PREFIXES = [
+        "i draw them", "i draw then", "i draw", "draw them",
+        "and reproduce", "under produce", "underproduce"
+    ]
+    for pfx in _NOISE_PREFIXES:
+        if raw.startswith(pfx):
+            raw = raw[len(pfx):].strip()
+            print(f"[ROUTER] Cleaned prefix '{pfx}' -> '{raw}'")
+
+    if not raw:
+        return True, "I'm listening, Harsha. Ask me anything!"
 
     LAST_ACTIVITY = time.time()
 
@@ -71,9 +86,9 @@ def process(command: str) -> tuple:
         return True, "Get lost! This is Harsha's laptop. You are NOT authorised."
 
     # ── Memory commands ─────────────────────────────────────────────────────────
-    # Structured profile memory: "my address is ...", "my favorite X is Y"
+    # Structured profile memory saving: "my address is ...", "my favorite X is Y", "remember my address is ..."
     _PROFILE_PATTERNS = [
-        (r"(?:my|i live in|i'm from)\s+(address|city|state|hometown|location)\s+(?:is|in)\s+(.*)", None),
+        (r"(?:my|i live in|i'm from|remember my|store my|save my)\s+(address|city|state|hometown|location)\s+(?:is|in|=|:)\s+(.*)", None),
         (r"my\s+(?:favorite|fav|favourite)\s+(\w+)\s+is\s+(.*)", None),
         (r"my\s+(name|age|birthday|phone|email|college|school|company|job|address|city|state)\s+is\s+(.*)", None),
         (r"i\s+(?:am|live|work|study)\s+(?:in|at|from)\s+(.*)", "location"),
@@ -95,36 +110,47 @@ def process(command: str) -> tuple:
     if raw.startswith("remember that"):
         note = raw.replace("remember that", "").strip()
         remember("note", note)
-        # Also commit to persistent memory
-        from modules.memory.profile_manager import commit_user_memory, get_profile_manager
+        from modules.memory.profile_manager import get_profile_manager
         pm = get_profile_manager()
         pm.add_note(note)
         return True, f"Stored in memory, bro: '{note}'"
 
-    # Recall from persistent memory BEFORE querying LLM
-    if any(k in raw for k in ["what do you remember", "show my notes", "what is my", "what's my", "do you know my"]):
+    # Memory Recall & Memory Retrieval
+    if any(k in raw for k in [
+        "remember my", "do you remember", "what is my", "what's my",
+        "do you know my", "where do i live", "show my notes", "what do you remember",
+        "my address", "my location", "my name", "my phone", "my city", "my state"
+    ]):
         from modules.memory.profile_manager import get_profile_manager
         pm = get_profile_manager()
 
-        # Check structured memory first
-        recall_match = re.search(r"(?:what is my|what's my|do you know my)\s+(\w+)", raw)
-        if recall_match:
-            key = recall_match.group(1).strip()
-            val = pm.recall_user_memory(key)
-            if val:
-                return True, f"Your {key} is {val}, Harsha!"
+        # Specific key queries
+        keys_to_check = ["address", "location", "city", "state", "name", "phone", "email", "job", "college", "school", "hometown"]
+        for key in keys_to_check:
+            if key in raw or (key == "address" and ("where do i live" in raw or "where i live" in raw or "address" in raw)):
+                val = pm.recall_user_memory(key)
+                if val:
+                    reply = f"Yes Harsha, your {key} is {val}."
+                    print(f"[ROUTER] Memory hit: {reply}")
+                    return True, reply
+                else:
+                    reply = f"I do not have your {key} saved yet, Harsha. Please tell me your {key} so I can store it."
+                    print(f"[ROUTER] Memory miss: {reply}")
+                    return True, reply
 
-        # Fall back to notes
-        notes = pm.get_notes()
+        # Fall back to general memory listing
         user_mem = pm.get_all_user_memory()
+        notes = pm.get_notes()
         parts = []
         if user_mem:
             parts.append("Profile: " + ", ".join(f"{k}: {v}" for k, v in user_mem.items()))
         if notes:
             parts.append("Notes:\n- " + "\n- ".join(notes))
         if parts:
-            return True, "Here's what I remember, Harsha:\n" + "\n".join(parts)
-        return True, "Your memory is clean right now, Harsha."
+            reply = "Here's what I remember, Harsha:\n" + "\n".join(parts)
+            return True, reply
+        reply = "I do not have your memory saved yet. Please tell me your address or details so I can store it."
+        return True, reply
 
 
     # ── System automation ───────────────────────────────────────────────────────
@@ -373,13 +399,15 @@ def process(command: str) -> tuple:
             continue
 
         # Agentic Execution with Semantic Memory & Multi-Step Reasoning
-        from agent import ultron_agent
-        _, agent_response = ultron_agent.process_task(task)
-        if agent_response:
-            replies.append(agent_response)
-
+        try:
+            from agent import ultron_agent
+            _, agent_response = ultron_agent.process_task(task)
+            if agent_response:
+                replies.append(agent_response)
+        except Exception as ag_err:
+            print(f"[ROUTER] Agent fallback: {ag_err}")
 
     if replies:
         return True, " ".join(replies)
 
-    return True, "I'm right here, Harsha. Ask me anything."
+    return True, "I heard you, Harsha. Ask me anything or tell me what to open!"

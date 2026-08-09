@@ -47,9 +47,15 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 data = json.loads(post_data)
                 cmd = data.get("command", "")
+                print(f"[ROUTER] Web server received: '{cmd}'")
                 from router import process
                 _flag, response = process(cmd)
                 reply = response or "Command executed, Harsha!"
+                try:
+                    from speech_engine import speak
+                    speak(reply)
+                except Exception as sp_err:
+                    print(f"[ROUTER] Web server speech error: {sp_err}")
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()

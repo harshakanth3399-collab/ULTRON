@@ -280,6 +280,10 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> str:
         # ── Phonetic correction engine ─────────────────────────────────────
         # 1. Hardcoded override vocabulary for known regional mishearings
         _PHONETIC_OVERRIDES = {
+            "i draw them": "",
+            "i draw then": "",
+            "i draw": "",
+            "draw them": "",
             "reproduce": "andhra pradesh",
             "and reproduce": "andhra pradesh",
             "under produce": "andhra pradesh",
