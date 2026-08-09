@@ -79,17 +79,46 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
 
 
+class ThreadingServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+
+def setup_adb_forwarding(port: int = PORT) -> bool:
+    """Sets up ADB port forwarding so localhost:8000 on phone connects directly via USB/ADB."""
+    try:
+        import subprocess
+        from modules.adb_bridge import _get_adb_executable
+        adb_exe = _get_adb_executable()
+        res = subprocess.run([adb_exe, "forward", f"tcp:{port}", f"tcp:{port}"], capture_output=True, text=True, timeout=5.0)
+        if res.returncode == 0:
+            print(f"[MOBILE] ADB Port Forwarding active: phone http://localhost:{port} -> laptop port {port}")
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def start_server_in_background():
     """Starts the web server in a daemon background thread."""
     ip = get_local_ip()
-    print(f"[MOBILE] ULTRON Mobile Web Server running at: http://{ip}:{PORT}")
-
-
     handler = CustomHTTPRequestHandler
-    httpd = socketserver.TCPServer(("", PORT), handler)
+    
+    try:
+        httpd = ThreadingServer(("0.0.0.0", PORT), handler)
+    except Exception as e:
+        print(f"[MOBILE ERROR] Could not bind port {PORT}: {e}")
+        try:
+            httpd = ThreadingServer(("0.0.0.0", 8080), handler)
+            print(f"[MOBILE] Bound fallback port 8080")
+        except Exception:
+            return ip, PORT
 
     server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     server_thread.start()
+
+    setup_adb_forwarding(PORT)
+    print(f"[MOBILE] ULTRON Mobile Web Server running at: http://{ip}:{PORT}")
     return ip, PORT
 
 
@@ -97,9 +126,8 @@ if __name__ == "__main__":
     ip, port = start_server_in_background()
     print(f"\n==================================================")
     print(f"📲 CONNECT YOUR PHONE TO ULTRON:")
-    print(f"1. Connect phone to same Wi-Fi as laptop.")
-    print(f"2. Open phone browser and go to: http://{ip}:{port}")
-    print(f"3. Tap 'Add to Home Screen' on your phone!")
+    print(f"Option 1 (Wi-Fi):  Open phone browser -> http://{ip}:{port}")
+    print(f"Option 2 (USB/ADB): Open phone browser -> http://localhost:{port}")
     print(f"==================================================\n")
     import time
     while True:
