@@ -123,6 +123,9 @@ class VoicePipeline:
     def _loop(self) -> None:
         router_process = _router()
 
+        # Play startup greeting using the approved voice
+        self._say("Hey Harsha, what can I help you with?")
+
         voice_state_manager.transition_to(VoiceState.IDLE)
         print("[VOICE] === Wake listening started. Say 'Hey Ultron' or 'Ultron'. ===")
 

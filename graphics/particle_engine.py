@@ -1,19 +1,16 @@
 """
-graphics/particle_engine.py - ULTRON AI Core Particle Engine
+graphics/particle_engine.py - ULTRON Volumetric AI Core Particle Engine
 
-PREVIOUS PROBLEM:
-  _generate_jarvis_matrix() used 3-arm spiral + 2 rings.
-  At 2D projection this looked like a sun/atom/flower shape.
-  This has been REMOVED.
+REPLACED:
+  - Old sun/atom shape is completely removed.
+  - New volumetric AI core based on Tony Stark's J.A.R.V.I.S. consciousness matrix:
+    1. Core (25%): A highly dense golden center pulsing with audio energy.
+    2. Plasma Shell (45%): Turbulent spherical field warping along 3D simplex/FBM vector noise.
+    3. Concentric HUD Tracks (30%): inclined ring arrays counter-rotating and rippling.
 
-NEW VISUAL:
-  _generate_ai_core() creates a clean volumetric intelligence sphere:
-    50% - Fibonacci sphere shell (uniform 3D sphere surface — "AI digital brain")
-    30% - 4 inclined torus rings (electromagnetic field containment cage)
-    20% - Neural filament threads (data flows from core outward)
-
-  Result: A mathematically clean, professional AI-core visualization.
-  No sun-rays. No flower petals. No random atom rings.
+AUDIO-REACTIVITY:
+  - Speech & playback audio amplitude drive the core size/glow, shell noise deformation,
+    and HUD track orbital speeds.
 """
 from __future__ import annotations
 
@@ -31,10 +28,7 @@ from graphics.state import UltronState
 
 
 def _fibonacci_sphere(count: int, radius: float, jitter: float = 0.01) -> np.ndarray:
-    """
-    Uniformly distribute points on a sphere using Fibonacci (golden angle) lattice.
-    Result: dense, ordered 3D sphere shell with no clustering/gaps.
-    """
+    """Golden ratio distribution of points on a sphere shell surface."""
     pts = np.zeros((count, 3), dtype=np.float32)
     golden = np.pi * (3.0 - np.sqrt(5.0))
     for i in range(count):
@@ -44,7 +38,6 @@ def _fibonacci_sphere(count: int, radius: float, jitter: float = 0.01) -> np.nda
         pts[i, 0] = np.cos(theta) * r
         pts[i, 1] = y
         pts[i, 2] = np.sin(theta) * r
-    # Scale to radius + small random jitter for organic feel
     pts *= radius
     pts += np.random.normal(0.0, jitter, pts.shape).astype(np.float32)
     return pts
@@ -52,12 +45,7 @@ def _fibonacci_sphere(count: int, radius: float, jitter: float = 0.01) -> np.nda
 
 def _torus_ring(count: int, major_r: float, minor_r: float,
                 tilt_x: float = 0.0, tilt_z: float = 0.0) -> np.ndarray:
-    """
-    Generate a ring of particles forming a torus (donut) shape.
-    major_r: distance from centre to ring centre
-    minor_r: tube radius
-    tilt_x/z: rotation angles for orbital inclination
-    """
+    """Torus ring layout with orbital inclination tilt."""
     theta = np.random.uniform(0.0, 2.0 * np.pi, count).astype(np.float32)
     phi   = np.random.uniform(0.0, 2.0 * np.pi, count).astype(np.float32)
 
@@ -67,7 +55,6 @@ def _torus_ring(count: int, major_r: float, minor_r: float,
 
     pts = np.stack([x, y, z], axis=1).astype(np.float32)
 
-    # Apply tilt (rotation around X and Z axes)
     if abs(tilt_x) > 0.001:
         cx, sx = np.cos(tilt_x), np.sin(tilt_x)
         y2 = pts[:, 1] * cx - pts[:, 2] * sx
@@ -85,96 +72,43 @@ def _torus_ring(count: int, major_r: float, minor_r: float,
     return pts
 
 
-def _neural_filaments(count: int, radius: float) -> np.ndarray:
-    """
-    Sparse neural filaments: particles scattered along curved paths
-    from sphere surface outward, simulating data/energy flows.
-    Replaces the random sun-ray spikes with controlled outward threads.
-    """
-    pts = np.zeros((count, 3), dtype=np.float32)
-
-    # Start from sphere surface points
-    n_threads = max(count // 12, 1)
-    pts_per_thread = count // n_threads
-
-    golden = np.pi * (3.0 - np.sqrt(5.0))
-    for t in range(n_threads):
-        i_start = t * pts_per_thread
-        i_end   = min(i_start + pts_per_thread, count)
-        n       = i_end - i_start
-
-        # Root point on sphere surface
-        fi  = golden * t
-        yi  = 1.0 - (t / max(n_threads - 1, 1)) * 2.0
-        ri  = np.sqrt(max(1.0 - yi * yi, 0.0))
-        ox  = np.cos(fi) * ri
-        oy  = yi
-        oz  = np.sin(fi) * ri
-
-        # Thread extends outward from radius to radius*1.25
-        t_vals = np.linspace(0.0, 1.0, n, dtype=np.float32)
-        r_vals = radius + t_vals * (radius * 0.25)
-
-        # Slight curve: add sinusoidal perpendicular wobble
-        perp_x = -oz
-        perp_z =  ox
-        wobble  = np.sin(t_vals * np.pi * 2.0) * 0.03
-
-        pts[i_start:i_end, 0] = ox * r_vals + perp_x * wobble
-        pts[i_start:i_end, 1] = oy * r_vals + wobble * 0.5
-        pts[i_start:i_end, 2] = oz * r_vals + perp_z * wobble
-
-    return pts.astype(np.float32)
-
-
 def _generate_ai_core(count: int) -> np.ndarray:
     """
-    Builds the ULTRON AI Core particle distribution.
-
-    Geometry breakdown:
-      50% - Fibonacci sphere shell (clean 3D volumetric sphere surface)
-      30% - 4 inclined torus rings (orbital containment structure)
-      20% - Neural filament threads (energy/data flows)
-
-    This replaces the old sun/atom/flower spiral shape entirely.
+    Structured volumetric AI energy core layout:
+      25% - Dense center core (Gaussian cluster)
+      45% - Volumetric shell (Fibonacci lattice)
+      30% - Counter-rotating inclined digital HUD tracks
     """
     pts = np.zeros((count, 3), dtype=np.float32)
 
-    n_sphere    = int(count * 0.50)
-    n_torus     = int(count * 0.30)
-    n_filaments = count - n_sphere - n_torus
+    n_core   = int(count * 0.25)
+    n_shell  = int(count * 0.45)
+    n_tracks = count - n_core - n_shell
 
     radius = SPHERE_RADIUS
 
-    # ── 1. Fibonacci sphere shell ─────────────────────────────────────────────
-    pts[:n_sphere] = _fibonacci_sphere(n_sphere, radius, jitter=0.008)
+    # 1. Central dense core
+    pts[:n_core] = np.random.normal(0.0, radius * 0.25, (n_core, 3)).astype(np.float32)
 
-    # ── 2. Four inclined torus rings at different orbital angles ──────────────
-    n_per_torus = n_torus // 4
-    torus_configs = [
-        # (major_r, minor_r, tilt_x, tilt_z)
-        (radius * 1.08, 0.012, 0.00,         0.00),         # equatorial ring
-        (radius * 1.12, 0.010, np.pi / 3.5,  0.00),         # 51° inclined
-        (radius * 1.10, 0.009, -np.pi / 4.0, np.pi / 6.0),  # 45° + 30° twist
-        (radius * 1.15, 0.008, np.pi / 6.0,  -np.pi / 4.0), # 30° + -45° twist
-    ]
-    cursor = n_sphere
-    for idx, (maj, min_, tx, tz) in enumerate(torus_configs):
-        n_this = n_per_torus if idx < 3 else (n_sphere + n_torus - cursor)
-        pts[cursor:cursor + n_this] = _torus_ring(n_this, maj, min_, tx, tz)
+    # 2. Outer plasma shell surface
+    pts[n_core:n_core + n_shell] = _fibonacci_sphere(n_shell, radius, jitter=0.012)
+
+    # 3. Inclined concentric tracks
+    n_per_track = n_tracks // 3
+    cursor = n_core + n_shell
+    for idx in range(3):
+        n_this = n_per_track if idx < 2 else (count - cursor)
+        maj = radius * (1.1 + idx * 0.16)
+        tx = (idx * np.pi / 4.0) + 0.25
+        tz = (idx * -np.pi / 6.0) - 0.12
+        pts[cursor:cursor + n_this] = _torus_ring(n_this, maj, 0.004, tx, tz)
         cursor += n_this
-
-    # ── 3. Neural filament threads ─────────────────────────────────────────────
-    pts[n_sphere + n_torus:] = _neural_filaments(n_filaments, radius)
 
     return pts.astype(np.float32)
 
 
 class ParticleEngine:
-    """
-    Drives ULTRON's 150,000 AI-core particles.
-    Particles respond in real-time to voice state and audio level.
-    """
+    """Drives particle kinematics with dynamic vector fields and audio-reactivity."""
 
     __slots__ = (
         "count", "_base", "_positions",
@@ -208,62 +142,98 @@ class ParticleEngine:
         rotation_spd = cfg["rotation"]
         audio        = audio_level * cfg["audio_influence"]
 
-        self._rotation += dt * (rotation_spd + audio * 0.3)
+        # Base rotation
+        self._rotation += dt * (rotation_spd + audio * 0.35)
 
-        cos_r = np.cos(self._rotation)
-        sin_r = np.sin(self._rotation)
-        bx = self._base[:, 0]
-        by = self._base[:, 1]
-        bz = self._base[:, 2]
+        # Partitions
+        n_core   = int(self.count * 0.25)
+        n_shell  = int(self.count * 0.45)
+        n_tracks = self.count - n_core - n_shell
 
-        # Rotate around Y axis
-        rot_x = bx * cos_r - bz * sin_r
-        rot_z = bx * sin_r + bz * cos_r
+        # ── 1. Update Core (Dense Center) ─────────────────────────────────────
+        # Tight breathing pulse driven by audio
+        core_pulse = 1.0 + np.sin(time * pulse_speed * 1.4) * pulse_amp * 0.35 + audio * 0.15
+        self._positions[:n_core] = self._base[:n_core] * core_pulse
 
-        # Organic noise displacement
-        noise_scale = 1.4 + turbulence * 0.3 + audio * 0.6
-        nx = rot_x * noise_scale + time * (0.22 + audio * 0.4)
-        ny = by    * noise_scale + time * (0.19 + audio * 0.4)
-        nz = rot_z * noise_scale + time * (0.17 + audio * 0.4)
+        # ── 2. Update Shell (Plasma Filaments) ────────────────────────────────
+        # Simplex noise vector displacement
+        bx_shell = self._base[n_core:n_core + n_shell, 0]
+        by_shell = self._base[n_core:n_core + n_shell, 1]
+        bz_shell = self._base[n_core:n_core + n_shell, 2]
+
+        cos_s = np.cos(self._rotation * 0.25)
+        sin_s = np.sin(self._rotation * 0.25)
+        rot_xs = bx_shell * cos_s - bz_shell * sin_s
+        rot_zs = bx_shell * sin_s + bz_shell * cos_s
+
+        noise_scale = 1.5 + turbulence * 0.35 + audio * 0.75
+        nx = rot_xs * noise_scale + time * (0.24 + audio * 0.3)
+        ny = by_shell * noise_scale + time * (0.20 + audio * 0.3)
+        nz = rot_zs * noise_scale + time * (0.16 + audio * 0.3)
 
         n1 = fbm3(nx, ny, nz, octaves=2)
-        n2 = fbm3(nx + 11.3, ny + 6.7, nz + 3.9, octaves=2)
-        n3 = simplex3(nx * 1.8 + 40.0, ny * 1.8, nz * 1.8 + time * (0.4 + audio))
+        n2 = fbm3(nx + 10.0, ny + 5.0, nz + 3.0, octaves=2)
+        n3 = simplex3(nx * 1.9 + 35.0, ny * 1.9, nz * 1.9 + time * (0.45 + audio))
 
-        # Pulse: breathing sphere
-        pulse  = np.sin(time * pulse_speed + self._phase) * pulse_amp
-        pulse += np.sin(time * pulse_speed * 1.9 + self._phase * 1.5) * pulse_amp * 0.3
-        audio_pulse = audio * 0.18 * (1.0 + np.sin(time * 10.0 + self._phase * 2.5))
+        disp = np.stack((n1, n2, n3), axis=1).astype(np.float32)
+        disp *= 0.04 * (turbulence + audio * 1.4) * SPHERE_RADIUS
 
-        displacement = np.stack((n1, n2, n3), axis=1).astype(np.float32)
-        displacement *= 0.025 * (turbulence + audio * 1.2)
+        shell_pulse = 1.0 + np.sin(time * pulse_speed + self._phase[n_core:n_core + n_shell]) * pulse_amp + audio * 0.22
+        self._positions[n_core:n_core + n_shell] = (
+            self._base[n_core:n_core + n_shell] * shell_pulse[:, np.newaxis] + disp
+        )
 
-        radius_mod = 1.0 + pulse + audio_pulse
-        self._positions = self._base * radius_mod[:, np.newaxis] + displacement
+        # ── 3. Update concentric tracks (Orbital Bands) ────────────────────────
+        n_per_track = n_tracks // 3
+        cursor = n_core + n_shell
+        for idx in range(3):
+            n_this = n_per_track if idx < 2 else (self.count - cursor)
+            # Counter-rotate adjacent tracks
+            dir_mult = 1.0 if idx % 2 == 0 else -1.25
+            angle = self._rotation * dir_mult + (idx * 0.45)
 
-        # Gentle swirl
-        swirl = 0.003 * (turbulence + audio * 1.5)
-        self._positions[:, 0] += n3 * swirl
-        self._positions[:, 1] += n1 * swirl
+            cos_t = np.cos(angle)
+            sin_t = np.sin(angle)
 
-        # Brightness
-        glow = cfg["glow"] * max(activation, 0.55)
-        self._brightness = np.clip(
-            0.38
-            + 0.42 * glow
-            + 0.28 * np.abs(n1)
-            + audio * 0.65
-            + np.sin(time * 3.5 + self._phase) * 0.08,
-            0.15, 1.0,
-        ).astype(np.float32)
+            bx_t = self._base[cursor:cursor + n_this, 0]
+            by_t = self._base[cursor:cursor + n_this, 1]
+            bz_t = self._base[cursor:cursor + n_this, 2]
 
-        size_boost = 1.0 + audio * 0.7 + glow * 0.2
-        self._size = np.clip(
-            self._size * 0.96
-            + np.random.uniform(PARTICLE_MIN_SIZE, PARTICLE_MAX_SIZE, self.count) * 0.04,
-            PARTICLE_MIN_SIZE,
-            PARTICLE_MAX_SIZE * size_boost,
-        ).astype(np.float32)
+            rx = bx_t * cos_t - bz_t * sin_t
+            rz = bx_t * sin_t + bz_t * cos_t
+
+            # Synaptic wave ripples
+            ripple = 1.0 + np.sin(time * 3.5 + float(idx) + self._phase[cursor:cursor + n_this]) * 0.008 * (1.0 + audio * 2.2)
+
+            self._positions[cursor:cursor + n_this] = np.stack((rx, by_t, rz), axis=1).astype(np.float32) * ripple[:, np.newaxis]
+            cursor += n_this
+
+        # ── Brightness & Sizing ────────────────────────────────────────────────
+        glow = cfg["glow"] * max(activation, 0.5)
+
+        # Core is extremely bright
+        self._brightness[:n_core] = np.clip(0.85 + audio * 0.15 + np.abs(n1[:n_core]) * 0.08, 0.6, 1.0)
+        # Shell matches voice energy
+        self._brightness[n_core:n_core + n_shell] = np.clip(
+            0.42 + 0.45 * glow + 0.28 * np.abs(n1[n_core:n_core + n_shell]) + audio * 0.75,
+            0.18, 1.0
+        )
+        # Tracks glow subtly
+        self._brightness[n_core + n_shell:] = np.clip(
+            0.32 + 0.38 * glow + audio * 0.45,
+            0.12, 0.95
+        )
+
+        # Sizes: Core small/dense, Shell expansive/reactive, Tracks fine/digital
+        self._size[:n_core] = np.clip(self._size[:n_core] * 0.75, PARTICLE_MIN_SIZE, PARTICLE_MAX_SIZE * 0.65)
+        self._size[n_core:n_core + n_shell] = np.clip(
+            self._size[n_core:n_core + n_shell] * (1.0 + audio * 0.9),
+            PARTICLE_MIN_SIZE, PARTICLE_MAX_SIZE * 1.8
+        )
+        self._size[n_core + n_shell:] = np.clip(
+            self._size[n_core + n_shell:] * 0.55,
+            PARTICLE_MIN_SIZE * 0.5, PARTICLE_MAX_SIZE * 0.75
+        )
 
     @property
     def positions(self) -> np.ndarray:

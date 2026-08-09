@@ -1,20 +1,16 @@
 """
-speech.py - ULTRON Microphone Capture & Transcription Engine
+speech.py - ULTRON Continuous PyAudio Capture & Whisper Transcription Engine
 
-REAL ROOT CAUSES FIXED (confirmed by hardware diagnostic):
-  1. energy_threshold = 200 while ambient RMS = 1.0
-     -> voice NEVER clears the threshold -> silence/timeout loop forever
-     Fixed: auto-calibrate threshold at startup from real hardware measurement
-
-  2. Default mic (Intel Smart Sound Array) native rate = 44100 Hz
-     -> opening at 16000 Hz can fail silently on this driver
-     Fixed: use native device sample rate, resample to 16000 for Whisper
-
-  3. SpeechRecognition adjust_for_ambient_noise() was removing this fix
-     Fixed: do NOT call adjust_for_ambient_noise()
-
-  4. vad_filter=True dropped short phrases like "Hey Ultron"
-     Fixed: vad_filter=False, rely on energy gate only
+KEY ENGINEERING RECOVERY:
+  1. Permanent PyAudio Stream: Bypasses SpeechRecognition's slow open/close mic latency.
+     The microphone remains open continuously at its native hardware rate (44100Hz/48000Hz),
+     minimizing startup and phrase response latency.
+  2. Custom Energy-Gate VAD: Analyzes the audio stream in real-time, detecting speech
+     and silence boundaries automatically.
+  3. Dynamic Calibration: Automatically measures ambient floor, sets optimal threshold,
+     and adjusts for quiet inputs (down to minimum 4 RMS).
+  4. Speaker Echo Prevention: Pauses mic capture during TTS playback and aggressively
+     flushes PyAudio input buffers right after speaking finishes.
 """
 from __future__ import annotations
 
@@ -29,7 +25,6 @@ import wave
 from typing import Optional
 
 import pyaudio
-import speech_recognition as sr
 from faster_whisper import WhisperModel
 
 try:
@@ -67,10 +62,6 @@ print("[VOICE] Faster-Whisper model ready.")
 
 # ── Detect real hardware microphone parameters ─────────────────────────────────
 def _probe_mic() -> tuple[int, int, int]:
-    """
-    Returns (device_index, native_rate, channels) for the default input device.
-    Uses the device's NATIVE sample rate to avoid resampling errors.
-    """
     try:
         p = pyaudio.PyAudio()
         info = p.get_default_input_device_info()
@@ -78,63 +69,125 @@ def _probe_mic() -> tuple[int, int, int]:
         rate     = int(info['defaultSampleRate'])
         channels = min(int(info['maxInputChannels']), 2)
         p.terminate()
-        print(f"[VOICE] Mic: device={idx}, native_rate={rate}Hz, channels={channels}")
+        print(f"[VOICE] Mic detected: device={idx}, native_rate={rate}Hz, channels={channels}")
         return idx, rate, channels
     except Exception as e:
-        print(f"[VOICE] Mic probe failed: {e}. Using defaults.")
+        print(f"[VOICE] Mic probe failed: {e}. Using safe defaults.")
         return None, 44100, 1
 
 def _measure_ambient_rms(device_idx: Optional[int], rate: int, channels: int) -> float:
-    """
-    Open mic for 0.5s and measure real ambient RMS.
-    Returns the measured value so we can set energy_threshold appropriately.
-    """
     try:
         p = pyaudio.PyAudio()
         stream = p.open(
             format=pyaudio.paInt16,
-            channels=channels,
+            channels=1,
             rate=rate,
             input=True,
             input_device_index=device_idx,
             frames_per_buffer=1024,
         )
         rms_vals = []
-        for _ in range(int(rate / 1024 * 0.5)):  # 0.5 seconds
+        # Measure for 0.4 seconds
+        for _ in range(int(rate / 1024 * 0.4)):
             data = stream.read(1024, exception_on_overflow=False)
             rms_vals.append(audioop.rms(data, 2))
         stream.stop_stream()
         stream.close()
         p.terminate()
-        ambient = sum(rms_vals) / len(rms_vals) if rms_vals else 10.0
-        print(f"[VOICE] Ambient RMS: {ambient:.1f}")
+        ambient = sum(rms_vals) / len(rms_vals) if rms_vals else 1.0
+        print(f"[VOICE] Measured ambient noise floor RMS: {ambient:.1f}")
         return ambient
     except Exception as e:
-        print(f"[VOICE] Ambient probe failed: {e}. Using safe default.")
-        return 10.0
+        print(f"[VOICE] Ambient noise floor measurement failed: {e}. Using default.")
+        return 1.0
 
 _MIC_IDX, _MIC_RATE, _MIC_CHANNELS = _probe_mic()
 _AMBIENT_RMS = _measure_ambient_rms(_MIC_IDX, _MIC_RATE, _MIC_CHANNELS)
 
-# ── SpeechRecognition setup with HARDWARE-CALIBRATED threshold ────────────────
-recognizer = sr.Recognizer()
-
-# KEY FIX: Set threshold based on REAL hardware measurement
-# Use ambient * 3.5 (well above noise, well below normal speech)
-# Minimum 4, maximum 300
+# KEY FIX: Hardware-calibrated energy threshold (Minimum 4, maximum 300)
 _energy_threshold = max(4, min(300, int(_AMBIENT_RMS * 3.5)))
-recognizer.energy_threshold        = _energy_threshold
-recognizer.dynamic_energy_threshold = False   # Never auto-adjust
-recognizer.pause_threshold          = 0.9
-recognizer.non_speaking_duration    = 0.35
-recognizer.phrase_threshold         = 0.2
+print(f"[VOICE] Final calibrated energy threshold set to {_energy_threshold}")
 
-print(f"[VOICE] energy_threshold set to {_energy_threshold} (ambient={_AMBIENT_RMS:.1f})")
+# ── Permanent Audio Stream ─────────────────────────────────────────────────────
+_pa_instance = None
+_mic_stream = None
+
+
+def init_mic() -> None:
+    """Initialize the permanent input stream to bypass start/stop latencies."""
+    global _pa_instance, _mic_stream
+    if _mic_stream is not None:
+        return
+    try:
+        _pa_instance = pyaudio.PyAudio()
+        _mic_stream = _pa_instance.open(
+            format=pyaudio.paInt16,
+            channels=1,
+            rate=_MIC_RATE,
+            input=True,
+            input_device_index=_MIC_IDX,
+            frames_per_buffer=1024,
+        )
+        print(f"[VOICE] Permanent mic stream opened at {_MIC_RATE}Hz.")
+    except Exception as e:
+        print(f"[VOICE] ERROR: Failed to open permanent mic stream: {e}")
+
+
+def flush_mic_stream() -> None:
+    """Discards all accumulated buffered frames in PyAudio buffer."""
+    global _mic_stream
+    if _mic_stream is None:
+        return
+    try:
+        avail = _mic_stream.get_read_available()
+        if avail > 0:
+            _mic_stream.read(avail, exception_on_overflow=False)
+            print(f"[VOICE] Flushed {avail} frames from PyAudio buffer.")
+    except Exception:
+        pass
+
+
+def _wait_if_speaking() -> None:
+    """Block microphone capture while ULTRON TTS plays to prevent echo loops."""
+    if _speaking_event.is_set():
+        print("[VOICE] TTS active — pausing mic capture.")
+        _speaking_event.wait()
+        # Sleep briefly for speaker echo to dissipate, then flush
+        time.sleep(0.42)
+        flush_mic_stream()
+
+
+# ── WAV Resampling ─────────────────────────────────────────────────────────────
+def _resample_wav_16k(wav_bytes: bytes) -> bytes:
+    """Resample input stream from native rates down to Whisper's 16000Hz mono."""
+    try:
+        bio = io.BytesIO(wav_bytes)
+        with wave.open(bio, 'rb') as r:
+            nch, sw, fr, nf = r.getparams()[:4]
+            frames = r.readframes(nf)
+
+        if fr == 16000:
+            return wav_bytes
+
+        # Resample frame rate
+        state = None
+        resampled_frames, state = audioop.ratecv(frames, sw, 1, fr, 16000, state)
+
+        out = io.BytesIO()
+        with wave.open(out, 'wb') as w:
+            w.setnchannels(1)
+            w.setsampwidth(sw)
+            w.setframerate(16000)
+            w.writeframes(resampled_frames)
+        return out.getvalue()
+    except Exception as e:
+        print(f"[VOICE] Audio resampling down to 16k failed: {e}")
+        return wav_bytes
 
 
 # ── Audio normalization ────────────────────────────────────────────────────────
 def _normalize_wav(wav_bytes: bytes) -> bytes:
-    """Boost quiet recordings so Whisper can hear clearly."""
+    """Boost voice audio gain so Whisper handles whispers cleanly."""
     try:
         bio = io.BytesIO(wav_bytes)
         with wave.open(bio, 'rb') as r:
@@ -159,49 +212,40 @@ def _normalize_wav(wav_bytes: bytes) -> bytes:
         return wav_bytes
 
 
-def _wait_if_speaking() -> None:
-    """Block microphone capture while ULTRON TTS is playing."""
-    if _speaking_event.is_set():
-        print("[VOICE] TTS active — pausing mic until playback finishes.")
-        _speaking_event.wait()
-        time.sleep(0.40)
-
-
 # ── Transcription ──────────────────────────────────────────────────────────────
 def transcribe_audio_bytes(wav_bytes: bytes) -> str:
-    """
-    Transcribes WAV to English using Faster-Whisper.
-    vad_filter=False: do NOT drop short phrases like 'Hey Ultron'.
-    """
+    """Transcribe WAV bytes using Faster-Whisper."""
     if not wav_bytes:
         return ""
 
-    normalized = _normalize_wav(wav_bytes)
+    resampled = _resample_wav_16k(wav_bytes)
+    normalized = _normalize_wav(resampled)
+
     filename = ""
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
             f.write(normalized)
             filename = f.name
 
-        print("[VOICE] Transcription start...")
+        print("[VOICE] [WHISPER] Starting model transcription...")
         segments, _info = model.transcribe(
             filename,
             language="en",
             beam_size=5,
             best_of=5,
             temperature=0.0,
-            vad_filter=False,          # Do NOT drop short wake phrases
+            vad_filter=False,  # Keep False to protect short phrases
             condition_on_previous_text=False,
         )
         raw = " ".join(s.text.strip() for s in segments).strip()
         if not raw:
-            print("[VOICE] Transcript: (empty)")
+            print("[VOICE] [WHISPER] Transcript is empty.")
             return ""
         final = correct(raw)
-        print(f"[VOICE] Transcript: '{final}'")
+        print(f"[VOICE] [WHISPER] Transcript: '{final}'")
         return final
     except Exception as e:
-        print(f"[VOICE] Transcription error: {e}")
+        print(f"[VOICE] [WHISPER] ERROR: Transcription failed: {e}")
         return ""
     finally:
         if filename:
@@ -214,45 +258,86 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> str:
 # ── Microphone audio capture ───────────────────────────────────────────────────
 def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> bytes:
     """
-    Capture one phrase from microphone.
-
-    KEY FIXES:
-      1. Blocks until TTS finishes before opening mic (prevents self-hearing)
-      2. Uses hardware native sample rate
-      3. Logs actual device, rate, RMS received
+    Listens continuously using the permanent PyAudio stream.
+    Applies custom energy-gate VAD to detect phrase start/stop points.
     """
+    global _mic_stream
     _wait_if_speaking()
 
-    try:
-        # Use hardware native rate; SpeechRecognition handles the mic
-        mic_kwargs = {"sample_rate": _MIC_RATE}
-        if _MIC_IDX is not None:
-            mic_kwargs["device_index"] = _MIC_IDX
+    if _mic_stream is None:
+        init_mic()
 
-        with sr.Microphone(**mic_kwargs) as source:
-            print(f"[VOICE] Mic open: device={_MIC_IDX}, rate={_MIC_RATE}Hz, "
-                  f"threshold={recognizer.energy_threshold}")
-            audio = recognizer.listen(
-                source,
-                timeout=timeout,
-                phrase_time_limit=phrase_time_limit,
-            )
-            wav = audio.get_wav_data()
-            rms_val = audioop.rms(wav[:min(len(wav), 8192)], 2) if wav else 0
-            print(f"[VOICE] Audio captured: {len(wav)} bytes, RMS={rms_val}")
-            return wav
+    flush_mic_stream()
+    print(f"[VOICE] Listening... Gate threshold={_energy_threshold}")
 
-    except sr.WaitTimeoutError:
-        print("[VOICE] No speech detected within timeout — retrying.")
+    speech_frames = []
+    speaking_started = False
+
+    # VAD limits
+    silence_limit_chunks = int(_MIC_RATE / 1024 * 0.85)  # 0.85s of silence marks end
+    silence_counter = 0
+    max_chunks = int(_MIC_RATE / 1024 * phrase_time_limit)
+    timeout_chunks = int(_MIC_RATE / 1024 * timeout)
+    chunk_counter = 0
+
+    while True:
+        _wait_if_speaking()
+
+        try:
+            data = _mic_stream.read(1024, exception_on_overflow=False)
+        except Exception as e:
+            print(f"[VOICE] Mic stream read warning: {e}")
+            time.sleep(0.01)
+            continue
+
+        rms_val = audioop.rms(data, 2)
+
+        if not speaking_started:
+            # Listening for speech onset
+            if rms_val > _energy_threshold:
+                print(f"[VOICE] Speech onset detected (RMS={rms_val} > threshold={_energy_threshold})")
+                speaking_started = True
+                speech_frames.append(data)
+            else:
+                chunk_counter += 1
+                if chunk_counter > timeout_chunks:
+                    print("[VOICE] Silence timeout reached.")
+                    return b""
+        else:
+            # Accumulating active speech
+            speech_frames.append(data)
+            if rms_val <= _energy_threshold:
+                silence_counter += 1
+                if silence_counter > silence_limit_chunks:
+                    print("[VOICE] Speech offset detected (silence threshold met).")
+                    break
+            else:
+                silence_counter = 0
+
+            if len(speech_frames) > max_chunks:
+                print("[VOICE] Phrase time limit exceeded.")
+                break
+
+    if not speech_frames:
         return b""
-    except Exception as e:
-        print(f"[VOICE] Mic capture error: {e}")
-        return b""
+
+    # Package frames to WAV bytes
+    out = io.BytesIO()
+    with wave.open(out, 'wb') as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(_MIC_RATE)
+        w.writeframes(b"".join(speech_frames))
+
+    return out.getvalue()
 
 
 def listen() -> str:
-    """Backward-compatible single-shot listen."""
     wav = listen_for_audio()
     if not wav:
         return ""
     return transcribe_audio_bytes(wav)
+
+
+# Eagerly initialize mic stream at startup to eliminate lag
+init_mic()
