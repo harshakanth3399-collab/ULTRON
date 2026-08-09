@@ -73,9 +73,10 @@ def _play(text: str) -> None:
             communicate = edge_tts.Communicate(
                 text=clean, voice=VOICE, rate=RATE, pitch=PITCH
             )
-            asyncio.run(communicate.save(filename))
+            # Use strict 6.0s timeout to prevent network hang deadlock
+            asyncio.run(asyncio.wait_for(communicate.save(filename), timeout=6.0))
         except Exception as e:
-            print(f"[TTS] edge-tts generation failed: {e}")
+            print(f"[TTS ERROR] edge-tts generation failed or timed out: {e}")
             _set_speaking(False)
             _done_event.set()
             return
@@ -92,7 +93,7 @@ def _play(text: str) -> None:
                 pygame.mixer.music.play()
                 print(f"[TTS] Playing: '{text[:60]}...'")
             except Exception as e:
-                print(f"[TTS] Pygame play error: {e}")
+                print(f"[TTS ERROR] Pygame play error: {e}")
                 _set_speaking(False)
                 _done_event.set()
                 return
@@ -113,7 +114,7 @@ def _play(text: str) -> None:
             pass
 
     except Exception as e:
-        print(f"[TTS] Unexpected error: {e}")
+        print(f"[TTS ERROR] Unexpected error: {e}")
     finally:
         _set_speaking(False)
         _done_event.set()
@@ -141,19 +142,21 @@ def speak(text: str) -> None:
     thread.start()
 
 
-def wait_until_done(timeout: float = 120.0) -> None:
+def wait_until_done(timeout: float = 25.0) -> None:
     """
     Block caller until TTS playback is fully complete.
-    First waits for audio to start playing, then waits for it to finish.
+    First waits for audio to start playing (timeout 6.0s), then waits for it to finish (timeout 25.0s).
     This eliminates the race condition where the pipeline resumed before audio played.
     """
     # Wait for audio to actually start (survives slow edge-tts generation on Jio)
-    if not _ready_event.wait(timeout=timeout):
-        print("[TTS] wait_until_done: timed out waiting for audio to start")
+    if not _ready_event.wait(timeout=6.0):
+        print("[TTS ERROR] wait_until_done: timed out waiting for audio to start (network issue?)")
+        _set_speaking(False)
         return
     # Now wait for playback to finish
     if not _done_event.wait(timeout=timeout):
-        print("[TTS] wait_until_done: timed out waiting for audio to finish")
+        print("[TTS ERROR] wait_until_done: timed out waiting for audio to finish")
+        _set_speaking(False)
 
 
 def stop() -> None:

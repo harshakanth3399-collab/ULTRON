@@ -266,6 +266,10 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
 
     if _mic_stream is None:
         init_mic()
+        if _mic_stream is None:
+            print("[VOICE ERROR] Microphone failed to initialize. Aborting audio capture.")
+            time.sleep(1.0)
+            return b""
 
     flush_mic_stream()
     print(f"[VOICE] Listening... Gate threshold={_energy_threshold}")
