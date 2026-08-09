@@ -49,7 +49,7 @@ def speaking() -> bool:
     return _speaking_event.is_set()
 
 
-# ── Wake words (expanded with common Whisper phonetic variations) ──────────────
+# ── Wake words (expanded with exact Whisper log trace mishearings) ─────────────
 WAKE_WORDS = {
     "ultron", "hey ultron", "hi ultron", "ok ultron", "okay ultron",
     "hello ultron", "yo ultron", "bro ultron", "ultram", "ultra",
@@ -57,8 +57,12 @@ WAKE_WORDS = {
     "hey outron", "hey autron", "hey eltron", "hey ol tron", "outron", "autron",
     "eltron", "oltron", "aultron", "haltron", "alteron", "outeron", "alltron",
     "hey assistant", "hey ul", "hail tron", "hailtron", "hail", "hay tron", "haytron",
-    "hell tron", "hail-tron", "heil tron", "heiltron", "hey hail tron"
+    "hell tron", "hail-tron", "heil tron", "heiltron", "hey hail tron",
+    "here ill turn", "okay and drawn", "call a mark", "ill turn", "and drawn",
+    "here i'll turn", "okay, and drawn.", "ay and drawn", "call a ma",
+    "i will try to call a ma", "call a ma", "call a mark", "i'll turn", "drawn"
 }
+
 
 
 # ── Live Mic RMS for Visualizer ────────────────────────────────────────────────
@@ -315,9 +319,10 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
     # Ring buffer to preserve 4 chunks (~100ms) before onset detection
     pre_buffer = collections.deque(maxlen=4)
 
-    # VAD limits
-    silence_limit_chunks = int(_MIC_RATE / 1024 * 0.70)  # 0.70s of silence marks end
+    # VAD limits: 1.4s of silence marks natural phrase end (prevents mid-word cutoff)
+    silence_limit_chunks = int(_MIC_RATE / 1024 * 1.40)
     silence_counter = 0
+
     max_chunks = int(_MIC_RATE / 1024 * phrase_time_limit)
     timeout_chunks = int(_MIC_RATE / 1024 * timeout)
     chunk_counter = 0
