@@ -74,15 +74,16 @@ def _play(text: str) -> None:
     _ready_event.clear()
     _done_event.clear()
 
-    # Clean text: never speak raw URLs or IP addresses
-    spoken_text = _clean_text_for_speech(text)
-    if not spoken_text:
-        spoken_text = "Check your screen, Harsha."
+    try:
+        spoken_text = _clean_text_for_speech(text)
+        if not spoken_text:
+            spoken_text = "Check your screen, Harsha."
 
         _stop_flag.clear()
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
             filename = f.name
+
 
         try:
             clean = _fix_phonetics(spoken_text)
