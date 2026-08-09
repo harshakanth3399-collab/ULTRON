@@ -33,7 +33,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 def start_server_in_background():
     """Starts the web server in a daemon background thread."""
     ip = get_local_ip()
-    print(f"🌐 ULTRON Mobile Web Server running at: http://{ip}:{PORT}")
+    print(f"[MOBILE] ULTRON Mobile Web Server running at: http://{ip}:{PORT}")
+
 
     handler = CustomHTTPRequestHandler
     httpd = socketserver.TCPServer(("", PORT), handler)

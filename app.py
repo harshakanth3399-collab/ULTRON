@@ -30,7 +30,21 @@ def main() -> int:
 
     print("[BOOT] QApplication created", flush=True)
 
+    # Auto-start Mobile Web Server
+    try:
+        from web_server import start_server_in_background
+        ip, port = start_server_in_background()
+        print(f"\n==================================================", flush=True)
+        print(f"[MOBILE] ULTRON MOBILE WEB SERVER ACTIVE!", flush=True)
+        print(f"[MOBILE] Open this URL on your phone Chrome browser:")
+        print(f" -> http://{ip}:{port}", flush=True)
+        print(f"==================================================\n", flush=True)
+    except Exception as e:
+        print(f"[WEB SERVER] Server startup note: {e}", flush=True)
+
+
     from ui.main_window import UltronWindow
+
     window = UltronWindow()
     print("[BOOT] main window created", flush=True)
 
