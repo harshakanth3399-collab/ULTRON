@@ -198,11 +198,11 @@ class UltronWindow(QMainWindow):
         self._timer.timeout.connect(self._tick)
         self._timer.start(FRAME_MS)
 
-        # ── Heartbeat timer (debug) ───────────────────────────────────────
+        # ── Heartbeat timer (silent background health check) ─────────────
         self._heartbeat_count = 0
         self._heartbeat = QTimer(self)
         self._heartbeat.timeout.connect(self._on_heartbeat)
-        self._heartbeat.start(5000)  # Every 5s
+        self._heartbeat.start(30_000)  # Every 30s, silent
 
         print("[BOOT] renderer initialized", flush=True)
         # NOTE: showFullScreen() is called by app.py AFTER __init__ returns.
@@ -211,7 +211,9 @@ class UltronWindow(QMainWindow):
 
     def _on_heartbeat(self) -> None:
         self._heartbeat_count += 1
-        print(f"[DEBUG] Main UI loop running... (heartbeat #{self._heartbeat_count})", flush=True)
+        # Only log every 60th beat (~30 min) to avoid console flood
+        if self._heartbeat_count % 60 == 1:
+            print(f"[HEALTH] ULTRON alive — heartbeat #{self._heartbeat_count}", flush=True)
 
     def _start_pipeline(self) -> None:
         print("[BOOT] QTimer trigger: starting voice pipeline", flush=True)

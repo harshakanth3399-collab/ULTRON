@@ -71,17 +71,61 @@ def process(command: str) -> tuple:
         return True, "Get lost! This is Harsha's laptop. You are NOT authorised."
 
     # ── Memory commands ─────────────────────────────────────────────────────────
+    # Structured profile memory: "my address is ...", "my favorite X is Y"
+    _PROFILE_PATTERNS = [
+        (r"(?:my|i live in|i'm from)\s+(address|city|state|hometown|location)\s+(?:is|in)\s+(.*)", None),
+        (r"my\s+(?:favorite|fav|favourite)\s+(\w+)\s+is\s+(.*)", None),
+        (r"my\s+(name|age|birthday|phone|email|college|school|company|job|address|city|state)\s+is\s+(.*)", None),
+        (r"i\s+(?:am|live|work|study)\s+(?:in|at|from)\s+(.*)", "location"),
+    ]
+
+    for pattern, forced_key in _PROFILE_PATTERNS:
+        match = re.search(pattern, raw, re.IGNORECASE)
+        if match:
+            from modules.memory.profile_manager import commit_user_memory
+            if forced_key:
+                key = forced_key
+                value = match.group(1).strip()
+            else:
+                key = match.group(1).strip()
+                value = match.group(2).strip()
+            resp = commit_user_memory(key, value)
+            return True, resp
+
     if raw.startswith("remember that"):
         note = raw.replace("remember that", "").strip()
         remember("note", note)
+        # Also commit to persistent memory
+        from modules.memory.profile_manager import commit_user_memory, get_profile_manager
+        pm = get_profile_manager()
+        pm.add_note(note)
         return True, f"Stored in memory, bro: '{note}'"
 
-    if "what do you remember" in raw or "show my notes" in raw:
+    # Recall from persistent memory BEFORE querying LLM
+    if any(k in raw for k in ["what do you remember", "show my notes", "what is my", "what's my", "do you know my"]):
+        from modules.memory.profile_manager import get_profile_manager
         pm = get_profile_manager()
+
+        # Check structured memory first
+        recall_match = re.search(r"(?:what is my|what's my|do you know my)\s+(\w+)", raw)
+        if recall_match:
+            key = recall_match.group(1).strip()
+            val = pm.recall_user_memory(key)
+            if val:
+                return True, f"Your {key} is {val}, Harsha!"
+
+        # Fall back to notes
         notes = pm.get_notes()
+        user_mem = pm.get_all_user_memory()
+        parts = []
+        if user_mem:
+            parts.append("Profile: " + ", ".join(f"{k}: {v}" for k, v in user_mem.items()))
         if notes:
-            return True, "Here's what I remember for you, Harsha:\n- " + "\n- ".join(notes)
+            parts.append("Notes:\n- " + "\n- ".join(notes))
+        if parts:
+            return True, "Here's what I remember, Harsha:\n" + "\n".join(parts)
         return True, "Your memory is clean right now, Harsha."
+
 
     # ── System automation ───────────────────────────────────────────────────────
     if any(k in raw for k in ["volume", "battery", "cpu", "system status", "brightness"]):

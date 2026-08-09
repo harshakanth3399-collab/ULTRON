@@ -277,6 +277,77 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> str:
             print("[VOICE] [WHISPER] Transcript is empty.")
             return ""
 
+        # ── Phonetic correction engine ─────────────────────────────────────
+        # 1. Hardcoded override vocabulary for known regional mishearings
+        _PHONETIC_OVERRIDES = {
+            "reproduce": "andhra pradesh",
+            "and reproduce": "andhra pradesh",
+            "under produce": "andhra pradesh",
+            "underproduce": "andhra pradesh",
+            "andro pradesh": "andhra pradesh",
+            "under pradesh": "andhra pradesh",
+            "and rapradesh": "andhra pradesh",
+            "what's up": "whatsapp",
+            "whats up": "whatsapp",
+            "whatup": "whatsapp",
+            "a, d, b": "adb",
+            "a-d-b": "adb",
+            "a d b": "adb",
+            "a, b, b": "adb",
+        }
+
+        raw_corrected = raw
+        raw_check = raw.lower()
+        for mishearing, correction in _PHONETIC_OVERRIDES.items():
+            if mishearing in raw_check:
+                raw_corrected = raw_check.replace(mishearing, correction)
+                raw_check = raw_corrected
+                print(f"[VOICE] [PHONETIC] Override: '{mishearing}' → '{correction}'")
+
+        # 2. Levenshtein distance matching for near-miss regional words
+        def _levenshtein(s1: str, s2: str) -> int:
+            if len(s1) < len(s2):
+                return _levenshtein(s2, s1)
+            if len(s2) == 0:
+                return len(s1)
+            prev_row = range(len(s2) + 1)
+            for i, c1 in enumerate(s1):
+                curr_row = [i + 1]
+                for j, c2 in enumerate(s2):
+                    insertions = prev_row[j + 1] + 1
+                    deletions = curr_row[j] + 1
+                    substitutions = prev_row[j] + (c1 != c2)
+                    curr_row.append(min(insertions, deletions, substitutions))
+                prev_row = curr_row
+            return prev_row[-1]
+
+        _FUZZY_VOCAB = {
+            "andhra pradesh": 4,     # threshold: allow up to 4 edits
+            "telangana": 3,
+            "karnataka": 3,
+            "bangalore": 3,
+            "hyderabad": 3,
+            "visakhapatnam": 5,
+            "vijayawada": 4,
+            "tirupati": 3,
+        }
+
+        words_in_transcript = raw_corrected.lower().split()
+        for target_word, threshold in _FUZZY_VOCAB.items():
+            target_parts = target_word.split()
+            window = len(target_parts)
+            for i in range(len(words_in_transcript) - window + 1):
+                candidate = " ".join(words_in_transcript[i:i + window])
+                dist = _levenshtein(candidate, target_word)
+                if 0 < dist <= threshold and candidate != target_word:
+                    print(f"[VOICE] [PHONETIC] Fuzzy match: '{candidate}' → '{target_word}' (dist={dist})")
+                    for j in range(i, i + window):
+                        words_in_transcript[j] = ""
+                    words_in_transcript[i] = target_word
+                    break
+
+        raw = " ".join(w for w in words_in_transcript if w).strip() or raw_corrected
+
         # ── Hallucination filter ──────────────────────────────────────────
         # Whisper commonly hallucinates these phrases on silence/noise.
         _HALLUCINATIONS = [
