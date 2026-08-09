@@ -115,6 +115,30 @@ def process(command: str) -> tuple:
         pm.add_note(note)
         return True, f"Stored in memory, bro: '{note}'"
 
+    # ── System automation & Diagnostics ────────────────────────────────────────
+    if any(k in raw for k in ["volume", "battery", "cpu", "system status", "brightness", "lock screen", "lock laptop", "disk space", "storage space", "my ip", "ip address", "mute", "unmute"]):
+        from core.system_automation import execute_system_command
+        res = execute_system_command(raw)
+        if res:
+            return True, res
+
+    # ── Follow-Up Conversation Memory ──────────────────────────────────────────
+    if any(k in raw for k in ["what did i just say", "what was my last command", "what did i ask"]):
+        from modules.memory.profile_manager import get_profile_manager
+        pm = get_profile_manager()
+        last = pm.get_last_turn()
+        if last and last.get("user"):
+            return True, f"You just said: '{last['user']}', Harsha!"
+        return True, "I don't have a previous command recorded yet, Harsha."
+
+    if any(k in raw for k in ["what was your last reply", "what did you say", "what was your last answer"]):
+        from modules.memory.profile_manager import get_profile_manager
+        pm = get_profile_manager()
+        last = pm.get_last_turn()
+        if last and last.get("ai"):
+            return True, f"My last reply was: '{last['ai']}', Harsha!"
+        return True, "I haven't said anything recently, Harsha."
+
     # Memory Recall & Memory Retrieval (Hardware Fallback Enforcement)
     if any(k in raw for k in [
         "remember my", "do you remember", "what is my", "what's my",
@@ -155,14 +179,6 @@ def process(command: str) -> tuple:
             return True, reply
         reply = "I do not have your memory saved yet. Please tell me your address or details so I can store it."
         return True, reply
-
-
-    # ── System automation ───────────────────────────────────────────────────────
-    if any(k in raw for k in ["volume", "battery", "cpu", "system status", "brightness"]):
-        from core.system_automation import execute_system_command
-        res = execute_system_command(raw)
-        if res:
-            return True, res
 
     # ── Screenshot ───────────────────────────────────────────────────────────────
     if "screenshot" in raw or "take a screen" in raw:

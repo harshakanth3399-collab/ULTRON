@@ -47,6 +47,7 @@ class PersonalProfileManager:
         self.filepath = filepath
         self.data: Dict[str, Any] = {}
         self._lock = threading.Lock()
+        self._recent_turns: List[Dict[str, str]] = []
         self.load()
 
     def load(self) -> None:
@@ -162,6 +163,18 @@ class PersonalProfileManager:
 
     def get_all_user_memory(self) -> Dict[str, Any]:
         return self.data.get("user_memory", {})
+
+    # ── Conversational Context Buffer ──────────────────────────────────────
+    def add_turn(self, user_msg: str, ai_reply: str) -> None:
+        """Stores recent conversation turn in memory buffer."""
+        if user_msg and ai_reply:
+            self._recent_turns.append({"user": user_msg.strip(), "ai": ai_reply.strip()})
+            if len(self._recent_turns) > 10:
+                self._recent_turns.pop(0)
+
+    def get_last_turn(self) -> Optional[Dict[str, str]]:
+        """Returns the most recent conversation turn."""
+        return self._recent_turns[-1] if self._recent_turns else None
 
 
 _manager: Optional[PersonalProfileManager] = None
