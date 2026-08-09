@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import os
+import json
 import socket
 import http.server
 import socketserver
 import threading
 
-
 PORT = 8000
+HOST = "0.0.0.0"
 DOCS_DIR = os.path.join(os.path.dirname(__file__), "docs")
 
 
@@ -22,28 +23,8 @@ def get_local_ip() -> str:
         s.close()
         return ip
     except Exception:
-        return "127.0.0.1"
+        return "10.83.134.102"
 
-
-def get_all_local_ips() -> list[str]:
-    """Returns all active network interface IPs on the laptop (Wi-Fi, Mobile Hotspot, Tethering)."""
-    ips = []
-    primary = get_local_ip()
-    if primary != "127.0.0.1":
-        ips.append(primary)
-
-    try:
-        addrs = socket.gethostbyname_ex(socket.gethostname())[2]
-        for ip in addrs:
-            if ip != "127.0.0.1" and ip not in ips:
-                ips.append(ip)
-    except Exception:
-        pass
-
-    return ips or ["127.0.0.1"]
-
-
-import json
 
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -96,7 +77,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         super().do_POST()
 
 
-
 class ThreadingServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     allow_reuse_address = True
     daemon_threads = True
@@ -108,49 +88,34 @@ def setup_adb_forwarding(port: int = PORT) -> bool:
         import subprocess
         from modules.adb_bridge import _get_adb_executable
         adb_exe = _get_adb_executable()
-        
-        # 1. Reverse port forwarding (Phone http://localhost:8000 -> Laptop port 8000)
-        res_rev = subprocess.run([adb_exe, "reverse", f"tcp:{port}", f"tcp:{port}"], capture_output=True, text=True, timeout=5.0)
-        # 2. Forward port forwarding (Laptop -> Phone)
-        res_fwd = subprocess.run([adb_exe, "forward", f"tcp:{port}", f"tcp:{port}"], capture_output=True, text=True, timeout=5.0)
-
-        if res_rev.returncode == 0 or res_fwd.returncode == 0:
-            print(f"[MOBILE] ADB Direct Bridge Active: phone http://localhost:{port} -> laptop port {port}")
-            return True
-    except Exception as e:
-        print(f"[MOBILE] ADB bridge setup notice: {e}")
+        subprocess.run([adb_exe, "reverse", f"tcp:{port}", f"tcp:{port}"], capture_output=True, text=True, timeout=5.0)
+        subprocess.run([adb_exe, "forward", f"tcp:{port}", f"tcp:{port}"], capture_output=True, text=True, timeout=5.0)
+        return True
+    except Exception:
+        pass
     return False
 
 
 def start_server_in_background():
-    """Starts the web server in a daemon background thread."""
+    """Starts the web server locked to host '0.0.0.0' and port 8000."""
     ip = get_local_ip()
     handler = CustomHTTPRequestHandler
     
-    try:
-        httpd = ThreadingServer(("0.0.0.0", PORT), handler)
-    except Exception as e:
-        print(f"[MOBILE ERROR] Could not bind port {PORT}: {e}")
-        try:
-            httpd = ThreadingServer(("0.0.0.0", 8080), handler)
-            print(f"[MOBILE] Bound fallback port 8080")
-        except Exception:
-            return ip, PORT
+    httpd = ThreadingServer((HOST, PORT), handler)
 
     server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     server_thread.start()
 
     setup_adb_forwarding(PORT)
-    print(f"[MOBILE] ULTRON Mobile Web Server running at: http://{ip}:{PORT}")
+    print(f"[SERVER] Mobile Access Link -> http://{ip}:{PORT}")
     return ip, PORT
 
 
 if __name__ == "__main__":
     ip, port = start_server_in_background()
     print(f"\n==================================================")
-    print(f"📲 CONNECT YOUR PHONE TO ULTRON:")
-    print(f"Option 1 (Wi-Fi):  Open phone browser -> http://{ip}:{port}")
-    print(f"Option 2 (USB/ADB): Open phone browser -> http://localhost:{port}")
+    print(f"[SERVER] Mobile Access Link -> http://{ip}:{port}")
+    print(f"[SERVER] USB ADB Link        -> http://localhost:{port}")
     print(f"==================================================\n")
     import time
     while True:
