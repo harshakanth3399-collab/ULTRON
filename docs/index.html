@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ULTRON Mobile - Voice Interface</title>
+    <title>ULTRON Mobile - Holographic AI</title>
     <style>
         * {
             margin: 0;
@@ -20,7 +20,7 @@
             flex-direction: column;
             justify-content: space-between;
             align-items: center;
-            padding: 24px 20px;
+            padding: 20px 16px;
             overflow: hidden;
         }
         header {
@@ -28,7 +28,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-top: 12px;
+            padding-top: 8px;
         }
         .logo {
             font-size: 22px;
@@ -46,12 +46,13 @@
             background: rgba(232,99,10,0.1);
             border: 1px solid rgba(232,99,10,0.45);
             color: rgba(232,99,10,0.9);
+            transition: all 0.3s ease;
         }
         /* Matrix Container */
         .visualizer-container {
             position: relative;
-            width: 280px;
-            height: 280px;
+            width: 250px;
+            height: 250px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -62,10 +63,10 @@
             height: 100%;
         }
         .state-label {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
-            letter-spacing: 4px;
-            color: rgba(232,99,10,0.6);
+            letter-spacing: 3px;
+            color: rgba(232,99,10,0.8);
             text-transform: uppercase;
             margin-bottom: 12px;
             text-align: center;
@@ -76,7 +77,8 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
+            min-height: 50px;
         }
         .chat-line {
             font-size: 13px;
@@ -90,16 +92,24 @@
             color: rgba(255, 160, 55, 0.95);
             font-weight: 600;
         }
-        /* Mic Button */
-        .controls {
+        /* Controls & Input Area */
+        .controls-wrapper {
             width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 10px;
+        }
+        .controls {
             display: flex;
             justify-content: center;
-            padding-bottom: 20px;
+            align-items: center;
         }
         .mic-btn {
-            width: 72px;
-            height: 72px;
+            width: 68px;
+            height: 68px;
             border-radius: 50%;
             background: radial-gradient(circle, #3A0E00 0%, #1A0500 100%);
             border: 1px solid rgba(180,40,15,0.6);
@@ -133,6 +143,35 @@
         .mic-btn.active .mic-icon {
             stroke: #ffffff;
         }
+        /* Mobile Input Field Fallback */
+        .input-bar {
+            width: 100%;
+            display: flex;
+            gap: 8px;
+        }
+        .cmd-input {
+            flex: 1;
+            background: rgba(30, 10, 5, 0.8);
+            border: 1px solid rgba(232, 99, 10, 0.4);
+            border-radius: 20px;
+            padding: 12px 16px;
+            color: #ffffff;
+            font-size: 14px;
+            outline: none;
+        }
+        .cmd-input::placeholder {
+            color: rgba(232, 99, 10, 0.4);
+        }
+        .send-btn {
+            background: linear-gradient(135deg, #E8630A, #B4280F);
+            border: none;
+            border-radius: 20px;
+            padding: 0 18px;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -153,15 +192,22 @@
             <div class="chat-line ai-line" id="ai-text"></div>
         </div>
 
-        <div class="controls">
-            <button class="mic-btn" id="mic-btn" onclick="toggleMic()">
-                <svg class="mic-icon" viewBox="0 0 24 24">
-                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                    <line x1="12" y1="19" x2="12" y2="22"></line>
-                    <line x1="8" y1="22" x2="16" y2="22"></line>
-                </svg>
-            </button>
+        <div class="controls-wrapper">
+            <div class="controls">
+                <button class="mic-btn" id="mic-btn" onclick="toggleMic()">
+                    <svg class="mic-icon" viewBox="0 0 24 24">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="22"></line>
+                        <line x1="8" y1="22" x2="16" y2="22"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="input-bar">
+                <input type="text" class="cmd-input" id="cmd-input" placeholder="Type command here..." onkeypress="handleKeyPress(event)">
+                <button class="send-btn" onclick="sendTextCommand()">SEND</button>
+            </div>
         </div>
     </div>
 
@@ -169,12 +215,13 @@
         // ── Canvas Scintillating Particle Matrix ──────────────────────────────
         const canvas = document.getElementById('matrix-canvas');
         const ctx = canvas.getContext('2d');
-        canvas.width = 280;
-        canvas.height = 280;
+        canvas.width = 250;
+        canvas.height = 250;
 
         let time = 0;
         let isListening = false;
         let isSpeaking = false;
+        let wakeWordMode = true;
 
         function renderMatrix() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -183,8 +230,7 @@
 
             time += isSpeaking ? 0.08 : (isListening ? 0.05 : 0.03);
 
-            // Core Amber Glow
-            const rad = isSpeaking ? 90 : (isListening ? 75 : 60);
+            const rad = isSpeaking ? 85 : (isListening ? 70 : 55);
             const grad = ctx.createRadialGradient(cx, cy, 5, cx, cy, rad);
             grad.addColorStop(0, isSpeaking ? 'rgba(255, 180, 50, 0.95)' : 'rgba(232, 99, 10, 0.85)');
             grad.addColorStop(0.5, 'rgba(232, 99, 10, 0.25)');
@@ -194,20 +240,18 @@
             ctx.arc(cx, cy, rad, 0, Math.PI * 2);
             ctx.fill();
 
-            // Concentric Stroboscopic Particle Rings
             const ringCount = 3;
             for (let r = 0; r < ringCount; r++) {
-                const radius = 45 + r * 30 + Math.sin(time * 2 + r) * 6;
-                const count = 40 + r * 20;
+                const radius = 40 + r * 28 + Math.sin(time * 2 + r) * 5;
+                const count = 35 + r * 18;
                 const dir = r % 2 === 0 ? 1 : -1;
                 const speed = time * dir * (0.8 + r * 0.3);
 
                 for (let i = 0; i < count; i++) {
                     const angle = (i / count) * Math.PI * 2 + speed;
                     const px = cx + Math.cos(angle) * radius;
-                    const py = cy + Math.sin(angle) * radius * 0.65; // tilt
+                    const py = cy + Math.sin(angle) * radius * 0.65;
 
-                    // Stroboscopic blinking scintillation (computer graphics 28Hz flicker)
                     const phase = (i * 12.9898 + r * 78.233) % 6.28;
                     const blink = 0.5 + 0.5 * Math.sin(time * 24.0 + phase);
                     const size = (1.5 + Math.sin(phase) * 1.0 + (isSpeaking ? 1.5 : 0)) * blink;
@@ -223,88 +267,149 @@
         }
         renderMatrix();
 
-        // ── Web Speech API Recognition ─────────────────────────────────────────
+        // ── Speech Recognition Engine ───────────────────────────────────────
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
 
-        if (SpeechRecognition) {
+        function initSpeech() {
+            if (!SpeechRecognition) {
+                console.log("Speech recognition not supported on this browser.");
+                return;
+            }
+
             recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = false;
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
 
             recognition.onstart = function() {
                 isListening = true;
-                document.getElementById('mic-btn').classList.add('active');
-                document.getElementById('badge').innerText = '● LISTENING';
-                document.getElementById('badge').style.color = '#FF3311';
-                document.getElementById('state-text').innerText = 'LISTENING...';
+                updateBadge('● LISTENING', '#FF3311');
+                document.getElementById('state-text').innerText = 'LISTENING... SAY "HEY ULTRON"';
             };
 
             recognition.onend = function() {
                 isListening = false;
-                document.getElementById('mic-btn').classList.remove('active');
-                if (!isSpeaking) {
-                    document.getElementById('badge').innerText = '● ONLINE';
-                    document.getElementById('badge').style.color = 'rgba(232,99,10,0.9)';
+                if (wakeWordMode) {
+                    // Auto-restart continuous wake word listening
+                    try { recognition.start(); } catch(e) {}
+                } else if (!isSpeaking) {
+                    updateBadge('● ONLINE', 'rgba(232,99,10,0.9)');
                     document.getElementById('state-text').innerText = "SAY 'HEY ULTRON' OR TAP MIC";
                 }
             };
 
             recognition.onresult = function(event) {
-                const text = event.results[0][0].transcript;
-                document.getElementById('user-text').innerText = 'YOU   ' + text;
-                document.getElementById('badge').innerText = '◌ THINKING';
-                document.getElementById('badge').style.color = '#FFC823';
-                document.getElementById('state-text').innerText = 'PROCESSING...';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const transcript = event.results[i][0].transcript.trim();
+                    const rawLower = transcript.toLowerCase();
 
-                // Send command directly to ULTRON laptop backend via local Wi-Fi API
-                fetch('/api/command', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command: text })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    const reply = data.reply || "Done, Harsha!";
-                    speakResponse(reply);
-                })
-                .catch(err => {
-                    speakResponse("Connected, Harsha! Processed command.");
-                });
+                    if (event.results[i].isFinal) {
+                        console.log("Final Transcript:", transcript);
+
+                        // Wake word check
+                        if (rawLower.includes("hey ultron") || rawLower.includes("ultron") || rawLower.includes("hey altan") || rawLower.includes("hey eltron")) {
+                            updateBadge('🔥 WAKE DETECTED', '#FF6600');
+                            document.getElementById('state-text').innerText = 'WAKE DETECTED!';
+                            
+                            // Extract command after wake word if present
+                            let cmd = transcript.replace(/hey ultron|ultron|hey altan|hey eltron/gi, "").strip();
+                            if (cmd) {
+                                sendCommand(cmd);
+                            } else {
+                                sendCommand("hello");
+                            }
+                        } else if (!wakeWordMode) {
+                            sendCommand(transcript);
+                        }
+                    }
+                }
             };
 
+            try { recognition.start(); } catch(e) {}
         }
 
         function toggleMic() {
             if (!recognition) {
-                alert("Speech recognition not supported on this mobile browser. Try Chrome!");
-                return;
+                initSpeech();
             }
+            wakeWordMode = false;
             if (isListening) {
-                recognition.stop();
-            } else {
-                window.speechSynthesis.cancel();
-                recognition.start();
+                try { recognition.stop(); } catch(e) {}
             }
+            try { recognition.start(); } catch(e) {}
+            document.getElementById('mic-btn').classList.add('active');
+        }
+
+        function sendTextCommand() {
+            const input = document.getElementById('cmd-input');
+            const text = input.value.trim();
+            if (text) {
+                sendCommand(text);
+                input.value = '';
+            }
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') {
+                sendTextCommand();
+            }
+        }
+
+        function sendCommand(text) {
+            document.getElementById('user-text').innerText = 'YOU   ' + text;
+            updateBadge('◌ THINKING', '#FFC823');
+            document.getElementById('state-text').innerText = 'PROCESSING...';
+
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: text })
+            })
+            .then(res => res.json())
+            .then(data => {
+                const reply = data.reply || "Done, Harsha!";
+                speakResponse(reply);
+            })
+            .catch(err => {
+                speakResponse("Processed command, Harsha!");
+            });
         }
 
         function speakResponse(text) {
             isSpeaking = true;
-            document.getElementById('badge').innerText = '◎ SPEAKING';
-            document.getElementById('badge').style.color = '#00C8FF';
+            updateBadge('◎ SPEAKING', '#00C8FF');
             document.getElementById('state-text').innerText = 'SPEAKING...';
             document.getElementById('ai-text').innerText = 'ULTRON   ' + text;
 
-            const synth = window.speechSynthesis;
-            const utter = new SpeechSynthesisUtterance(text);
-            utter.onend = function() {
-                isSpeaking = false;
-                document.getElementById('badge').innerText = '● ONLINE';
-                document.getElementById('badge').style.color = 'rgba(232,99,10,0.9)';
-                document.getElementById('state-text').innerText = "SAY 'HEY ULTRON' OR TAP MIC";
-            };
-            synth.speak(utter);
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.onend = function() {
+                    isSpeaking = false;
+                    updateBadge('● ONLINE', 'rgba(232,99,10,0.9)');
+                    document.getElementById('state-text').innerText = "SAY 'HEY ULTRON' OR TAP MIC";
+                };
+                window.speechSynthesis.speak(utter);
+            } else {
+                setTimeout(() => {
+                    isSpeaking = false;
+                    updateBadge('● ONLINE', 'rgba(232,99,10,0.9)');
+                    document.getElementById('state-text').innerText = "SAY 'HEY ULTRON' OR TAP MIC";
+                }, 3000);
+            }
         }
+
+        function updateBadge(text, color) {
+            const b = document.getElementById('badge');
+            b.innerText = text;
+            b.style.color = color;
+        }
+
+        // Initialize Speech Engine on load
+        window.onload = function() {
+            initSpeech();
+        };
     </script>
 </body>
 </html>
