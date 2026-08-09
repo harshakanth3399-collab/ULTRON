@@ -25,6 +25,7 @@ uniform float u_glow;
 
 out float v_brightness;
 out float v_depth;
+out float v_phase;
 
 void main() {
     vec4 clip = u_mvp * vec4(in_pos, 1.0);
@@ -32,22 +33,25 @@ void main() {
 
     // Perspective attenuation: points scale with 3D depth for crisp depth & orbital motion!
     float atten = 1.0 / max(clip.w, 0.08);
-    gl_PointSize = clamp(in_size * atten * 12.0 * (1.0 + u_glow * 0.4), 1.5, 64.0);
+    gl_PointSize = clamp(in_size * atten * 14.0 * (1.0 + u_glow * 0.45), 1.5, 64.0);
 
-    v_brightness = in_brightness * (0.85 + u_glow * 0.35);
+    v_brightness = in_brightness * (0.85 + u_glow * 0.4);
     v_depth = clip.z;
+    // Pseudo-random phase per vertex for independent stroboscopic particle blinking
+    v_phase = fract(sin(dot(in_pos, vec3(12.9898, 78.233, 45.5432))) * 43758.5453);
 }
 """
-
 
 PARTICLE_FRAG = """
 #version 330 core
 
 in float v_brightness;
 in float v_depth;
+in float v_phase;
 
 uniform vec3 u_color_core;
 uniform vec3 u_color_glow;
+uniform float u_time;
 
 out vec4 frag_color;
 
@@ -55,13 +59,16 @@ void main() {
     vec2 uv = gl_PointCoord - 0.5;
     float dist = length(uv);
 
-    float core = exp(-dist * dist * 16.0);
-    float halo = exp(-dist * 6.0) * 0.6;
-    float intensity = (core * 1.5 + halo) * v_brightness;
+    // Stroboscopic scintillation / twinkling effect (high-frequency blinking)
+    float blink = 0.70 + 0.38 * sin(u_time * 28.0 + v_phase * 62.83);
+
+    float core = exp(-dist * dist * 18.0);
+    float halo = exp(-dist * 5.5) * 0.65;
+    float intensity = (core * 2.0 + halo) * v_brightness * blink;
 
     vec3 col = mix(u_color_glow, u_color_core, core);
-    col *= (1.0 + intensity * 0.8);
-    float alpha = clamp(intensity * 0.9, 0.0, 1.0);
+    col *= (1.0 + intensity * 0.9);
+    float alpha = clamp(intensity * 0.95, 0.0, 1.0);
 
     frag_color = vec4(col * intensity, alpha);
 }

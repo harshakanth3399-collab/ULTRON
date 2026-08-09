@@ -2,269 +2,291 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ULTRON - MCU J.A.R.V.I.S. Holographic Matrix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ULTRON Mobile - Voice Interface</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
         body {
-            background-color: #030200;
-            color: #f3f4f6;
-            overflow-x: hidden;
+            background-color: #000000;
+            color: #ffffff;
+            height: 100vh;
             display: flex;
             flex-direction: column;
+            justify-content: space-between;
             align-items: center;
-            min-height: 100vh;
+            padding: 24px 20px;
+            overflow: hidden;
         }
         header {
             width: 100%;
-            padding: 1.8rem 5%;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(255, 153, 0, 0.25);
-            background: rgba(3, 2, 0, 0.85);
-            backdrop-filter: blur(12px);
-            position: fixed;
-            top: 0;
-            z-index: 100;
+            padding-top: 12px;
         }
         .logo {
-            font-size: 1.8rem;
-            font-weight: 800;
-            letter-spacing: 4px;
-            color: #ff9900;
-            text-shadow: 0 0 16px rgba(255, 153, 0, 0.7);
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 5px;
+            color: #E8630A;
+            text-shadow: 0 0 12px rgba(232,99,10,0.6);
         }
         .status-badge {
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            background: rgba(255, 153, 0, 0.1);
-            border: 1px solid #ff9900;
-            color: #ff9900;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            padding: 5px 14px;
+            border-radius: 14px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            background: rgba(232,99,10,0.1);
+            border: 1px solid rgba(232,99,10,0.45);
+            color: rgba(232,99,10,0.9);
         }
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #ff9900;
-            box-shadow: 0 0 10px #ff9900;
-            animation: pulse 1.8s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 1; }
-        }
-        .hero {
-            margin-top: 100px;
-            width: 100%;
-            max-width: 1200px;
-            padding: 40px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-        h1 {
-            font-size: 3.2rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #ffc837 0%, #ff8008 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 12px;
-        }
-        p.subtitle {
-            font-size: 1.2rem;
-            color: #d1d5db;
-            max-width: 650px;
-            margin-bottom: 30px;
-        }
-        #canvas-container {
-            width: 100%;
-            max-width: 800px;
-            height: 520px;
+        /* Matrix Container */
+        .visualizer-container {
             position: relative;
-            border-radius: 20px;
-            background: radial-gradient(circle, rgba(255, 153, 0, 0.08) 0%, rgba(3, 2, 0, 0.95) 80%);
-            border: 1px solid rgba(255, 153, 0, 0.3);
-            box-shadow: 0 0 50px rgba(255, 153, 0, 0.2);
-            margin-bottom: 40px;
-            overflow: hidden;
+            width: 280px;
+            height: 280px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: auto;
         }
         canvas {
             width: 100%;
             height: 100%;
         }
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
-            width: 100%;
-            max-width: 1100px;
-            padding: 20px;
-            margin-bottom: 60px;
-        }
-        .card {
-            background: rgba(18, 12, 4, 0.8);
-            border: 1px solid rgba(255, 153, 0, 0.15);
-            border-radius: 16px;
-            padding: 28px;
-            text-align: left;
-            transition: all 0.3s ease;
-        }
-        .card:hover {
-            border-color: #ff9900;
-            transform: translateY(-4px);
-            box-shadow: 0 10px 25px rgba(255, 153, 0, 0.2);
-        }
-        .card h3 {
-            font-size: 1.3rem;
-            color: #ffc837;
-            margin-bottom: 10px;
-        }
-        .card p {
-            font-size: 0.95rem;
-            color: #9ca3af;
-            line-height: 1.5;
-        }
-        footer {
-            margin-top: auto;
-            width: 100%;
-            padding: 24px;
-            border-top: 1px solid rgba(255, 153, 0, 0.1);
+        .state-label {
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: rgba(232,99,10,0.6);
+            text-transform: uppercase;
+            margin-bottom: 12px;
             text-align: center;
-            font-size: 0.9rem;
-            color: #6b7280;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .chat-line {
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+        .user-line {
+            color: rgba(210, 210, 210, 0.75);
+        }
+        .ai-line {
+            color: rgba(255, 160, 55, 0.95);
+            font-weight: 600;
+        }
+        /* Mic Button */
+        .controls {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            padding-bottom: 20px;
+        }
+        .mic-btn {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #3A0E00 0%, #1A0500 100%);
+            border: 1px solid rgba(180,40,15,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 0 24px rgba(232,99,10,0.25);
+            transition: all 0.2s ease;
+        }
+        .mic-btn.active {
+            background: radial-gradient(circle, #FF3311 0%, #AA1100 100%);
+            border: 2px solid rgba(255,60,20,0.95);
+            box-shadow: 0 0 35px rgba(255,60,20,0.7);
+            animation: pulse-ring 1.5s infinite;
+        }
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(255,60,20,0.6); }
+            70% { box-shadow: 0 0 0 18px rgba(255,60,20,0); }
+            100% { box-shadow: 0 0 0 0 rgba(255,60,20,0); }
+        }
+        .mic-icon {
+            width: 24px;
+            height: 24px;
+            fill: none;
+            stroke: #E8630A;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+        .mic-btn.active .mic-icon {
+            stroke: #ffffff;
         }
     </style>
 </head>
 <body>
     <header>
         <div class="logo">ULTRON</div>
-        <div class="status-badge">
-            <div class="status-dot"></div>
-            MCU AMBER GOLD MATRIX (150K PARTICLES)
-        </div>
+        <div class="status-badge" id="badge">● ONLINE</div>
     </header>
 
-    <div class="hero">
-        <h1>MCU J.A.R.V.I.S. CONSCIOUSNESS MATRIX</h1>
-        <p class="subtitle">100% authentic Amber Gold holographic visualizer with 150,000 active particles, 3D concentric orbital tracks, and biometric voice security.</p>
+    <div class="visualizer-container">
+        <canvas id="matrix-canvas"></canvas>
+    </div>
 
-        <div id="canvas-container">
-            <canvas id="jarvis-canvas"></canvas>
+    <div style="width:100%; text-align:center;">
+        <div class="state-label" id="state-text">SAY 'HEY ULTRON' OR TAP MIC</div>
+
+        <div class="chat-container">
+            <div class="chat-line user-line" id="user-text"></div>
+            <div class="chat-line ai-line" id="ai-text"></div>
         </div>
 
-        <div class="features">
-            <div class="card">
-                <h3>🔒 Biometric Voice Security</h3>
-                <p>Equipped with 64-bin spectral voice authentication. Recognizes Harsha's unique voice print and rejects unauthorized intruders.</p>
-            </div>
-            <div class="card">
-                <h3>⚡ 150,000 Particle Visualizer</h3>
-                <p>Hardware-accelerated ModernGL visualizer with 4 3D concentric rotating orbital rings, copper-gold plasma, and a 3D audio oscilloscope.</p>
-            </div>
-            <div class="card">
-                <h3>🧠 Private Local Intelligence</h3>
-                <p>Powered by local Ollama AI models with zero data leaks. Remembers personal preferences and notes locally in encrypted JSON storage.</p>
-            </div>
+        <div class="controls">
+            <button class="mic-btn" id="mic-btn" onclick="toggleMic()">
+                <svg class="mic-icon" viewBox="0 0 24 24">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="22"></line>
+                    <line x1="8" y1="22" x2="16" y2="22"></line>
+                </svg>
+            </button>
         </div>
     </div>
 
-    <footer>
-        ULTRON AI System &copy; 2026 Harsha. Built with PySide6, ModernGL, Faster-Whisper, and Ollama.
-    </footer>
-
     <script>
-        // MCU Amber Gold J.A.R.V.I.S. Visualizer Demonstration
-        const canvas = document.getElementById('jarvis-canvas');
+        // ── Canvas Scintillating Particle Matrix ──────────────────────────────
+        const canvas = document.getElementById('matrix-canvas');
         const ctx = canvas.getContext('2d');
-
-        function resizeCanvas() {
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
-        }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
+        canvas.width = 280;
+        canvas.height = 280;
 
         let time = 0;
-        const rings = [
-            { radius: 110, speed: 0.012, color: '#ff9900', tilt: 0.35 },
-            { radius: 145, speed: -0.018, color: '#ffcc00', tilt: -0.45 },
-            { radius: 180, speed: 0.022, color: '#ff7700', tilt: 0.55 },
-            { radius: 215, speed: -0.01, color: '#e66000', tilt: -0.25 }
-        ];
+        let isListening = false;
+        let isSpeaking = false;
 
-        function draw() {
+        function renderMatrix() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const cx = canvas.width / 2;
             const cy = canvas.height / 2;
 
-            time += 0.02;
+            time += isSpeaking ? 0.08 : (isListening ? 0.05 : 0.03);
 
             // Core Amber Glow
-            const grad = ctx.createRadialGradient(cx, cy, 10, cx, cy, 160);
-            grad.addColorStop(0, 'rgba(255, 204, 0, 0.9)');
-            grad.addColorStop(0.3, 'rgba(255, 153, 0, 0.45)');
-            grad.addColorStop(0.7, 'rgba(255, 102, 0, 0.15)');
-            grad.addColorStop(1, 'rgba(3, 2, 0, 0)');
+            const rad = isSpeaking ? 90 : (isListening ? 75 : 60);
+            const grad = ctx.createRadialGradient(cx, cy, 5, cx, cy, rad);
+            grad.addColorStop(0, isSpeaking ? 'rgba(255, 180, 50, 0.95)' : 'rgba(232, 99, 10, 0.85)');
+            grad.addColorStop(0.5, 'rgba(232, 99, 10, 0.25)');
+            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
             ctx.fillStyle = grad;
             ctx.beginPath();
-            ctx.arc(cx, cy, 160, 0, Math.PI * 2);
+            ctx.arc(cx, cy, rad, 0, Math.PI * 2);
             ctx.fill();
 
-            // Concentric 3D Rotating Rings with Filaments
-            rings.forEach((ring, idx) => {
-                ctx.save();
-                ctx.translate(cx, cy);
-                ctx.rotate(time * ring.speed);
-                ctx.scale(1, Math.cos(ring.tilt));
+            // Concentric Stroboscopic Particle Rings
+            const ringCount = 3;
+            for (let r = 0; r < ringCount; r++) {
+                const radius = 45 + r * 30 + Math.sin(time * 2 + r) * 6;
+                const count = 40 + r * 20;
+                const dir = r % 2 === 0 ? 1 : -1;
+                const speed = time * dir * (0.8 + r * 0.3);
 
-                ctx.strokeStyle = ring.color;
-                ctx.lineWidth = 2.8;
-                ctx.shadowColor = ring.color;
-                ctx.shadowBlur = 16;
+                for (let i = 0; i < count; i++) {
+                    const angle = (i / count) * Math.PI * 2 + speed;
+                    const px = cx + Math.cos(angle) * radius;
+                    const py = cy + Math.sin(angle) * radius * 0.65; // tilt
 
-                ctx.beginPath();
-                ctx.arc(0, 0, ring.radius + Math.sin(time * 3 + idx) * 5, 0, Math.PI * 2);
-                ctx.stroke();
+                    // Stroboscopic blinking scintillation (computer graphics 28Hz flicker)
+                    const phase = (i * 12.9898 + r * 78.233) % 6.28;
+                    const blink = 0.5 + 0.5 * Math.sin(time * 24.0 + phase);
+                    const size = (1.5 + Math.sin(phase) * 1.0 + (isSpeaking ? 1.5 : 0)) * blink;
 
-                // Radial Frequency Spikes & Filaments (From Screenshot)
-                for (let i = 0; i < 36; i++) {
-                    const angle = (i / 36) * Math.PI * 2 + time * ring.speed;
-                    const spikeLen = 8 + Math.sin(angle * 6 + time * 4) * 12;
-                    const x1 = Math.cos(angle) * ring.radius;
-                    const y1 = Math.sin(angle) * ring.radius;
-                    const x2 = Math.cos(angle) * (ring.radius + spikeLen);
-                    const y2 = Math.sin(angle) * (ring.radius + spikeLen);
-
-                    ctx.strokeStyle = 'rgba(255, 204, 0, 0.6)';
-                    ctx.lineWidth = 1.5;
+                    ctx.fillStyle = isSpeaking ? `rgba(255, 200, 60, ${0.4 + blink * 0.6})` : `rgba(232, 99, 10, ${0.3 + blink * 0.7})`;
                     ctx.beginPath();
-                    ctx.moveTo(x1, y1);
-                    ctx.lineTo(x2, y2);
-                    ctx.stroke();
+                    ctx.arc(px, py, size, 0, Math.PI * 2);
+                    ctx.fill();
                 }
+            }
 
-                ctx.restore();
-            });
-
-            // HUD Frame Lines
-            ctx.strokeStyle = 'rgba(255, 153, 0, 0.3)';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(30, 30, canvas.width - 60, canvas.height - 60);
-
-            requestAnimationFrame(draw);
+            requestAnimationFrame(renderMatrix);
         }
-        draw();
+        renderMatrix();
+
+        // ── Web Speech API Recognition ─────────────────────────────────────────
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = function() {
+                isListening = true;
+                document.getElementById('mic-btn').classList.add('active');
+                document.getElementById('badge').innerText = '● LISTENING';
+                document.getElementById('badge').style.color = '#FF3311';
+                document.getElementById('state-text').innerText = 'LISTENING...';
+            };
+
+            recognition.onend = function() {
+                isListening = false;
+                document.getElementById('mic-btn').classList.remove('active');
+                if (!isSpeaking) {
+                    document.getElementById('badge').innerText = '● ONLINE';
+                    document.getElementById('badge').style.color = 'rgba(232,99,10,0.9)';
+                    document.getElementById('state-text').innerText = "SAY 'HEY ULTRON' OR TAP MIC";
+                }
+            };
+
+            recognition.onresult = function(event) {
+                const text = event.results[0][0].transcript;
+                document.getElementById('user-text').innerText = 'YOU   ' + text;
+                speakResponse("On it, Harsha! " + text);
+            };
+        }
+
+        function toggleMic() {
+            if (!recognition) {
+                alert("Speech recognition not supported on this mobile browser. Try Chrome!");
+                return;
+            }
+            if (isListening) {
+                recognition.stop();
+            } else {
+                window.speechSynthesis.cancel();
+                recognition.start();
+            }
+        }
+
+        function speakResponse(text) {
+            isSpeaking = true;
+            document.getElementById('badge').innerText = '◎ SPEAKING';
+            document.getElementById('badge').style.color = '#00C8FF';
+            document.getElementById('state-text').innerText = 'SPEAKING...';
+            document.getElementById('ai-text').innerText = 'ULTRON   ' + text;
+
+            const synth = window.speechSynthesis;
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.onend = function() {
+                isSpeaking = false;
+                document.getElementById('badge').innerText = '● ONLINE';
+                document.getElementById('badge').style.color = 'rgba(232,99,10,0.9)';
+                document.getElementById('state-text').innerText = "SAY 'HEY ULTRON' OR TAP MIC";
+            };
+            synth.speak(utter);
+        }
     </script>
 </body>
 </html>
