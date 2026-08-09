@@ -96,48 +96,73 @@ def execute(command):
     if "exit ultron" in command:
         return False
 
-    # Notepad
-    if "notepad" in command:
-        subprocess.Popen("notepad.exe")
-        return True
+    # Universal App & System Execution Dictionary
+    _APP_COMMANDS = {
+        "notepad": "notepad.exe",
+        "calculator": "calc.exe",
+        "calc": "calc.exe",
+        "cmd": "cmd.exe",
+        "terminal": "wt.exe",
+        "command prompt": "cmd.exe",
+        "task manager": "taskmgr.exe",
+        "control panel": "control.exe",
+        "paint": "mspaint.exe",
+        "settings": "ms-settings:",
+        "clock": "ms-clock:",
+        "camera": "microsoft.windows.camera:",
+        "explorer": "explorer.exe",
+        "my computer": "explorer.exe",
+    }
 
-    # Calculator
-    if "calculator" in command:
-        subprocess.Popen("calc.exe")
-        return True
+    for app_name, app_cmd in _APP_COMMANDS.items():
+        if app_name in command:
+            try:
+                if app_cmd.endswith(".exe"):
+                    subprocess.Popen(app_cmd)
+                else:
+                    subprocess.Popen(f'start "" "{app_cmd}"', shell=True)
+                return True
+            except Exception:
+                pass
 
-    # Chrome
-    if "chrome" in command:
-        subprocess.Popen(
-            r"C:\Program Files\Google\Chrome\Application\chrome.exe"
-        )
-        return True
+    # Universal Web / Search / Action Execution
+    if command.startswith(("open ", "launch ", "start ", "go to ", "visit ")):
+        target = re.sub(r"^(open|launch|start|go to|visit)\s+", "", command).strip()
+        target_clean = re.sub(r"[^\w\s\.-]", "", target)
 
-    # Google
-    if "google" in command:
+        if target_clean:
+            # Common web shortcuts
+            if "." not in target_clean and not target_clean.endswith(".com"):
+                url = f"https://www.{target_clean.replace(' ', '')}.com"
+            else:
+                url = target_clean if target_clean.startswith("http") else f"https://{target_clean}"
+
+            try:
+                subprocess.Popen(f'start "" "{url}"', shell=True)
+                return True
+            except Exception:
+                webbrowser.open(url)
+                return True
+
+    # Google fallback
+    if "google" in command or "search" in command:
         google_search(command)
         return True
 
-    # YouTube
+    # YouTube fallback
     if "youtube" in command or "play" in command:
-
         search = command
-
         for word in [
             "play", "youtube", "on", "open", "and",
             "for me", "please", "search", "find",
             "show me", "put on", "start"
         ]:
             search = search.replace(word, "")
-
         search = search.strip()
-
         if search:
             play_youtube(search)
         else:
             webbrowser.open("https://youtube.com")
-
         return True
 
-    # Unknown Command
-    return None
+    return None
