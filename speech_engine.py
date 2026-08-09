@@ -120,17 +120,18 @@ def _play(text: str) -> None:
                 pygame.mixer.music.stop()
                 break
 
-            # Live ultra-sensitive voice barge-in: ANY spoken sound from Harsha (RMS > 8) IMMEDIATELY STOPS ULTRON!
+            # Live ultra-sensitive voice barge-in: ANY spoken sound from Harsha (RMS > 5) IMMEDIATELY STOPS ULTRON!
             try:
                 from speech import get_latest_mic_rms
                 rms = get_latest_mic_rms()
-                if rms > 8.0:
+                if rms > 5.0:
                     print(f"[TTS BARGE-IN] Harsha interrupted ULTRON (RMS={rms:.1f}) — stopping speech immediately!")
                     _stop_flag.set()
                     pygame.mixer.music.stop()
                     break
             except Exception:
                 pass
+
 
             pygame.time.Clock().tick(30)
 

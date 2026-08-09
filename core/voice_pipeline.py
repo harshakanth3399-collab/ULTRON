@@ -200,20 +200,13 @@ class VoicePipeline:
                     voice_state_manager.transition_to(VoiceState.WAKE_DETECTED, transcript)
                     self._chat("USER", transcript)
 
-                    if inline_cmd:
-                        # "Ultron open YouTube" → process inline
-                        print(f"[VOICE] Inline command: '{inline_cmd}'")
-                        transcript = inline_cmd
-                        in_session = True
-                        session_end = time.time() + 45.0
-                        # fall through to command processing
-                    else:
-                        # Just "Hey Ultron" → greet, open session
-                        voice_state_manager.transition_to(VoiceState.GREETING)
-                        self._say("Hey Harsha, what can I help you with?")
-                        in_session = True
-                        session_end = time.time() + 45.0  # 45s to respond
-                        continue
+                    # Greet Harsha and open 45s session
+                    voice_state_manager.transition_to(VoiceState.GREETING)
+                    self._say("Hey Harsha, what can I help you with?")
+                    in_session = True
+                    session_end = time.time() + 45.0  # 45s session to respond
+                    continue
+
 
                 # ── Command processing ────────────────────────────────────────
                 self._chat("USER", transcript)

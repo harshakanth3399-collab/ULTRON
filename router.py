@@ -101,10 +101,11 @@ def process(command: str) -> tuple:
         from commands_daily import pick_up_call
         return True, pick_up_call()
 
-    if "call" in raw and "whatsapp" not in raw and "video" not in raw:
+    if (raw.startswith("call ") or raw.startswith("dial ")) and not any(k in raw for k in ["call you", "call me", "call it", "whatsapp", "video"]):
         from commands_daily import phone_call
-        name = re.sub(r"(call|phone|dial)", "", raw).strip()
+        name = re.sub(r"^(call|dial)", "", raw).strip()
         return True, phone_call(name)
+
 
     # ── Banking & Payments ────────────────────────────────────────────────────────
     if any(k in raw for k in ["sbi", "hdfc", "icici", "kotak", "axis", "paytm",
