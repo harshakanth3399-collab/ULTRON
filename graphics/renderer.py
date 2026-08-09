@@ -485,9 +485,10 @@ class UltronRenderer(QOpenGLWidget):
 
     def _verify_renderer(self) -> None:
         _log("Running particle draw verification...")
-        # Force instanced billboard engine permanently for 100% Intel Iris Xe GPU compatibility
-        self._use_billboards = True
-        _log("Instanced billboard engine ACTIVE (100% cross-hardware GPU compatibility).")
+        # Use native OpenGL 3.3 point sprite rendering (100% hardware hardware animated)
+        self._use_billboards = False
+        _log("Native OpenGL 3.3 3D Particle Point Engine ACTIVE.")
+
 
     def shutdown(self) -> None:
         if self._audio:

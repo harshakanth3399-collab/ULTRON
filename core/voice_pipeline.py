@@ -108,9 +108,9 @@ class VoicePipeline:
 
         # 2. Comprehensive phonetic regex for all Whisper variations of "Hey Ultron"
         phonetic_patterns = [
-            r"\b(hey|hi|hello|ok|okay|yo|bro)?\s*(ultron|ultra|ultram|altron|alltron|all\s+tron|ul\s+tron|outron|autron|eltron|oltron|aultron|ol\s+tron|haltron|alteron|outeron)\b",
-            r"\b(ultron|altron|outron|autron|eltron|oltron|ultra|ultram)\b",
-            r"ultr", r"altr", r"oltr", r"autr", r"eltr", r"tron"
+            r"\b(hey|hi|hello|ok|okay|yo|bro)?\s*(ultron|ultra|ultram|altron|alltron|all\s+tron|ul\s+tron|outron|autron|eltron|oltron|aultron|ol\s+tron|haltron|alteron|outeron|hail\s*tron|hailtron|hail|hay\s*tron|haytron|hell\s*tron|heil\s*tron)\b",
+            r"\b(ultron|altron|outron|autron|eltron|oltron|ultra|ultram|hailtron|hail\s*tron|hail)\b",
+            r"ultr", r"altr", r"oltr", r"autr", r"eltr", r"hail", r"tron"
         ]
 
         for pat in phonetic_patterns:
@@ -118,10 +118,11 @@ class VoicePipeline:
                 # Extract inline command after wake word if present
                 cmd = re.sub(
                     r'^\s*(hey|hi|hello|ok|okay|yo|bro)?\s*'
-                    r'(ultron|ultra|ultram|altron|alltron|all\s+tron|ul\s+tron|outron|autron|eltron|oltron|aultron|ol\s+tron|haltron|alteron|outeron|tron)?\s*',
+                    r'(ultron|ultra|ultram|altron|alltron|all\s+tron|ul\s+tron|outron|autron|eltron|oltron|aultron|ol\s+tron|haltron|alteron|outeron|hail\s*tron|hailtron|hail|hay\s*tron|haytron|hell\s*tron|heil\s*tron|tron)?\s*',
                     '', clean_norm
                 ).strip()
                 return True, cmd
+
 
         return False, ""
 

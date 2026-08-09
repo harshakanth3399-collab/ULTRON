@@ -358,6 +358,8 @@ class UltronWindow(QMainWindow):
     def _tick(self) -> None:
         self._pulse_t += FRAME_MS / 1000.0
         self._mic.set_pulse(self._pulse_t)
+        self._renderer.update()  # Force 60 FPS repaints on the OpenGL particle canvas
+
 
     # ── Mic button handler ────────────────────────────────────────────────────
 

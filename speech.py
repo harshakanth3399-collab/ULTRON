@@ -56,8 +56,10 @@ WAKE_WORDS = {
     "altron", "all tron", "ul tron", "hey ultra", "hi ultra", "hey altron",
     "hey outron", "hey autron", "hey eltron", "hey ol tron", "outron", "autron",
     "eltron", "oltron", "aultron", "haltron", "alteron", "outeron", "alltron",
-    "hey assistant", "hey ul"
+    "hey assistant", "hey ul", "hail tron", "hailtron", "hail", "hay tron", "haytron",
+    "hell tron", "hail-tron", "heil tron", "heiltron", "hey hail tron"
 }
+
 
 # ── Live Mic RMS for Visualizer ────────────────────────────────────────────────
 _latest_mic_rms = 0.0
