@@ -235,16 +235,24 @@ def process(command: str) -> tuple:
         return True, msg
 
 
-    if any(k in raw for k in ["phone battery", "battery of phone", "check phone battery"]):
+    if any(k in raw for k in ["phone connected", "is my phone", "is phone connected", "check phone status", "phone status"]):
         from modules.adb_bridge import adb_bridge
-        return True, adb_bridge.get_battery_level()
+        devs, is_unauth = adb_bridge.get_connected_devices()
+        if adb_bridge.connected_ip or devs:
+            dev = adb_bridge.connected_ip or devs[0]
+            return True, f"Yes Harsha! Your smartphone ({dev}) is actively connected to ULTRON!"
+        return True, "Your phone is currently disconnected. Say 'connect ADB' to connect your phone."
 
-    if "phone screenshot" in raw or "screenshot of phone" in raw:
+    if any(k in raw for k in ["in my phone", "on my phone", "on phone", "in phone", "on my mobile", "in my mobile"]):
         from modules.adb_bridge import adb_bridge
-        return True, adb_bridge.take_screenshot()
+        for app in ["youtube", "instagram", "whatsapp", "chrome", "spotify", "camera", "settings"]:
+            if app in raw:
+                return True, adb_bridge.open_app(app)
+        return True, "Triggered action on your phone, Harsha!"
 
     if "connect phone" in raw or "mobile link" in raw or "phone link" in raw:
         return True, "Phone portal is ready, Harsha! Your connection link is displayed on screen."
+
 
 
 

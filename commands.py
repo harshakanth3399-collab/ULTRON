@@ -11,8 +11,10 @@ def play_youtube(search):
 
     ydl_opts = {
         "quiet": True,
+        "no_warnings": True,
         "default_search": "ytsearch10"
     }
+
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
