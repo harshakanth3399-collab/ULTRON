@@ -63,16 +63,14 @@ class PersonalProfileManager:
             self.data = DEFAULT_PROFILE.copy()
             self.save_sync()
 
-        # Sanitize & enforce hardware baseline profile values
+        # Sanitize & enforce single consolidated standard profile keys
         user_mem = self.data.setdefault("user_memory", {})
         user_mem["address"] = "Anantapur, Andhra Pradesh"
-        user_mem["location"] = "Anantapur, Andhra Pradesh"
-        user_mem["city"] = "Anantapur"
-        user_mem["state"] = "Andhra Pradesh"
-        user_mem["mother"] = "Narmada"
-        user_mem["mom"] = "Narmada"
-        user_mem["mother's name"] = "Narmada"
-        user_mem["mom's name"] = "Narmada"
+        user_mem["mother_name"] = "Narmada"
+        
+        # Remove legacy duplicate keys
+        for dup in ["mother", "mom", "mother's name", "mom's name", "location", "city", "state", "hometown"]:
+            user_mem.pop(dup, None)
 
         # Clean out hallucinated/outdated notes
         notes = self.data.setdefault("notes", [])
@@ -83,14 +81,21 @@ class PersonalProfileManager:
         self.data["notes"] = clean_notes
 
     def save_sync(self) -> None:
-        """Internal synchronous atomic write."""
+        """Internal synchronous atomic write with retry on file locks."""
         with self._lock:
             try:
                 os.makedirs(os.path.dirname(self.filepath), exist_ok=True)
                 tmp_path = self.filepath + ".tmp"
                 with open(tmp_path, "w", encoding="utf-8") as f:
                     json.dump(self.data, f, indent=4)
-                os.replace(tmp_path, self.filepath)
+                
+                for _attempt in range(5):
+                    try:
+                        os.replace(tmp_path, self.filepath)
+                        break
+                    except (PermissionError, OSError):
+                        import time
+                        time.sleep(0.5)
                 print("[MEMORY] Async disk write completed successfully.")
             except Exception as e:
                 print(f"[MEMORY ERROR] Disk write failed: {e}")
@@ -140,26 +145,37 @@ class PersonalProfileManager:
         return self.data.get("preferences", {}).get(key)
 
     # ── Hardware-Level Persistent User Memory ──────────────────────────────
-    def commit_user_memory(self, key: str, value: Any) -> None:
-        """Writes structured memory asynchronously in background thread."""
-        mem = self.data.setdefault("user_memory", {})
+    def _normalize_key(self, key: str) -> str:
+        """Consolidate key variations into standard unified keys."""
         k = key.lower().strip()
-        v = str(value).strip()
-        mem[k] = v
+        if k in ["mother", "mom", "mother's name", "mom's name", "mother_name"]:
+            return "mother_name"
+        if k in ["address", "location", "city", "state", "hometown"]:
+            return "address"
+        if k in ["favorite_song", "favorite song", "fav song", "song"]:
+            return "favorite_song"
+        return k
+
+    def commit_user_memory(self, key: str, value: Any) -> None:
+        """Writes structured memory asynchronously with key consolidation."""
+        mem = self.data.setdefault("user_memory", {})
+        norm_key = self._normalize_key(key)
+        cleaned_val = str(value).strip()
+        mem[norm_key] = cleaned_val
         self.save()
-        print(f"[MEMORY] Committed asynchronously: {k} = {v}")
+        print(f"[MEMORY] Committed asynchronously: {norm_key} = {cleaned_val}")
 
     def recall_user_memory(self, key: str) -> Optional[Any]:
-        """Hardware fallback lookup: reads directly from disk/memory before LLM."""
-        k = key.lower().strip()
+        """Hardware fallback lookup: reads directly from disk/memory using consolidated keys."""
+        norm_key = self._normalize_key(key)
         
         # Explicit Hardware Fallbacks
-        if k in ["address", "location", "city", "state", "hometown"]:
-            return "Anantapur, Andhra Pradesh"
-        if k in ["mother", "mom", "mother's name", "mom's name"]:
-            return "Narmada"
+        if norm_key == "address":
+            return self.data.get("user_memory", {}).get("address", "Anantapur, Andhra Pradesh")
+        if norm_key == "mother_name":
+            return self.data.get("user_memory", {}).get("mother_name", "Narmada")
 
-        return self.data.get("user_memory", {}).get(k)
+        return self.data.get("user_memory", {}).get(norm_key)
 
     def get_all_user_memory(self) -> Dict[str, Any]:
         return self.data.get("user_memory", {})

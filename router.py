@@ -144,25 +144,27 @@ def process(command: str) -> tuple:
         "remember my", "do you remember", "what is my", "what's my",
         "do you know my", "where do i live", "show my notes", "what do you remember",
         "my address", "my location", "my name", "my phone", "my city", "my state",
-        "my mother", "my mom", "mother's name", "mom's name"
+        "my mother", "my mom", "mother's name", "mom's name", "my favorite song", "my fav song"
     ]):
         from modules.memory.profile_manager import get_profile_manager
         pm = get_profile_manager()
 
         # Specific key queries (HARDWARE DISK LOOKUP FIRST)
         keys_to_check = [
-            "mother's name", "mom's name", "mother", "mom",
+            "mother_name", "mother's name", "mom's name", "mother", "mom",
+            "favorite_song", "favorite song", "fav song", "song",
             "address", "location", "city", "state", "name", "phone", "email", "job", "college", "school", "hometown"
         ]
         for key in keys_to_check:
             if key in raw or (key == "address" and ("where do i live" in raw or "where i live" in raw or "address" in raw)):
                 val = pm.recall_user_memory(key)
+                display_key = "mother's name" if key in ["mother_name", "mother", "mom", "mother's name", "mom's name"] else key
                 if val:
-                    reply = f"Yes Harsha, your {key} is {val}."
+                    reply = f"Yes Harsha, your {display_key} is {val}."
                     print(f"[ROUTER] Hardware Memory hit: {reply}")
                     return True, reply
                 else:
-                    reply = f"I do not have your {key} saved yet, Harsha. Please tell me your {key} so I can store it."
+                    reply = f"I do not have your {display_key} saved yet, Harsha. Please tell me your {display_key} so I can store it."
                     print(f"[ROUTER] Memory miss: {reply}")
                     return True, reply
 

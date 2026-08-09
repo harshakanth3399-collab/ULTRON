@@ -354,17 +354,20 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> str:
 
         # ── Hallucination filter ──────────────────────────────────────────
         # Whisper commonly hallucinates these phrases on silence/noise.
-        _HALLUCINATIONS = [
-            "thank you for watching", "see you in the next video",
-            "thanks for watching", "please subscribe", "like and subscribe",
-            "don't forget to", "www.", "http", "subtitles by",
-            "thank you very much", "thank you", "thanks", "thank you so much",
-        ]
-
+        # Bypass filter for legitimate music keywords and user statements!
+        _MUSIC_KEYWORDS = ["song", "by", "track", "music", "sing", "michael jackson", "favorite song", "fav song"]
         raw_lower = raw.lower()
-        if any(h in raw_lower for h in _HALLUCINATIONS):
-            print(f"[VOICE] [WHISPER] Hallucination detected, ignoring: '{raw[:60]}'")
-            return ""
+
+        if not any(mk in raw_lower for mk in _MUSIC_KEYWORDS):
+            _HALLUCINATIONS = [
+                "thank you for watching", "see you in the next video",
+                "thanks for watching", "please subscribe", "like and subscribe",
+                "don't forget to", "www.", "http", "subtitles by",
+                "thank you very much", "thank you", "thanks", "thank you so much",
+            ]
+            if any(h in raw_lower for h in _HALLUCINATIONS):
+                print(f"[VOICE] [WHISPER] Hallucination detected, ignoring: '{raw[:60]}'")
+                return ""
 
         final = correct(raw)
         print(f"[VOICE] [WHISPER] Transcript: '{final}'")
