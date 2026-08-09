@@ -98,8 +98,20 @@ def execute(command):
     if "exit ultron" in command:
         return False
 
-    # Universal App & System Execution Dictionary
+    # Universal Native Desktop Apps & Systems Execution Dictionary
     _APP_COMMANDS = {
+        "vs code": "code",
+        "vscode": "code",
+        "visual studio code": "code",
+        "github desktop": "GitHubDesktop.exe",
+        "github app": "GitHubDesktop.exe",
+        "github": "https://github.com",
+        "whatsapp": "whatsapp:",
+        "spotify": "spotify:",
+        "discord": "discord:",
+        "word": "winword.exe",
+        "excel": "excel.exe",
+        "powerpoint": "powerpnt.exe",
         "notepad": "notepad.exe",
         "calculator": "calc.exe",
         "calc": "calc.exe",
@@ -114,18 +126,22 @@ def execute(command):
         "camera": "microsoft.windows.camera:",
         "explorer": "explorer.exe",
         "my computer": "explorer.exe",
+        "chrome": "chrome.exe",
     }
 
     for app_name, app_cmd in _APP_COMMANDS.items():
         if app_name in command:
             try:
-                if app_cmd.endswith(".exe"):
-                    subprocess.Popen(app_cmd)
-                else:
+                if app_cmd.endswith(".exe") or app_cmd == "code":
+                    subprocess.Popen(app_cmd, shell=True)
+                elif app_cmd.startswith("http"):
                     subprocess.Popen(f'start "" "{app_cmd}"', shell=True)
+                else:
+                    subprocess.Popen(f'start {app_cmd}', shell=True)
                 return True
             except Exception:
                 pass
+
 
     # Universal Web / Search / Action Execution
     if command.startswith(("open ", "launch ", "start ", "go to ", "visit ")):

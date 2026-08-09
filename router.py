@@ -95,7 +95,19 @@ def process(command: str) -> tuple:
         from commands_daily import screenshot
         return True, screenshot()
 
+    # ── VS Code & GitHub ──────────────────────────────────────────────────────
+    if any(k in raw for k in ["vs code", "vscode", "visual studio code", "open code"]):
+        from commands import execute
+        execute("code")
+        return True, "Opening VS Code for you, Harsha!"
+
+    if "github" in raw:
+        from commands import execute
+        execute("github")
+        return True, "Opening GitHub for you, Harsha!"
+
     # ── WhatsApp (Desktop App & Messaging) ────────────────────────────────────
+
     raw_wa = raw.replace("what's up", "whatsapp").replace("whats up", "whatsapp").replace("whatup", "whatsapp")
 
     if "whatsapp" in raw_wa or "message" in raw_wa or "text" in raw_wa or "msg" in raw_wa:
