@@ -1,7 +1,6 @@
 """
 ULTRON desktop holographic interface.
 app.py only defines functions — it does NOT run any code at import time.
-This ensures importing app from main.py never triggers re-initialization.
 """
 import sys
 
@@ -19,18 +18,37 @@ def _configure_gl() -> None:
 
 def main() -> int:
     from PySide6.QtWidgets import QApplication
-    from ui.main_window import UltronWindow
+    from PySide6.QtCore import QTimer
 
     print("[BOOT] launch_app entered", flush=True)
+
+    # Must be set before QApplication
     _configure_gl()
 
-    app = QApplication(sys.argv)
+    app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("ULTRON")
+
+    # Prevent Qt from quitting when window is closed (safety guard)
+    app.setQuitOnLastWindowClosed(False)
+
     print("[BOOT] QApplication created", flush=True)
 
+    # Import window here (triggers speech/whisper init exactly once)
+    from ui.main_window import UltronWindow
     window = UltronWindow()
     print("[BOOT] main window created", flush=True)
-    window.show()
-    print("[BOOT] window shown", flush=True)
 
+    # Show fullscreen AFTER __init__ completes and BEFORE app.exec()
+    window.showFullScreen()
+    print("[BOOT] window shown — entering event loop", flush=True)
+
+    # Start voice pipeline 1.2s after event loop starts
+    # (gives initializeGL time to complete on first paint)
+    QTimer.singleShot(1200, window._start_pipeline)
+    print("[BOOT] voice pipeline scheduled to start in 1.2s", flush=True)
+
+    # Re-enable quit-on-close after 3s (so Esc / close button works normally)
+    QTimer.singleShot(3000, lambda: app.setQuitOnLastWindowClosed(True))
+
+    print("[DEBUG] app.exec() starting — UI is alive", flush=True)
     return app.exec()
