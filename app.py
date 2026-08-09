@@ -46,8 +46,9 @@ def main() -> int:
 
         print(f"\n==================================================", flush=True)
         print(f"[MOBILE] ULTRON MOBILE WEB SERVER ACTIVE!", flush=True)
-        print(f"[MOBILE] Open this URL on your phone Chrome browser:")
-        print(f" -> http://{ip}:{port}", flush=True)
+        print(f"[MOBILE] Open your phone Chrome browser and go to:", flush=True)
+        print(f" -> Option 1 (USB Cable / ADB): http://localhost:{port}", flush=True)
+        print(f" -> Option 2 (Wi-Fi / Hotspot): http://{ip}:{port}", flush=True)
         print(f"==================================================\n", flush=True)
     except Exception as e:
         print(f"[WEB SERVER] Server startup note: {e}", flush=True)

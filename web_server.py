@@ -103,17 +103,22 @@ class ThreadingServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 
 def setup_adb_forwarding(port: int = PORT) -> bool:
-    """Sets up ADB port forwarding so localhost:8000 on phone connects directly via USB/ADB."""
+    """Sets up ADB reverse and forward port bridge so phone's http://localhost:8000 connects directly to laptop."""
     try:
         import subprocess
         from modules.adb_bridge import _get_adb_executable
         adb_exe = _get_adb_executable()
-        res = subprocess.run([adb_exe, "forward", f"tcp:{port}", f"tcp:{port}"], capture_output=True, text=True, timeout=5.0)
-        if res.returncode == 0:
-            print(f"[MOBILE] ADB Port Forwarding active: phone http://localhost:{port} -> laptop port {port}")
+        
+        # 1. Reverse port forwarding (Phone http://localhost:8000 -> Laptop port 8000)
+        res_rev = subprocess.run([adb_exe, "reverse", f"tcp:{port}", f"tcp:{port}"], capture_output=True, text=True, timeout=5.0)
+        # 2. Forward port forwarding (Laptop -> Phone)
+        res_fwd = subprocess.run([adb_exe, "forward", f"tcp:{port}", f"tcp:{port}"], capture_output=True, text=True, timeout=5.0)
+
+        if res_rev.returncode == 0 or res_fwd.returncode == 0:
+            print(f"[MOBILE] ADB Direct Bridge Active: phone http://localhost:{port} -> laptop port {port}")
             return True
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[MOBILE] ADB bridge setup notice: {e}")
     return False
 
 
