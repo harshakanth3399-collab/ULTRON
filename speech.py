@@ -306,8 +306,8 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
             time.sleep(1.0)
             return b""
 
-    flush_mic_stream()
     print(f"[VOICE] Listening... Gate threshold={_energy_threshold}")
+
 
     speech_frames = []
     speaking_started = False

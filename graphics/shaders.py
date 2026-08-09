@@ -30,12 +30,15 @@ void main() {
     vec4 clip = u_mvp * vec4(in_pos, 1.0);
     gl_Position = clip;
 
-    gl_PointSize = in_size * (1.2 + u_glow * 0.2);
+    // Perspective attenuation: points scale with 3D depth for crisp depth & orbital motion!
+    float atten = 1.0 / max(clip.w, 0.08);
+    gl_PointSize = clamp(in_size * atten * 12.0 * (1.0 + u_glow * 0.4), 1.5, 64.0);
 
-    v_brightness = in_brightness * (0.9 + u_glow * 0.3);
+    v_brightness = in_brightness * (0.85 + u_glow * 0.35);
     v_depth = clip.z;
 }
 """
+
 
 PARTICLE_FRAG = """
 #version 330 core
