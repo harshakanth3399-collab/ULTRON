@@ -223,12 +223,16 @@ def process(command: str) -> tuple:
         return True, msg
 
     # ── Phone & Wireless ADB Controls ──────────────────────────────────────────
-    if any(k in raw for k in ["connect adb", "adb connect", "wireless adb", "wireless debugging"]):
+    # Normalize phonetic Whisper mishearings of ADB ("a, d, b", "a, b, b", "a, d, d", "a d b") -> "adb"
+    raw_adb_norm = re.sub(r"\b(a[\s,\.-]*d[\s,\.-]*b|a[\s,\.-]*b[\s,\.-]*b|a[\s,\.-]*d[\s,\.-]*d|ad&d)\b", "adb", raw)
+
+    if "adb" in raw_adb_norm or "wireless debugging" in raw_adb_norm:
         from modules.adb_bridge import adb_bridge
         ip_match = re.search(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", raw)
         phone_ip = ip_match.group(0) if ip_match else None
         success, msg = adb_bridge.connect_phone(phone_ip)
         return True, msg
+
 
     if any(k in raw for k in ["phone battery", "battery of phone", "check phone battery"]):
         from modules.adb_bridge import adb_bridge
