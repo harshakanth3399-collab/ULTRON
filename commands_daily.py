@@ -85,8 +85,13 @@ def whatsapp_im_busy(name: str) -> str:
     webbrowser.open("https://web.whatsapp.com")
 def reset_instagram_preferences() -> str:
     """Opens Instagram content preferences settings page directly."""
-    webbrowser.open("https://www.instagram.com/your_activity/content_preferences")
-    return "Opened your Instagram content preferences page, Harsha! Hit Reset right on your screen."
+    url = "https://www.instagram.com/your_activity/content_preferences"
+    try:
+        subprocess.Popen(f'start "" "{url}"', shell=True)
+    except Exception:
+        webbrowser.open(url)
+    return "Opening your Instagram content preferences page right now, Harsha!"
+
 
 
 # ── Phone calls via Windows Phone Link ────────────────────────────────────────

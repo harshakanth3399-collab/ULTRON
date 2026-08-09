@@ -125,9 +125,12 @@ def _measure_ambient_rms(device_idx: Optional[int], rate: int, channels: int) ->
         return 1.0
 
 _MIC_IDX, _MIC_RATE, _MIC_CHANNELS = _probe_mic()
-# Dynamic energy threshold above ambient noise floor (clamped for sensitivity & room noise isolation)
-_energy_threshold = max(18, int(_AMBIENT_RMS + 10.0))
-print(f"[VOICE] Dynamic adaptive energy threshold set to {_energy_threshold} (Ambient={_AMBIENT_RMS:.1f})")
+_AMBIENT_RMS = _measure_ambient_rms(_MIC_IDX, _MIC_RATE, _MIC_CHANNELS)
+# Dynamic threshold clamped between 14 and 30 RMS: ensures every spoken word is caught cleanly!
+_energy_threshold = min(30, max(14, int(_AMBIENT_RMS + 6.0)))
+print(f"[VOICE] Optimal energy threshold locked to {_energy_threshold} (Ambient={_AMBIENT_RMS:.1f})")
+
+
 
 
 

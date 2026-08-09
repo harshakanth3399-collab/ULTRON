@@ -183,13 +183,18 @@ def process(command: str) -> tuple:
         return True, open_netflix()
 
     # ── Social & Instagram ───────────────────────────────────────────────────
-    if "instagram" in raw and ("reset" in raw or "preference" in raw or "content" in raw):
+    if any(k in raw for k in ["content preference", "content preferences", "reset preference", "reset preferences", "reset my content"]):
+        from commands_daily import reset_instagram_preferences
+        return True, reset_instagram_preferences()
+
+    if "instagram" in raw and any(k in raw for k in ["reset", "preference", "content", "feed"]):
         from commands_daily import reset_instagram_preferences
         return True, reset_instagram_preferences()
 
     if "instagram" in raw:
         from commands_daily import open_instagram
         return True, open_instagram()
+
 
 
     if "twitter" in raw or "x.com" in raw:
