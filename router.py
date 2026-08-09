@@ -101,13 +101,18 @@ def process(command: str) -> tuple:
     if "whatsapp" in raw_wa or "message" in raw_wa or "text" in raw_wa or "msg" in raw_wa:
         from commands_daily import whatsapp_call, whatsapp_message, whatsapp_im_busy, open_whatsapp
 
-        if any(k in raw_wa for k in ["mom", "mum", "mother", "dad", "father"]) or ("send" in raw_wa and ("to" in raw_wa or "msg" in raw_wa or "message" in raw_wa)):
-            name_match = re.search(r"(?:to|message|text|msg)\s+(\w+)\s*(.*)", raw_wa)
-            name = name_match.group(1) if name_match else "mom"
-            msg = name_match.group(2).strip() if name_match else ""
-            return True, whatsapp_message(name, msg)
+        if any(k in raw_wa for k in ["mom", "mum", "mother", "dad", "father", "bro", "hi", "high", "hello", "send"]):
+            contact_target = "mum"
+            for c in ["mom", "mum", "mother", "dad", "father", "bro"]:
+                if c in raw_wa:
+                    contact_target = c
+                    break
+
+            msg = "Hi" if any(k in raw_wa for k in ["hi", "high", "hey", "hello"]) else ""
+            return True, whatsapp_message(contact_target, msg)
 
         return True, open_whatsapp()
+
 
 
     # ── Phone calls ──────────────────────────────────────────────────────────────

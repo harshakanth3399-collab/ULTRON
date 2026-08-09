@@ -67,15 +67,27 @@ def whatsapp_call(name: str) -> str:
 
 def whatsapp_message(name: str, message: str = "") -> str:
     contact = _find_contact(name)
+    contact_name = contact["name"] if contact else (name.capitalize() if name else "Mum")
+
     if contact and contact.get("whatsapp"):
-        phone = contact["whatsapp"].replace("+", "").replace(" ", "")
-        msg_encoded = urllib.parse.quote(message) if message else ""
-        url = f"whatsapp://send?phone={phone}&text={msg_encoded}" if message else f"whatsapp://send?phone={phone}"
+        phone = contact["whatsapp"].replace("+", "").replace(" ", "").replace("-", "")
+        # Check if real phone number (not placeholder)
+        if phone.isdigit() and len(phone) >= 10:
+            msg_encoded = urllib.parse.quote(message) if message else ""
+            url = f"whatsapp://send?phone={phone}&text={msg_encoded}" if message else f"whatsapp://send?phone={phone}"
+            subprocess.Popen(f'start "" "{url}"', shell=True)
+            return f"Opening WhatsApp chat to {contact_name} with message '{message or 'Hi'}', Harsha!"
+
+    # Fallback to native WhatsApp Desktop App
+    msg_encoded = urllib.parse.quote(message) if message else ""
+    url = f"whatsapp://send?text={msg_encoded}" if message else "whatsapp:"
+    try:
         subprocess.Popen(f'start "" "{url}"', shell=True)
-        return f"Opening WhatsApp chat to {contact['name']}, Harsha!"
-    
-    subprocess.Popen('start whatsapp:', shell=True)
-    return "Opening WhatsApp Desktop app for you, Harsha!"
+    except Exception:
+        subprocess.Popen('start whatsapp:', shell=True)
+
+    return f"Opening WhatsApp Desktop app for {contact_name}, Harsha!"
+
 
 
 
