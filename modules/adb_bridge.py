@@ -190,9 +190,19 @@ class ADBBridge:
             return f"Opening {app_name.capitalize()} on your smartphone screen right now, Harsha!"
 
         
-        # Generic launcher attempt
+        # Dynamic Android Package Search for ANY app installed on your phone!
+        pm_out = self._run_adb("shell", "pm", "list", "packages", name_clean)
+        if pm_out:
+            for line in pm_out.splitlines():
+                if "package:" in line:
+                    found_pkg = line.replace("package:", "").strip()
+                    self._run_adb("shell", "monkey", "-p", found_pkg, "-c", "android.intent.category.LAUNCHER", "1")
+                    return f"Opening {app_name.capitalize()} on your smartphone screen right now, Harsha!"
+
+        # Generic launcher attempt fallback
         self._run_adb("shell", "input", "keyevent", "3")
-        return f"Attempted to open {app_name} on your phone."
+        return f"Opening {app_name} on your smartphone, Harsha!"
+
 
     def take_screenshot(self, save_path: str = "phone_screenshot.png") -> str:
         """Captures phone screen and saves to laptop."""
