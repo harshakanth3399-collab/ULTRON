@@ -222,9 +222,25 @@ def process(command: str) -> tuple:
         success, msg = check_and_apply_safe_updates()
         return True, msg
 
-    # ── Phone connect ────────────────────────────────────────────────────────
+    # ── Phone & Wireless ADB Controls ──────────────────────────────────────────
+    if any(k in raw for k in ["connect adb", "adb connect", "wireless adb", "wireless debugging"]):
+        from modules.adb_bridge import adb_bridge
+        ip_match = re.search(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", raw)
+        phone_ip = ip_match.group(0) if ip_match else None
+        success, msg = adb_bridge.connect_phone(phone_ip)
+        return True, msg
+
+    if any(k in raw for k in ["phone battery", "battery of phone", "check phone battery"]):
+        from modules.adb_bridge import adb_bridge
+        return True, adb_bridge.get_battery_level()
+
+    if "phone screenshot" in raw or "screenshot of phone" in raw:
+        from modules.adb_bridge import adb_bridge
+        return True, adb_bridge.take_screenshot()
+
     if "connect phone" in raw or "mobile link" in raw or "phone link" in raw:
         return True, "Phone portal is ready, Harsha! Your connection link is displayed on screen."
+
 
 
     # ── Web search ──────────────────────────────────────────────────────────────────
