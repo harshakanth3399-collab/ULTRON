@@ -19,12 +19,16 @@ def _configure_gl() -> None:
 
 
 def main() -> int:
+    print("[BOOT] launch_app entered", flush=True)
     _configure_gl()
     app = QApplication(sys.argv)
     app.setApplicationName("ULTRON")
+    print("[BOOT] QApplication created", flush=True)
 
     window = UltronWindow()
+    print("[BOOT] main window created", flush=True)
     window.show()
+    print("[BOOT] window shown", flush=True)
 
     return app.exec()
 

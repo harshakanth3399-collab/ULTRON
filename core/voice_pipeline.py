@@ -58,13 +58,15 @@ class VoicePipeline:
         if self._running:
             return
         self._running = True
+        print("[BOOT] audio engine initialized", flush=True)
         self._thread = threading.Thread(target=self._loop, daemon=True, name="VoicePipeline")
         self._thread.start()
-        print("[VOICE] Pipeline thread started.")
+        print("[BOOT] voice worker started", flush=True)
+        print("[VOICE] Pipeline thread started.", flush=True)
 
     def stop(self) -> None:
         self._running = False
-        print("[VOICE] Pipeline stopping.")
+        print("[VOICE] Pipeline stopping.", flush=True)
 
     # ── TTS helper — THE CRITICAL FIX ──────────────────────────────────────────
 
@@ -123,11 +125,14 @@ class VoicePipeline:
     def _loop(self) -> None:
         router_process = _router()
 
+        print("[BOOT] startup greeting starting", flush=True)
         # Play startup greeting using the approved voice
         self._say("Hey Harsha, what can I help you with?")
+        print("[BOOT] startup greeting finished", flush=True)
 
         voice_state_manager.transition_to(VoiceState.IDLE)
-        print("[VOICE] === Wake listening started. Say 'Hey Ultron' or 'Ultron'. ===")
+        print("[BOOT] wake-word listener started", flush=True)
+        print("[VOICE] === Wake listening started. Say 'Hey Ultron' or 'Ultron'. ===", flush=True)
 
         in_session = False        # True when command session is open
         session_end = 0.0         # Epoch when session expires

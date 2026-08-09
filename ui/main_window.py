@@ -186,6 +186,7 @@ class UltronWindow(QMainWindow):
         shadow.setOffset(0, 0)
         self._mic.setGraphicsEffect(shadow)
 
+        print("[BOOT] renderer created", flush=True)
         # ── Wire state machine ────────────────────────────────────────────
         voice_state_manager.add_listener(self._on_voice_state)
         voice_pipeline.set_chat_callback(self._on_chat)
@@ -196,8 +197,14 @@ class UltronWindow(QMainWindow):
         self._timer.timeout.connect(self._tick)
         self._timer.start(FRAME_MS)
 
+        print("[BOOT] renderer initialized", flush=True)
         self.showFullScreen()
-        QTimer.singleShot(900, voice_pipeline.start)
+        print("[BOOT] window shown", flush=True)
+        QTimer.singleShot(900, self._start_pipeline)
+
+    def _start_pipeline(self) -> None:
+        print("[BOOT] QTimer trigger: starting voice pipeline", flush=True)
+        voice_pipeline.start()
 
     # ── Layout ────────────────────────────────────────────────────────────────
 
