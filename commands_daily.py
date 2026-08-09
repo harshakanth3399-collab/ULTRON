@@ -83,10 +83,14 @@ def whatsapp_im_busy(name: str) -> str:
         webbrowser.open(f"https://wa.me/{phone}?text={msg_encoded}")
         return f"Sending 'I'm busy' to {contact['name']} on WhatsApp."
     webbrowser.open("https://web.whatsapp.com")
-    return "Opening WhatsApp so you can send the message."
+def reset_instagram_preferences() -> str:
+    """Opens Instagram content preferences settings page directly."""
+    webbrowser.open("https://www.instagram.com/your_activity/content_preferences")
+    return "Opened your Instagram content preferences page, Harsha! Hit Reset right on your screen."
 
 
 # ── Phone calls via Windows Phone Link ────────────────────────────────────────
+
 
 def phone_call(name: str) -> str:
     # Try Phone Link (pairs with Android/iPhone)
