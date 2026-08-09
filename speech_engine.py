@@ -79,7 +79,8 @@ def _play(text: str) -> None:
     if not spoken_text:
         spoken_text = "Check your screen, Harsha."
 
-    try:
+        _stop_flag.clear()
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
             filename = f.name
 
@@ -114,23 +115,25 @@ def _play(text: str) -> None:
 
         _ready_event.set()
 
-        # Wait for playback to finish (with ultra-sensitive live voice barge-in detection)
+        # Wait for playback to finish (with dynamic live voice barge-in detection)
         while pygame.mixer.music.get_busy():
             if _stop_flag.is_set():
                 pygame.mixer.music.stop()
                 break
 
-            # Live ultra-sensitive voice barge-in: ANY spoken sound from Harsha (RMS > 5) IMMEDIATELY STOPS ULTRON!
+            # Live voice barge-in: spoken sound from Harsha cuts off speech immediately
             try:
-                from speech import get_latest_mic_rms
+                from speech import get_latest_mic_rms, get_energy_threshold
                 rms = get_latest_mic_rms()
-                if rms > 5.0:
-                    print(f"[TTS BARGE-IN] Harsha interrupted ULTRON (RMS={rms:.1f}) — stopping speech immediately!")
+                thresh = max(35.0, float(get_energy_threshold()) + 15.0)
+                if rms > thresh:
+                    print(f"[TTS BARGE-IN] Harsha interrupted ULTRON (RMS={rms:.1f} > {thresh:.1f}) — stopping speech immediately!")
                     _stop_flag.set()
                     pygame.mixer.music.stop()
                     break
             except Exception:
                 pass
+
 
 
             pygame.time.Clock().tick(30)

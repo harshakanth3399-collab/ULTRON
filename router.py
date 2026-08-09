@@ -287,28 +287,31 @@ def process(command: str) -> tuple:
 
 
 
-    # ── Web search ──────────────────────────────────────────────────────────────────
-    if raw.startswith(("search the web for", "search web for", "search for")):
+    # ── Live Web Search ─────────────────────────────────────────────────────────────
+    if any(k in raw for k in ["search", "google", "check in google", "locations of", "where are", "where is", "find in google"]) and not any(k in raw for k in ["open google", "open chrome"]):
         from modules.internet import search_web_live
-        query = re.sub(r"^(search the web for|search web for|search for)", "", raw).strip()
-        web_info = search_web_live(query)
+        query = re.sub(r"(search|the|web|for|google|check|in|tell|me|give|information|area|names|where|are|located)", " ", raw)
+        clean_q = " ".join(query.split()).strip()
+        search_target = f"QSpiders locations {clean_q}" if "spider" in raw else (clean_q or raw)
+
+        web_info = search_web_live(search_target)
         if web_info:
             ai_summary = ask_ai(
-                f"Answer Harsha directly in 1-2 short sentences based on these "
-                f"live web results for '{query}':\n{web_info}"
+                f"Answer Harsha directly in 1-2 short sentences giving the exact real location area names based on these "
+                f"live search results:\n{web_info}"
             )
-            return True, ai_summary
-        return True, f"Searched for '{query}' but found no results."
+            if ai_summary:
+                return True, ai_summary
+        return True, f"Searched live for '{search_target}' but found no results."
 
     # ── YouTube / Play ─────────────────────────────────────────────────────────────
     if "youtube" in raw or raw.startswith("play "):
-        from commands import execute
         execute(raw)
-        # Extract what we're playing for spoken reply
         search = re.sub(r"(play|youtube|open|on|and|for me|please)", "", raw).strip()
         if search:
             return True, f"Playing {search} on YouTube for you, bro!"
         return True, "Opening YouTube for you, Harsha!"
+
 
     # ── Standard commands: YouTube / Google / Apps / AI ───────────────────────
     corrected = correct(raw)
