@@ -36,8 +36,11 @@ def _load_contacts() -> list[dict]:
 
 def _find_contact(name: str) -> dict | None:
     name = name.lower().strip()
+    if name in ("mom", "mum", "mother"):
+        name = "mum"
     for c in _load_contacts():
-        if name in c.get("name", "").lower():
+        c_name = c.get("name", "").lower()
+        if name in c_name or c_name in name:
             return c
     return None
 
@@ -46,36 +49,34 @@ def open_whatsapp() -> str:
     """Opens native WhatsApp Desktop app on Windows."""
     try:
         subprocess.Popen('start whatsapp:', shell=True)
-        return "Opening WhatsApp app for you, Harsha!"
+        return "Opening WhatsApp Desktop app for you, Harsha!"
     except Exception:
-        webbrowser.open("https://web.whatsapp.com")
-        return "Opening WhatsApp Web for you, Harsha!"
+        return "Opening WhatsApp app for you, Harsha!"
 
 
 def whatsapp_call(name: str) -> str:
-
     contact = _find_contact(name)
     if contact and contact.get("whatsapp"):
         phone = contact["whatsapp"].replace("+", "").replace(" ", "")
-        webbrowser.open(f"https://wa.me/{phone}")
-        return f"Opening WhatsApp call to {contact['name']}, bro."
-    # Fallback: open WhatsApp
-    webbrowser.open("https://web.whatsapp.com")
-    return f"Opening WhatsApp. I couldn't find {name} in your contacts — add them to memory/contacts.json."
+        url = f"whatsapp://send?phone={phone}"
+        subprocess.Popen(f'start "" "{url}"', shell=True)
+        return f"Opening WhatsApp call to {contact['name']}, Harsha!"
+    subprocess.Popen('start whatsapp:', shell=True)
+    return "Opening WhatsApp Desktop app for you, Harsha!"
 
 
 def whatsapp_message(name: str, message: str = "") -> str:
     contact = _find_contact(name)
     if contact and contact.get("whatsapp"):
         phone = contact["whatsapp"].replace("+", "").replace(" ", "")
-        if message:
-            msg_encoded = urllib.parse.quote(message)
-            webbrowser.open(f"https://wa.me/{phone}?text={msg_encoded}")
-        else:
-            webbrowser.open(f"https://wa.me/{phone}")
-        return f"Opening WhatsApp to {contact['name']}."
-    webbrowser.open("https://web.whatsapp.com")
-    return "Opening WhatsApp Web."
+        msg_encoded = urllib.parse.quote(message) if message else ""
+        url = f"whatsapp://send?phone={phone}&text={msg_encoded}" if message else f"whatsapp://send?phone={phone}"
+        subprocess.Popen(f'start "" "{url}"', shell=True)
+        return f"Opening WhatsApp chat to {contact['name']}, Harsha!"
+    
+    subprocess.Popen('start whatsapp:', shell=True)
+    return "Opening WhatsApp Desktop app for you, Harsha!"
+
 
 
 def whatsapp_im_busy(name: str) -> str:
