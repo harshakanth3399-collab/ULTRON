@@ -49,28 +49,29 @@ class ADBBridge:
         return devices
 
     def connect_phone(self, phone_ip: Optional[str] = None) -> tuple[bool, str]:
-        """Connects to Android phone over Wi-Fi ADB on port 5555."""
-        if not phone_ip:
-            # Auto-detect subnet IP if not specified
-            phone_ip = self._find_phone_ip()
-
-        if not phone_ip:
-            return False, "Could not auto-detect phone IP. Please specify your phone's Wi-Fi IP address."
-
-        out = self._run_adb("connect", f"{phone_ip}:{self.port}")
-        if "connected" in out.lower():
-            self.connected_ip = phone_ip
-            self._start_persistent_keepalive()
-            return True, f"Successfully connected wirelessly to your phone at {phone_ip}:{self.port}!"
-        
-        # Check if already connected via USB/Wi-Fi
+        """Connects to Android phone via USB Debugging or Wi-Fi ADB on port 5555."""
+        # 1. Check if device is connected via USB Debugging cable
         devices = self.get_connected_devices()
         if devices:
+            # Enable Wireless ADB port 5555 automatically on the USB device!
+            self._run_adb("tcpip", str(self.port))
             self.connected_ip = devices[0]
             self._start_persistent_keepalive()
-            return True, f"Connected to device {devices[0]} via ADB."
+            return True, f"USB Debugging detected! Activated Wireless ADB on port {self.port}. Your phone is now fully connected to ULTRON!"
 
-        return False, f"ADB Connection response: '{out}'. Ensure Wireless Debugging is ON on your phone."
+        # 2. If phone_ip specified or auto-discovered over Hotspot / Wi-Fi
+        if not phone_ip:
+            phone_ip = self._find_phone_ip()
+
+        if phone_ip:
+            out = self._run_adb("connect", f"{phone_ip}:{self.port}")
+            if "connected" in out.lower() or "already" in out.lower():
+                self.connected_ip = phone_ip
+                self._start_persistent_keepalive()
+                return True, f"Successfully connected wirelessly to your phone at {phone_ip}:{self.port}!"
+
+        return False, "No phone detected via USB or Hotspot. Plug phone in via USB once with USB Debugging ON, or connect to phone Hotspot."
+
 
     def _find_phone_ip(self) -> Optional[str]:
         """Attempts to discover phone IP on local subnet."""
