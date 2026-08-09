@@ -25,9 +25,42 @@ def get_local_ip() -> str:
         return "127.0.0.1"
 
 
+import json
+
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DOCS_DIR, **kwargs)
+
+    def do_GET(self):
+        if self.path.startswith("/api/status"):
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"status": "online", "system": "ULTRON Holographic Matrix"}')
+            return
+        super().do_GET()
+
+    def do_POST(self):
+        if self.path.startswith("/api/command"):
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length).decode('utf-8')
+            try:
+                data = json.loads(post_data)
+                cmd = data.get("command", "")
+                from router import process
+                _flag, response = process(cmd)
+                reply = response or "Command executed, Harsha!"
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"reply": reply}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+            return
+        super().do_POST()
+
 
 
 def start_server_in_background():

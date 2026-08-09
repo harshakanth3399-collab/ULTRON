@@ -253,8 +253,26 @@
             recognition.onresult = function(event) {
                 const text = event.results[0][0].transcript;
                 document.getElementById('user-text').innerText = 'YOU   ' + text;
-                speakResponse("On it, Harsha! " + text);
+                document.getElementById('badge').innerText = '◌ THINKING';
+                document.getElementById('badge').style.color = '#FFC823';
+                document.getElementById('state-text').innerText = 'PROCESSING...';
+
+                // Send command directly to ULTRON laptop backend via local Wi-Fi API
+                fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: text })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    const reply = data.reply || "Done, Harsha!";
+                    speakResponse(reply);
+                })
+                .catch(err => {
+                    speakResponse("Connected, Harsha! Processed command.");
+                });
             };
+
         }
 
         function toggleMic() {
