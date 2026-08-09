@@ -124,50 +124,45 @@ class AudioAnalyzer:
         """
         Returns smoothed 0..1 audio level for the particle engine.
 
-        LISTENING: drives from real mic
-        SPEAKING:  drives from TTS syllable envelope (no mic feedback)
-        IDLE:      gentle autonomous breath
+        SPEAKING:  drives from TTS syllable envelope (ULTRON's voice notes)
+        USER (IDLE/LISTENING/RECORDING): drives from live mic RMS (Harsha's voice notes)
         """
         target = 0.0
 
-        if state == UltronState.LISTENING:
-            if not self._running:
-                self.start_listening()
-            with self._lock:
-                target = min(1.0, self._level)
+        if state == UltronState.SPEAKING and speaking_fn():
+            # ULTRON IS SPEAKING: Synthesized syllable model matching speech rhythm
+            self._speak_phase += dt * 10.5
+            syllable = abs(math.sin(self._speak_phase * 1.75)) ** 0.5
+            bass     = (math.sin(self._speak_phase * 0.85) * 0.5 + 0.5) * 0.35
+            burst    = max(0.0, math.sin(self._speak_phase * 4.2)) ** 2.0 * 0.40
+            self._speak_energy = min(1.0, syllable * 0.60 + bass + burst + 0.15)
+            target = self._speak_energy
 
         else:
-            # Stop mic capture in non-listening states
-            if self._running:
-                self.stop()
+            # HARSHA IS SPEAKING (or listening/recording/idle): Read live mic RMS directly
+            mic_rms = 0.0
+            try:
+                from speech import get_latest_mic_rms
+                mic_rms = get_latest_mic_rms()
+            except Exception:
+                pass
 
-            if state == UltronState.SPEAKING and speaking_fn():
-                # Synthesized syllable model: approximates natural speech rhythm
-                self._speak_phase += dt * 9.5
-                syllable = abs(math.sin(self._speak_phase * 1.65)) ** 0.5
-                bass     = (math.sin(self._speak_phase * 0.82) * 0.5 + 0.5) * 0.30
-                burst    = max(0.0, math.sin(self._speak_phase * 4.1)) ** 2.0 * 0.35
-                self._speak_energy = min(1.0, syllable * 0.55 + bass + burst + 0.14)
-                target = self._speak_energy
-
-            elif state == UltronState.IDLE:
-                # Gentle breathe: slow sinusoidal with subtle variation
-                self._idle_phase += dt * 0.55
-                target = 0.07 + 0.05 * math.sin(self._idle_phase * 1.15)
-                target += 0.02 * math.sin(self._idle_phase * 3.1)
-                self._speak_energy *= 0.90
-
+            if mic_rms > 3.0:
+                # Map mic RMS (typically 5..200) to 0.1..1.0 particle energy scale
+                target = min(1.0, (mic_rms / 75.0) * AUDIO_GAIN)
             else:
-                # PROCESSING / TRANSCRIBING: steady low pulse
-                self._idle_phase += dt * 1.8
-                target = 0.18 + 0.10 * abs(math.sin(self._idle_phase))
+                # Gentle breathe baseline pulse when silent
+                self._idle_phase += dt * 0.65
+                target = 0.08 + 0.05 * math.sin(self._idle_phase * 1.2)
+                target += 0.02 * math.sin(self._idle_phase * 3.2)
                 self._speak_energy *= 0.85
 
-        # Smooth with attack/release
-        coeff = AUDIO_ATTACK if target > self._smoothed else AUDIO_RELEASE
+        # Smooth with fast attack / natural release
+        coeff = AUDIO_ATTACK * 1.4 if target > self._smoothed else AUDIO_RELEASE * 1.2
         self._smoothed += (target - self._smoothed) * min(1.0, coeff * dt * 60.0)
         self._smoothed = float(np.clip(self._smoothed, 0.0, 1.0))
         return self._smoothed
+
 
     @property
     def level(self) -> float:

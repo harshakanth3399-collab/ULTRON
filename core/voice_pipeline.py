@@ -97,28 +97,34 @@ class VoicePipeline:
         if not clean:
             return False, ""
 
-        # Exact and prefix match from WAKE_WORDS set
-        for wake in sorted(WAKE_WORDS, key=len, reverse=True):
-            if clean == wake:
-                return True, ""
-            if clean.startswith(wake + " "):
-                return True, clean[len(wake):].strip()
-            if clean.startswith(wake + ","):
-                return True, clean[len(wake) + 1:].strip()
+        clean_norm = re.sub(r'[^\w\s]', '', clean)
 
-        # Fuzzy substring: any phonetic variant of ultron
-        triggers = ["ultron", "ultra", "ultram", "altron", "all tron", "ul tron"]
-        for trig in triggers:
-            if trig in clean:
-                # strip out the wake prefix, keep any trailing command
+        # 1. Exact or prefix match from WAKE_WORDS set
+        for wake in sorted(WAKE_WORDS, key=len, reverse=True):
+            if clean_norm == wake:
+                return True, ""
+            if clean_norm.startswith(wake + " "):
+                return True, clean_norm[len(wake):].strip()
+
+        # 2. Comprehensive phonetic regex for all Whisper variations of "Hey Ultron"
+        phonetic_patterns = [
+            r"\b(hey|hi|hello|ok|okay|yo|bro)?\s*(ultron|ultra|ultram|altron|alltron|all\s+tron|ul\s+tron|outron|autron|eltron|oltron|aultron|ol\s+tron|haltron|alteron|outeron)\b",
+            r"\b(ultron|altron|outron|autron|eltron|oltron|ultra|ultram)\b",
+            r"ultr", r"altr", r"oltr", r"autr", r"eltr", r"tron"
+        ]
+
+        for pat in phonetic_patterns:
+            if re.search(pat, clean_norm):
+                # Extract inline command after wake word if present
                 cmd = re.sub(
                     r'^\s*(hey|hi|hello|ok|okay|yo|bro)?\s*'
-                    r'(ultron|ultra|ultram|altron|alltron|all tron|ul tron)\s*[,.]?\s*',
-                    '', clean
+                    r'(ultron|ultra|ultram|altron|alltron|all\s+tron|ul\s+tron|outron|autron|eltron|oltron|aultron|ol\s+tron|haltron|alteron|outeron|tron)?\s*',
+                    '', clean_norm
                 ).strip()
                 return True, cmd
 
         return False, ""
+
 
     # ── Main loop ──────────────────────────────────────────────────────────────
 

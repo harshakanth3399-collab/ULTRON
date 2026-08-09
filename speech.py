@@ -24,6 +24,7 @@ import time
 import wave
 from typing import Optional
 
+import collections
 import pyaudio
 from faster_whisper import WhisperModel
 
@@ -48,12 +49,28 @@ def speaking() -> bool:
     return _speaking_event.is_set()
 
 
-# ── Wake words ────────────────────────────────────────────────────────────────
+# ── Wake words (expanded with common Whisper phonetic variations) ──────────────
 WAKE_WORDS = {
     "ultron", "hey ultron", "hi ultron", "ok ultron", "okay ultron",
     "hello ultron", "yo ultron", "bro ultron", "ultram", "ultra",
-    "altron", "all tron", "ul tron", "hey ultra", "hi ultra", "hey altron"
+    "altron", "all tron", "ul tron", "hey ultra", "hi ultra", "hey altron",
+    "hey outron", "hey autron", "hey eltron", "hey ol tron", "outron", "autron",
+    "eltron", "oltron", "aultron", "haltron", "alteron", "outeron", "alltron",
+    "hey assistant", "hey ul"
 }
+
+# ── Live Mic RMS for Visualizer ────────────────────────────────────────────────
+_latest_mic_rms = 0.0
+_rms_lock = threading.Lock()
+
+def get_latest_mic_rms() -> float:
+    with _rms_lock:
+        return _latest_mic_rms
+
+def _set_latest_mic_rms(val: float) -> None:
+    global _latest_mic_rms
+    with _rms_lock:
+        _latest_mic_rms = val
 
 # ── Faster-Whisper model ──────────────────────────────────────────────────────
 print("[VOICE] Loading Faster-Whisper model...")
@@ -104,11 +121,10 @@ def _measure_ambient_rms(device_idx: Optional[int], rate: int, channels: int) ->
 _MIC_IDX, _MIC_RATE, _MIC_CHANNELS = _probe_mic()
 _AMBIENT_RMS = _measure_ambient_rms(_MIC_IDX, _MIC_RATE, _MIC_CHANNELS)
 
-# KEY FIX: Hardware-calibrated energy threshold
-# Multiplier 2.0 (was 3.5) keeps threshold low enough for normal speech.
-# Hard cap of 50 prevents loud-room false negatives.
-_energy_threshold = max(3, min(50, int(_AMBIENT_RMS * 2.0)))
+# Dynamic threshold with sensitive multiplier for speech onset (1.2x ambient)
+_energy_threshold = max(2, min(25, int(_AMBIENT_RMS * 1.2)))
 print(f"[VOICE] Final calibrated energy threshold set to {_energy_threshold}")
+
 
 # ── Permanent Audio Stream ─────────────────────────────────────────────────────
 _pa_instance = None
@@ -275,6 +291,7 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
     """
     Listens continuously using the permanent PyAudio stream.
     Applies custom energy-gate VAD to detect phrase start/stop points.
+    Uses pre-buffer ring buffer so onset speech ("Hey") is never clipped.
     """
     global _mic_stream
     _wait_if_speaking()
@@ -292,8 +309,11 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
     speech_frames = []
     speaking_started = False
 
+    # Ring buffer to preserve 4 chunks (~100ms) before onset detection
+    pre_buffer = collections.deque(maxlen=4)
+
     # VAD limits
-    silence_limit_chunks = int(_MIC_RATE / 1024 * 0.85)  # 0.85s of silence marks end
+    silence_limit_chunks = int(_MIC_RATE / 1024 * 0.70)  # 0.70s of silence marks end
     silence_counter = 0
     max_chunks = int(_MIC_RATE / 1024 * phrase_time_limit)
     timeout_chunks = int(_MIC_RATE / 1024 * timeout)
@@ -310,13 +330,18 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
             continue
 
         rms_val = audioop.rms(data, 2)
+        _set_latest_mic_rms(float(rms_val))
 
         if not speaking_started:
+            # Maintain rolling ring buffer of quiet pre-speech audio
+            pre_buffer.append(data)
+
             # Listening for speech onset
             if rms_val > _energy_threshold:
                 print(f"[VOICE] Speech onset detected (RMS={rms_val} > threshold={_energy_threshold})")
                 speaking_started = True
-                speech_frames.append(data)
+                # Include pre-buffer audio so start of utterance is preserved
+                speech_frames.extend(pre_buffer)
             else:
                 chunk_counter += 1
                 if chunk_counter > timeout_chunks:
@@ -349,6 +374,7 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
         w.writeframes(b"".join(speech_frames))
 
     return out.getvalue()
+
 
 
 def listen() -> str:
