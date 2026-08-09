@@ -97,14 +97,10 @@ def process(command: str) -> tuple:
         return True, whatsapp_message("", "")
 
     # ── Phone calls ──────────────────────────────────────────────────────────────
-    if "pick up" in raw or "answer call" in raw or "receive call" in raw:
-        from commands_daily import pick_up_call
-        return True, pick_up_call()
-
-    if (raw.startswith("call ") or raw.startswith("dial ")) and not any(k in raw for k in ["call you", "call me", "call it", "whatsapp", "video"]):
+    if raw.startswith("open phone link") or raw.startswith("launch phone link"):
         from commands_daily import phone_call
-        name = re.sub(r"^(call|dial)", "", raw).strip()
-        return True, phone_call(name)
+        return True, phone_call("")
+
 
 
     # ── Banking & Payments ────────────────────────────────────────────────────────

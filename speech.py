@@ -125,11 +125,10 @@ def _measure_ambient_rms(device_idx: Optional[int], rate: int, channels: int) ->
         return 1.0
 
 _MIC_IDX, _MIC_RATE, _MIC_CHANNELS = _probe_mic()
-_AMBIENT_RMS = _measure_ambient_rms(_MIC_IDX, _MIC_RATE, _MIC_CHANNELS)
+# Dynamic energy threshold above ambient noise floor (clamped for sensitivity & room noise isolation)
+_energy_threshold = max(18, int(_AMBIENT_RMS + 10.0))
+print(f"[VOICE] Dynamic adaptive energy threshold set to {_energy_threshold} (Ambient={_AMBIENT_RMS:.1f})")
 
-# Fixed sensitive energy threshold = 4: guarantees normal/soft spoken voice is ALWAYS detected!
-_energy_threshold = 4
-print(f"[VOICE] Ultra-sensitive energy threshold locked to {_energy_threshold}")
 
 
 
@@ -273,7 +272,9 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> str:
             "thank you for watching", "see you in the next video",
             "thanks for watching", "please subscribe", "like and subscribe",
             "don't forget to", "www.", "http", "subtitles by",
+            "thank you very much", "thank you", "thanks", "thank you so much",
         ]
+
         raw_lower = raw.lower()
         if any(h in raw_lower for h in _HALLUCINATIONS):
             print(f"[VOICE] [WHISPER] Hallucination detected, ignoring: '{raw[:60]}'")
@@ -319,9 +320,10 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
     # Ring buffer to preserve 4 chunks (~100ms) before onset detection
     pre_buffer = collections.deque(maxlen=4)
 
-    # VAD limits: 1.4s of silence marks natural phrase end (prevents mid-word cutoff)
-    silence_limit_chunks = int(_MIC_RATE / 1024 * 1.40)
+    # VAD limits: 0.8s of silence marks phrase end (fast responsive phrase boundary)
+    silence_limit_chunks = int(_MIC_RATE / 1024 * 0.80)
     silence_counter = 0
+
 
     max_chunks = int(_MIC_RATE / 1024 * phrase_time_limit)
     timeout_chunks = int(_MIC_RATE / 1024 * timeout)
