@@ -1,14 +1,13 @@
-"""ULTRON desktop holographic interface entry point."""
-
+"""
+ULTRON desktop holographic interface.
+app.py only defines functions — it does NOT run any code at import time.
+This ensures importing app from main.py never triggers re-initialization.
+"""
 import sys
-
-from PySide6.QtGui import QSurfaceFormat
-from PySide6.QtWidgets import QApplication
-
-from ui.main_window import UltronWindow
 
 
 def _configure_gl() -> None:
+    from PySide6.QtGui import QSurfaceFormat
     fmt = QSurfaceFormat()
     fmt.setVersion(3, 3)
     fmt.setProfile(QSurfaceFormat.CoreProfile)
@@ -19,8 +18,12 @@ def _configure_gl() -> None:
 
 
 def main() -> int:
+    from PySide6.QtWidgets import QApplication
+    from ui.main_window import UltronWindow
+
     print("[BOOT] launch_app entered", flush=True)
     _configure_gl()
+
     app = QApplication(sys.argv)
     app.setApplicationName("ULTRON")
     print("[BOOT] QApplication created", flush=True)
@@ -31,7 +34,3 @@ def main() -> int:
     print("[BOOT] window shown", flush=True)
 
     return app.exec()
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
