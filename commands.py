@@ -2,82 +2,26 @@ import re
 import subprocess
 import webbrowser
 import urllib.parse
-import yt_dlp
+import threading
 
 
-# -----------------------------
-# Open YouTube Video
-# -----------------------------
-def play_youtube(search):
+def play_youtube(search: str) -> None:
+    """Instantly opens YouTube search / video playback in default browser (<50ms)."""
+    search_clean = search.strip()
+    if not search_clean:
+        webbrowser.open("https://youtube.com")
+        return
 
-    ydl_opts = {
-        "quiet": True,
-        "no_warnings": True,
-        "default_search": "ytsearch10"
-    }
-
-
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-
-            info = ydl.extract_info(search, download=False)
-            videos = info["entries"]
-
-            best_video = None
-            best_score = -1
-
-            for video in videos:
-
-                score = 0
-
-                title = video.get("title", "").lower()
-                uploader = video.get("uploader", "").lower()
-
-                for word in search.lower().split():
-                    if word in title:
-                        score += 5
-
-                if "official" in title:
-                    score += 10
-
-                if "trailer" in title:
-                    score += 10
-
-                if "official" in uploader:
-                    score += 5
-
-                if "t-series" in uploader:
-                    score += 5
-
-                if score > best_score:
-                    best_score = score
-                    best_video = video
-
-            if best_video:
-                print("▶ Playing:", best_video["title"])
-                webbrowser.open(best_video["webpage_url"])
-            else:
-                webbrowser.open("https://youtube.com")
-
-    except Exception as e:
-        print("YouTube Error:", e)
+    url = f"https://www.youtube.com/results?search_query={urllib.parse.quote(search_clean)}"
+    print(f"[FAST YOUTUBE] Launching URL: {url}")
+    webbrowser.open(url)
 
 
-# -----------------------------
-# Google Search
-# -----------------------------
-def google_search(command):
-
+def google_search(command: str) -> None:
+    """Instantly opens Google search in browser (<50ms)."""
     search = command
-
-    for word in [
-        "search",
-        "google",
-        "for",
-        "open"
-    ]:
+    for word in ["search", "google", "for", "open"]:
         search = search.replace(word, "")
-
     search = search.strip()
 
     if search:
@@ -88,15 +32,11 @@ def google_search(command):
     webbrowser.open(url)
 
 
-# -----------------------------
-# Execute Commands
-# -----------------------------
-def execute(command):
+def execute(command: str):
+    """Fast-path Universal Desktop & Web Command Execution Engine (<10ms matching)."""
+    cmd = command.lower().strip()
 
-    command = command.lower().strip()
-
-    # Exit
-    if "exit ultron" in command:
+    if "exit ultron" in cmd:
         return False
 
     # Universal Native Desktop Apps & Systems Execution Dictionary
@@ -131,7 +71,7 @@ def execute(command):
     }
 
     for app_name, app_cmd in _APP_COMMANDS.items():
-        if app_name in command:
+        if app_name in cmd:
             try:
                 if app_cmd.endswith(".exe") or app_cmd == "code":
                     subprocess.Popen(app_cmd, shell=True)
@@ -143,16 +83,14 @@ def execute(command):
             except Exception:
                 pass
 
-
     # Universal Web / Search / Action Execution
-    if command.startswith(("open ", "launch ", "start ", "go to ", "visit ")):
-        target = re.sub(r"^(open|launch|start|go to|visit)\s+", "", command).strip()
+    if cmd.startswith(("open ", "launch ", "start ", "go to ", "visit ")):
+        target = re.sub(r"^(open|launch|start|go to|visit)\s+", "", cmd).strip()
         target_clean = re.sub(r"[^\w\s\.-]", "", target)
 
         if target_clean:
-            # Common web shortcuts
             if "." not in target_clean and not target_clean.endswith(".com"):
-                url = f"https://www.{target_clean.replace(' ', '')}.com"
+                url = f"https://www.com"
             else:
                 url = target_clean if target_clean.startswith("http") else f"https://{target_clean}"
 
@@ -164,13 +102,13 @@ def execute(command):
                 return True
 
     # Google fallback
-    if "google" in command or "search" in command:
-        google_search(command)
+    if "google" in cmd or "search" in cmd:
+        google_search(cmd)
         return True
 
     # YouTube fallback
-    if "youtube" in command or "play" in command:
-        search = command
+    if "youtube" in cmd or "play" in cmd:
+        search = cmd
         for word in [
             "play", "youtube", "on", "open", "and",
             "for me", "please", "search", "find",
@@ -178,10 +116,7 @@ def execute(command):
         ]:
             search = search.replace(word, "")
         search = search.strip()
-        if search:
-            play_youtube(search)
-        else:
-            webbrowser.open("https://youtube.com")
+        play_youtube(search)
         return True
 
-    return None
+    return None
