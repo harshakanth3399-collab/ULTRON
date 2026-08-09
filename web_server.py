@@ -14,7 +14,7 @@ DOCS_DIR = os.path.join(os.path.dirname(__file__), "docs")
 
 
 def get_local_ip() -> str:
-    """Returns the laptop's Wi-Fi / Local IP address for phone connection."""
+    """Returns the laptop's primary local IP address for phone connection."""
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
@@ -23,6 +23,24 @@ def get_local_ip() -> str:
         return ip
     except Exception:
         return "127.0.0.1"
+
+
+def get_all_local_ips() -> list[str]:
+    """Returns all active network interface IPs on the laptop (Wi-Fi, Mobile Hotspot, Tethering)."""
+    ips = []
+    primary = get_local_ip()
+    if primary != "127.0.0.1":
+        ips.append(primary)
+
+    try:
+        addrs = socket.gethostbyname_ex(socket.gethostname())[2]
+        for ip in addrs:
+            if ip != "127.0.0.1" and ip not in ips:
+                ips.append(ip)
+    except Exception:
+        pass
+
+    return ips or ["127.0.0.1"]
 
 
 import json

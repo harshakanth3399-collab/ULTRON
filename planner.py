@@ -1,12 +1,18 @@
-def plan(command):
+"""planner.py - Multi-Command Task Decomposition Engine for ULTRON."""
 
+import re
+
+def plan(command: str) -> list[str]:
+    """Splits multi-command prompts into individual actionable sub-tasks."""
+    if not command or not command.strip():
+        return []
+
+    # Split on conjunctions: 'and then', 'then', 'and', ',', ';'
+    raw_parts = re.split(r"\s+(?:and then|then|and|,|;)\s+", command.strip(), flags=re.IGNORECASE)
     tasks = []
+    for p in raw_parts:
+        clean = p.strip()
+        if clean:
+            tasks.append(clean)
 
-    parts = command.replace(" then ", " and ").split(" and ")
-
-    for part in parts:
-        part = part.strip()
-        if part:
-            tasks.append(part)
-
-    return tasks
+    return tasks if tasks else [command.strip()]

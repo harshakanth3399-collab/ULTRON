@@ -57,6 +57,19 @@ def process(command: str) -> tuple:
 
     LAST_ACTIVITY = time.time()
 
+    # ── Multi-Command Decomposition ─────────────────────────────────────────
+    if any(sep in raw for sep in [" and ", " then ", " and then "]) and not ("favorite" in raw or "remember" in raw):
+        tasks = plan(raw)
+        if len(tasks) > 1:
+            print(f"[ROUTER] Multi-command detected ({len(tasks)} tasks): {tasks}")
+            responses = []
+            for t in tasks:
+                flag, resp = process(t)
+                if resp and resp not in responses:
+                    responses.append(resp)
+            combined = " ".join(responses) if responses else "Executed all commands for you, Harsha!"
+            return True, combined
+
     # ── High Priority Phone Target Actions ────────────────────────────────────
     if any(k in raw for k in ["in my phone", "on my phone", "on phone", "in phone", "in my mobile", "on my mobile", "in mobile", "on mobile"]):
         from modules.adb_bridge import adb_bridge
