@@ -223,8 +223,9 @@ def process(command: str) -> tuple:
         return True, msg
 
     # ── Phone & Wireless ADB Controls ──────────────────────────────────────────
-    # Normalize phonetic Whisper mishearings of ADB ("a, d, b", "a, b, b", "a, d, d", "a d b") -> "adb"
-    raw_adb_norm = re.sub(r"\b(a[\s,\.-]*d[\s,\.-]*b|a[\s,\.-]*b[\s,\.-]*b|a[\s,\.-]*d[\s,\.-]*d|ad&d)\b", "adb", raw)
+    # Normalize phonetic Whisper mishearings of ADB ("a, d, b", "a-d-b", "a, b, b", "a, d, d", "a d b") -> "adb"
+    raw_adb_norm = re.sub(r"a[\s,\.-]*[db][\s,\.-]*[db]", "adb", raw, flags=re.IGNORECASE)
+
 
     if "adb" in raw_adb_norm or "wireless debugging" in raw_adb_norm:
         from modules.adb_bridge import adb_bridge
