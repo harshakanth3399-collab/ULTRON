@@ -42,9 +42,18 @@ def _find_contact(name: str) -> dict | None:
     return None
 
 
-# ── WhatsApp ──────────────────────────────────────────────────────────────────
+def open_whatsapp() -> str:
+    """Opens native WhatsApp Desktop app on Windows."""
+    try:
+        subprocess.Popen('start whatsapp:', shell=True)
+        return "Opening WhatsApp app for you, Harsha!"
+    except Exception:
+        webbrowser.open("https://web.whatsapp.com")
+        return "Opening WhatsApp Web for you, Harsha!"
+
 
 def whatsapp_call(name: str) -> str:
+
     contact = _find_contact(name)
     if contact and contact.get("whatsapp"):
         phone = contact["whatsapp"].replace("+", "").replace(" ", "")

@@ -95,30 +95,20 @@ def process(command: str) -> tuple:
         from commands_daily import screenshot
         return True, screenshot()
 
-    # ── WhatsApp ─────────────────────────────────────────────────────────────────
-    if "whatsapp" in raw or "message" in raw or "text" in raw or "msg" in raw:
-        from commands_daily import whatsapp_call, whatsapp_message, whatsapp_im_busy
+    # ── WhatsApp (Desktop App & Messaging) ────────────────────────────────────
+    raw_wa = raw.replace("what's up", "whatsapp").replace("whats up", "whatsapp").replace("whatup", "whatsapp")
 
-        # "call [name] on whatsapp" / "whatsapp call [name]"
-        if "call" in raw:
-            name = re.sub(r"(call|on|whatsapp|via)", "", raw).strip()
-            return True, whatsapp_call(name)
+    if "whatsapp" in raw_wa or "message" in raw_wa or "text" in raw_wa or "msg" in raw_wa:
+        from commands_daily import whatsapp_call, whatsapp_message, whatsapp_im_busy, open_whatsapp
 
-        # "i'm busy" / "tell [name] i'm busy"
-        if "busy" in raw or "i'm busy" in raw or "im busy" in raw:
-            name_match = re.search(r"(?:tell|message|text|msg)\s+(\w+)", raw)
-            name = name_match.group(1) if name_match else ""
-            return True, whatsapp_im_busy(name)
-
-        # "message [name] [text]" / "send message to [name]"
-        name_match = re.search(r"(?:message|text|msg|send\s+to)\s+(\w+)\s*(.*)", raw)
-        if name_match:
-            name = name_match.group(1)
-            msg  = name_match.group(2).strip()
+        if any(k in raw_wa for k in ["mom", "mum", "mother", "dad", "father"]) or ("send" in raw_wa and ("to" in raw_wa or "msg" in raw_wa or "message" in raw_wa)):
+            name_match = re.search(r"(?:to|message|text|msg)\s+(\w+)\s*(.*)", raw_wa)
+            name = name_match.group(1) if name_match else "mom"
+            msg = name_match.group(2).strip() if name_match else ""
             return True, whatsapp_message(name, msg)
 
-        from commands_daily import whatsapp_message
-        return True, whatsapp_message("", "")
+        return True, open_whatsapp()
+
 
     # ── Phone calls ──────────────────────────────────────────────────────────────
     if raw.startswith("open phone link") or raw.startswith("launch phone link"):
