@@ -211,11 +211,11 @@ class ParticleEngine:
         # ── Brightness & Sizing ────────────────────────────────────────────────
         glow = cfg["glow"] * max(activation, 0.5)
 
-        # Core is extremely bright
-        self._brightness[:n_core] = np.clip(0.85 + audio * 0.15 + np.abs(n1[:n_core]) * 0.08, 0.6, 1.0)
+        # Core is extremely bright (no n1 indexing - n1 is shell-only)
+        self._brightness[:n_core] = np.clip(0.85 + audio * 0.15, 0.6, 1.0)
         # Shell matches voice energy
         self._brightness[n_core:n_core + n_shell] = np.clip(
-            0.42 + 0.45 * glow + 0.28 * np.abs(n1[n_core:n_core + n_shell]) + audio * 0.75,
+            0.42 + 0.45 * glow + 0.28 * np.abs(n1) + audio * 0.75,
             0.18, 1.0
         )
         # Tracks glow subtly
@@ -223,6 +223,7 @@ class ParticleEngine:
             0.32 + 0.38 * glow + audio * 0.45,
             0.12, 0.95
         )
+
 
         # Sizes: Core small/dense, Shell expansive/reactive, Tracks fine/digital
         self._size[:n_core] = np.clip(self._size[:n_core] * 0.75, PARTICLE_MIN_SIZE, PARTICLE_MAX_SIZE * 0.65)

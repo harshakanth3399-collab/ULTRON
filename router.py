@@ -210,7 +210,7 @@ def process(command: str) -> tuple:
             return True, "Local model training done, Harsha! Running on custom weights now."
         return True, f"Training note: {msg}"
 
-    if "update ultron" in raw or "check update" in raw:
+    if "update ultron" in raw or "check update" in raw or "upgrade yourself" in raw or "update yourself" in raw:
         from modules.updater import check_and_apply_safe_updates
         success, msg = check_and_apply_safe_updates()
         return True, msg
@@ -221,7 +221,7 @@ def process(command: str) -> tuple:
         ip = get_local_ip()
         return True, f"Go to http://{ip}:{PORT} on your phone browser to connect."
 
-    # ── Web search ────────────────────────────────────────────────────────────
+    # ── Web search ──────────────────────────────────────────────────────────────────
     if raw.startswith(("search the web for", "search web for", "search for")):
         from modules.internet import search_web_live
         query = re.sub(r"^(search the web for|search web for|search for)", "", raw).strip()
@@ -233,6 +233,16 @@ def process(command: str) -> tuple:
             )
             return True, ai_summary
         return True, f"Searched for '{query}' but found no results."
+
+    # ── YouTube / Play ─────────────────────────────────────────────────────────────
+    if "youtube" in raw or raw.startswith("play "):
+        from commands import execute
+        execute(raw)
+        # Extract what we're playing for spoken reply
+        search = re.sub(r"(play|youtube|open|on|and|for me|please)", "", raw).strip()
+        if search:
+            return True, f"Playing {search} on YouTube for you, bro!"
+        return True, "Opening YouTube for you, Harsha!"
 
     # ── Standard commands: YouTube / Google / Apps / AI ───────────────────────
     corrected = correct(raw)

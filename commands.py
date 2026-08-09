@@ -119,16 +119,14 @@ def execute(command):
         return True
 
     # YouTube
-    if "youtube" in command:
+    if "youtube" in command or "play" in command:
 
         search = command
 
         for word in [
-            "play",
-            "youtube",
-            "on",
-            "open",
-            "and"
+            "play", "youtube", "on", "open", "and",
+            "for me", "please", "search", "find",
+            "show me", "put on", "start"
         ]:
             search = search.replace(word, "")
 

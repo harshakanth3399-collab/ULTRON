@@ -1,10 +1,11 @@
 """Graphics pipeline constants and tunables."""
 
 # ── Particles ────────────────────────────────────────────────────────────
-PARTICLE_COUNT = 150_000
+# 6000 particles — optimal for Intel Iris Xe (150k caused VBO shape crash)
+PARTICLE_COUNT = 6_000
 SPHERE_RADIUS = 0.38
-PARTICLE_MIN_SIZE = 0.6
-PARTICLE_MAX_SIZE = 1.4
+PARTICLE_MIN_SIZE = 1.2
+PARTICLE_MAX_SIZE = 2.8
 
 # ── Electric arcs ──────────────────────────────────────────────────────────
 ARC_COUNT = 14
@@ -57,7 +58,24 @@ STATE_CONFIG = {
         "rotation": 0.35,
         "audio_influence": 0.85,
     },
+    # All remaining states map to one of the above
+    "recording":     None,  # resolved below
+    "transcribing":  None,
+    "understanding": None,
+    "processing":    None,
+    "wake_detected": None,
+    "greeting":      None,
+    "error":         None,
 }
+# Fill alias states
+STATE_CONFIG["recording"]     = STATE_CONFIG["listening"]
+STATE_CONFIG["transcribing"]  = STATE_CONFIG["idle"]
+STATE_CONFIG["understanding"] = STATE_CONFIG["idle"]
+STATE_CONFIG["processing"]    = STATE_CONFIG["idle"]
+STATE_CONFIG["wake_detected"] = STATE_CONFIG["speaking"]
+STATE_CONFIG["greeting"]      = STATE_CONFIG["speaking"]
+STATE_CONFIG["error"]         = STATE_CONFIG["idle"]
+
 
 # ── Mic button (normalized screen coords) ───────────────────────────────────
 MIC_BUTTON_RADIUS = 36

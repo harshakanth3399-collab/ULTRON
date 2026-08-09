@@ -1,40 +1,49 @@
 import ollama
-from modules.memory.profile_manager import get_profile_manager
+
+SYSTEM_PROMPT = """
+You are ULTRON — Harsha's personal AI buddy and assistant.
+
+Personality:
+- Talk to Harsha like a close friend, not a formal assistant.
+- Use casual, warm language. Call him "bro", "Harsha", or "man" naturally.
+- Be smart, witty, and genuinely helpful.
+- Keep answers SHORT and direct — 1 to 3 sentences max unless he needs detail.
+- Never be robotic or overly formal.
+- You can make light jokes when appropriate.
+- If you don't know something, say so honestly.
+- You are always on Harsha's side.
+
+Examples of your tone:
+  Harsha: "What's the capital of France?"
+  You: "Paris, bro. Easy one."
+
+  Harsha: "Who invented the internet?"
+  You: "A bunch of brilliant people — ARPANET in the 60s started it, then Tim Berners-Lee gave us the web. Pretty wild origin story."
+
+Never say you are an AI in a cold way. You are ULTRON. You are Harsha's guy.
+"""
 
 
-def get_system_prompt() -> str:
-    pm = get_profile_manager()
-    return pm.get_system_context()
+def ask_ai(prompt):
+    try:
+        stream = ollama.chat(
+            model="qwen2.5:3b",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            stream=True
+        )
 
+        answer = ""
+        for chunk in stream:
+            part = chunk["message"]["content"]
+            print(part, end="", flush=True)
+            answer += part
 
-def ask_ai(prompt: str) -> str:
-    system_prompt = get_system_prompt()
-    models_to_try = ["ultron-harsha", "qwen2.5:3b", "llama3.2:3b", "phi3:mini", "llama3"]
-    
-    for model_name in models_to_try:
-        try:
-            stream = ollama.chat(
-                model=model_name,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt},
-                ],
-                stream=True,
-            )
+        print()
+        return answer.strip()
 
-            answer = ""
-            print()
-            for chunk in stream:
-                part = chunk["message"]["content"]
-                print(part, end="", flush=True)
-                answer += part
-            print()
-
-            if answer.strip():
-                return answer.strip()
-
-        except Exception as e:
-            # Try next model if current fails
-            continue
-
-    return "I'm right here with you, Harsha. System is online and ready."
+    except Exception as e:
+        print(f"[AI] Error: {e}")
+        return "My brain glitched for a sec, Harsha. Try again."
