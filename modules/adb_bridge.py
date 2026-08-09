@@ -39,19 +39,32 @@ class ADBBridge:
         except Exception as e:
             return f"ADB Error: {e}"
 
-    def get_connected_devices(self) -> list[str]:
-        """Returns list of currently connected ADB device identifiers."""
+    def get_connected_devices(self) -> tuple[list[str], bool]:
+        """Returns list of currently connected ADB device identifiers and authorization status."""
         out = self._run_adb("devices")
+        if "daemon not running" in out or not out:
+            self._run_adb("kill-server")
+            self._run_adb("start-server")
+            out = self._run_adb("devices")
+
         devices = []
+        is_unauthorized = False
         for line in out.splitlines():
             if "\tdevice" in line:
                 devices.append(line.split("\t")[0])
-        return devices
+            elif "\tunauthorized" in line:
+                is_unauthorized = True
+
+        return devices, is_unauthorized
 
     def connect_phone(self, phone_ip: Optional[str] = None) -> tuple[bool, str]:
         """Connects to Android phone via USB Debugging or Wi-Fi ADB on port 5555."""
         # 1. Check if device is connected via USB Debugging cable
-        devices = self.get_connected_devices()
+        devices, is_unauthorized = self.get_connected_devices()
+
+        if is_unauthorized:
+            return False, "Phone detected via USB! Unlock your phone and tap 'ALWAYS ALLOW USB DEBUGGING' on your phone screen."
+
         if devices:
             # Enable Wireless ADB port 5555 automatically on the USB device!
             self._run_adb("tcpip", str(self.port))
@@ -70,7 +83,13 @@ class ADBBridge:
                 self._start_persistent_keepalive()
                 return True, f"Successfully connected wirelessly to your phone at {phone_ip}:{self.port}!"
 
-        return False, "No phone detected via USB or Hotspot. Plug phone in via USB once with USB Debugging ON, or connect to phone Hotspot."
+        return False, (
+            "No phone detected yet, Harsha. Please check these 3 steps on your phone:\n"
+            "1. Unlock your phone screen -> pull down notification shade -> change USB mode from 'Charging' to 'File Transfer (MTP)'.\n"
+            "2. Ensure 'USB Debugging' is turned ON in Developer Options.\n"
+            "3. Look for a popup on your phone screen asking 'Allow USB Debugging?' and tap ALLOW!"
+        )
+
 
 
     def _find_phone_ip(self) -> Optional[str]:
@@ -102,7 +121,8 @@ class ADBBridge:
             while self._running:
                 time.sleep(30)
                 if self.connected_ip:
-                    devs = self.get_connected_devices()
+                    devs, _ = self.get_connected_devices()
+
                     if not devs or not any(self.connected_ip in d for d in devs):
                         print(f"[ADB] Connection lost. Reconnecting to {self.connected_ip}...")
                         self._run_adb("connect", f"{self.connected_ip}:{self.port}")
