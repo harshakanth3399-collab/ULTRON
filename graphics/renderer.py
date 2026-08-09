@@ -343,16 +343,13 @@ class UltronRenderer(QOpenGLWidget):
             except Exception:
                 pass
 
-        try:
-            color = self._ctx.texture((self._width, self._height), 4, dtype="f4")
-            color.filter = (moderngl.LINEAR, moderngl.LINEAR)
-            depth = self._ctx.depth_renderbuffer((self._width, self._height))
-            self._scene_fbo = self._ctx.framebuffer(color_attachments=[color], depth_attachment=depth)
-        except Exception:
-            color = self._ctx.texture((self._width, self._height), 4, dtype="f1")
-            color.filter = (moderngl.LINEAR, moderngl.LINEAR)
-            depth = self._ctx.depth_renderbuffer((self._width, self._height))
-            self._scene_fbo = self._ctx.framebuffer(color_attachments=[color], depth_attachment=depth)
+        # Always use f1 (uint8) — Intel Iris Xe / Windows OGL 3.3 Core
+        # does NOT reliably support float32 FBO attachments.
+        color = self._ctx.texture((self._width, self._height), 4, dtype="f1")
+        color.filter = (moderngl.LINEAR, moderngl.LINEAR)
+        depth = self._ctx.depth_renderbuffer((self._width, self._height))
+        self._scene_fbo = self._ctx.framebuffer(color_attachments=[color], depth_attachment=depth)
+
 
     def resizeGL(self, width: int, height: int) -> None:
         dpr = float(self.devicePixelRatio()) if hasattr(self, "devicePixelRatio") else 1.0

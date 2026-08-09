@@ -74,14 +74,17 @@ class BloomPass:
     def _build_targets(self) -> None:
         bw, bh = self._bloom_size()
         components = 4
+        # Use f1 (uint8) textures — compatible with ALL Intel/AMD/Nvidia GPUs.
+        # f4 (float32) FBO textures require OES_texture_float which Intel Iris Xe
+        # does NOT guarantee on Windows OpenGL 3.3 Core Profile.
         self.extract_fbo = self.ctx.framebuffer(
-            color_attachments=[self.ctx.texture((bw, bh), components, dtype="f4")]
+            color_attachments=[self.ctx.texture((bw, bh), components, dtype="f1")]
         )
         self.ping = self.ctx.framebuffer(
-            color_attachments=[self.ctx.texture((bw, bh), components, dtype="f4")]
+            color_attachments=[self.ctx.texture((bw, bh), components, dtype="f1")]
         )
         self.pong = self.ctx.framebuffer(
-            color_attachments=[self.ctx.texture((bw, bh), components, dtype="f4")]
+            color_attachments=[self.ctx.texture((bw, bh), components, dtype="f1")]
         )
         self.blur_fbo = self.ping
 
