@@ -373,110 +373,115 @@ class UltronRenderer(QOpenGLWidget):
         if not self._ready or self._ctx is None:
             return
 
-        now = time.perf_counter()
-        dt = min(now - self._last_frame, 0.05)
-        self._last_frame = now
-        self._time += dt
-
-        # Update animation states
-        self._state_manager.update(dt)
-        state = self._state_manager.state
-        audio_level = self._audio.update(dt, state, self._speaking_fn)
-        activation = self._state_manager.activation()
-
-        self._engine.update(dt, self._time, state, audio_level, activation)
-        self._arcs.update(dt, self._time, state, audio_level, activation, self._engine.positions)
-        self._jarvis.update(dt, self._time, state, audio_level)
-
-        # Audit check on first frame
-        if not self._audit_done:
-            self._verify_renderer()
-            self._audit_done = True
-
-        mvp = self._compute_mvp()
-
-        # 1. Render Scene to Offscreen Framebuffer
-        self._scene_fbo.use()
-        self._ctx.clear(0.0, 0.0, 0.0, 1.0, depth=1.0)
-
-        # 1a. Core Glow (Disabled to keep background pitch black for crisp MCU details)
-        pass
-
-        # 1b. Electric Arcs & J.A.R.V.I.S. 3D Rings + Oscilloscope
         try:
-            self._ctx.enable(moderngl.DEPTH_TEST)
-            arc_data = self._arcs.vertices
-            self._arc_vbo.write(arc_data.tobytes())
+            now = time.perf_counter()
+            dt = min(now - self._last_frame, 0.05)
+            self._last_frame = now
+            self._time += dt
 
-            ring_data = self._jarvis.vertices
-            self._ring_vbo.write(ring_data.tobytes())
+            # Update animation states
+            self._state_manager.update(dt)
+            state = self._state_manager.state
+            audio_level = self._audio.update(dt, state, self._speaking_fn)
+            activation = self._state_manager.activation()
 
-            if "u_mvp" in self._arc_prog:
-                self._arc_prog["u_mvp"].write(mvp.tobytes())
-            if "u_color_arc" in self._arc_prog:
-                self._arc_prog["u_color_arc"].value = COLOR_ARC
-            if "u_time" in self._arc_prog:
-                self._arc_prog["u_time"].value = self._time
-            if "u_viewport" in self._arc_prog:
-                self._arc_prog["u_viewport"].value = (float(self._width), float(self._height))
+            self._engine.update(dt, self._time, state, audio_level, activation)
+            self._arcs.update(dt, self._time, state, audio_level, activation, self._engine.positions)
+            self._jarvis.update(dt, self._time, state, audio_level)
 
-            self._arc_vao.render(moderngl.LINES, vertices=self._arcs.vertex_count)
-            self._ring_vao.render(moderngl.LINES, vertices=self._jarvis.vertex_count)
-        except Exception:
+            # Audit check on first frame
+            if not self._audit_done:
+                self._verify_renderer()
+                self._audit_done = True
+
+            mvp = self._compute_mvp()
+
+            # 1. Render Scene to Offscreen Framebuffer
+            self._scene_fbo.use()
+            self._ctx.clear(0.0, 0.0, 0.0, 1.0, depth=1.0)
+
+            # 1a. Core Glow (Disabled to keep background pitch black for crisp MCU details)
             pass
 
-        # 1c. Particle Sphere (Point Sprites or Instanced Billboards)
-        try:
-            packed_particles = self._engine.interleaved_buffer()
-            self._particle_vbo.write(packed_particles.tobytes())
+            # 1b. Electric Arcs & J.A.R.V.I.S. 3D Rings + Oscilloscope
+            try:
+                self._ctx.enable(moderngl.DEPTH_TEST)
+                arc_data = self._arcs.vertices
+                self._arc_vbo.write(arc_data.tobytes())
 
-            cfg = STATE_CONFIG[state.name.lower()]
-            glow_val = cfg["glow"] * activation
+                ring_data = self._jarvis.vertices
+                self._ring_vbo.write(ring_data.tobytes())
 
-            if self._use_billboards:
-                if "u_mvp" in self._billboard_prog:
-                    self._billboard_prog["u_mvp"].write(mvp.tobytes())
-                if "u_viewport" in self._billboard_prog:
-                    self._billboard_prog["u_viewport"].value = (float(self._width), float(self._height))
-                if "u_glow" in self._billboard_prog:
-                    self._billboard_prog["u_glow"].value = glow_val
-                if "u_color_core" in self._billboard_prog:
-                    self._billboard_prog["u_color_core"].value = COLOR_CORE
-                if "u_color_glow" in self._billboard_prog:
-                    self._billboard_prog["u_color_glow"].value = COLOR_GLOW
-                self._billboard_vao.render(moderngl.TRIANGLE_STRIP, instances=self._engine.count)
-            else:
-                if "u_mvp" in self._particle_prog:
-                    self._particle_prog["u_mvp"].write(mvp.tobytes())
-                if "u_time" in self._particle_prog:
-                    self._particle_prog["u_time"].value = self._time
-                if "u_glow" in self._particle_prog:
-                    self._particle_prog["u_glow"].value = glow_val
-                if "u_color_core" in self._particle_prog:
-                    self._particle_prog["u_color_core"].value = COLOR_CORE
-                if "u_color_glow" in self._particle_prog:
-                    self._particle_prog["u_color_glow"].value = COLOR_GLOW
-                self._particle_vao.render(moderngl.POINTS, vertices=self._engine.count)
-        except Exception as e:
-            _log(f"Particle render pass error: {e}")
+                if "u_mvp" in self._arc_prog:
+                    self._arc_prog["u_mvp"].write(mvp.tobytes())
+                if "u_color_arc" in self._arc_prog:
+                    self._arc_prog["u_color_arc"].value = COLOR_ARC
+                if "u_time" in self._arc_prog:
+                    self._arc_prog["u_time"].value = self._time
+                if "u_viewport" in self._arc_prog:
+                    self._arc_prog["u_viewport"].value = (float(self._width), float(self._height))
 
-        # 2. Bloom Post-processing Composite to Screen
-        try:
-            qt_fbo_id = self.defaultFramebufferObject()
-            target_fbo = self._ctx.detect_framebuffer(qt_fbo_id) if qt_fbo_id != 0 else self._ctx.screen
-            self._bloom.apply(self._scene_fbo.color_attachments[0], target_fbo)
-        except Exception as e:
-            _log(f"Bloom apply error: {e}")
+                self._arc_vao.render(moderngl.LINES, vertices=self._arcs.vertex_count)
+                self._ring_vao.render(moderngl.LINES, vertices=self._jarvis.vertex_count)
+            except Exception:
+                pass
+
+            # 1c. Particle Sphere (Point Sprites or Instanced Billboards)
+            try:
+                packed_particles = self._engine.interleaved_buffer()
+                self._particle_vbo.write(packed_particles.tobytes())
+
+                cfg = STATE_CONFIG[state.name.lower()]
+                glow_val = cfg["glow"] * activation
+
+                if self._use_billboards:
+                    if "u_mvp" in self._billboard_prog:
+                        self._billboard_prog["u_mvp"].write(mvp.tobytes())
+                    if "u_viewport" in self._billboard_prog:
+                        self._billboard_prog["u_viewport"].value = (float(self._width), float(self._height))
+                    if "u_glow" in self._billboard_prog:
+                        self._billboard_prog["u_glow"].value = glow_val
+                    if "u_color_core" in self._billboard_prog:
+                        self._billboard_prog["u_color_core"].value = COLOR_CORE
+                    if "u_color_glow" in self._billboard_prog:
+                        self._billboard_prog["u_color_glow"].value = COLOR_GLOW
+                    self._billboard_vao.render(moderngl.TRIANGLE_STRIP, instances=self._engine.count)
+                else:
+                    if "u_mvp" in self._particle_prog:
+                        self._particle_prog["u_mvp"].write(mvp.tobytes())
+                    if "u_time" in self._particle_prog:
+                        self._particle_prog["u_time"].value = self._time
+                    if "u_glow" in self._particle_prog:
+                        self._particle_prog["u_glow"].value = glow_val
+                    if "u_color_core" in self._particle_prog:
+                        self._particle_prog["u_color_core"].value = COLOR_CORE
+                    if "u_color_glow" in self._particle_prog:
+                        self._particle_prog["u_color_glow"].value = COLOR_GLOW
+                    self._particle_vao.render(moderngl.POINTS, vertices=self._engine.count)
+            except Exception as e:
+                _log(f"Particle render pass error: {e}")
+
+            # 2. Bloom Post-processing Composite to Screen
             try:
                 qt_fbo_id = self.defaultFramebufferObject()
                 target_fbo = self._ctx.detect_framebuffer(qt_fbo_id) if qt_fbo_id != 0 else self._ctx.screen
-                target_fbo.use()
-                self._ctx.viewport = (0, 0, self._width, self._height)
-                self._scene_fbo.color_attachments[0].use(location=0)
-                self._blit_prog["u_tex"].value = 0
-                self._blit_vao.render(moderngl.TRIANGLES)
-            except Exception:
-                pass
+                self._bloom.apply(self._scene_fbo.color_attachments[0], target_fbo)
+            except Exception as e:
+                _log(f"Bloom apply error: {e}")
+                try:
+                    qt_fbo_id = self.defaultFramebufferObject()
+                    target_fbo = self._ctx.detect_framebuffer(qt_fbo_id) if qt_fbo_id != 0 else self._ctx.screen
+                    target_fbo.use()
+                    self._ctx.viewport = (0, 0, self._width, self._height)
+                    self._scene_fbo.color_attachments[0].use(location=0)
+                    self._blit_prog["u_tex"].value = 0
+                    self._blit_vao.render(moderngl.TRIANGLES)
+                except Exception:
+                    pass
+
+        except Exception as e:
+            # Master safety net — prevents ANY exception from crashing the Qt C++ layer
+            _log(f"paintGL master exception (frame skipped): {e}")
 
     def _verify_renderer(self) -> None:
         _log("Running particle draw verification...")

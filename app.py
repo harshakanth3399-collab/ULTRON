@@ -18,37 +18,39 @@ def _configure_gl() -> None:
 
 def main() -> int:
     from PySide6.QtWidgets import QApplication
-    from PySide6.QtCore import QTimer
+    from PySide6.QtCore import QTimer, Qt
 
     print("[BOOT] launch_app entered", flush=True)
-
-    # Must be set before QApplication
     _configure_gl()
 
     app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("ULTRON")
-
-    # Prevent Qt from quitting when window is closed (safety guard)
+    # Do NOT quit when last window closes — we control lifecycle
     app.setQuitOnLastWindowClosed(False)
 
     print("[BOOT] QApplication created", flush=True)
 
-    # Import window here (triggers speech/whisper init exactly once)
     from ui.main_window import UltronWindow
     window = UltronWindow()
     print("[BOOT] main window created", flush=True)
 
-    # Show fullscreen AFTER __init__ completes and BEFORE app.exec()
-    window.showFullScreen()
-    print("[BOOT] window shown — entering event loop", flush=True)
+    # Step 1: Show as a NORMAL window first so Qt registers it
+    # (showFullScreen directly from hidden state causes exit code 1 on some Intel drivers)
+    window.show()
+    print("[BOOT] window shown (normal)", flush=True)
 
-    # Start voice pipeline 1.2s after event loop starts
-    # (gives initializeGL time to complete on first paint)
-    QTimer.singleShot(1200, window._start_pipeline)
-    print("[BOOT] voice pipeline scheduled to start in 1.2s", flush=True)
+    # Step 2: Go fullscreen 200ms later, after event loop starts and first paint completes
+    def _go_fullscreen():
+        print("[BOOT] switching to fullscreen", flush=True)
+        window.showFullScreen()
 
-    # Re-enable quit-on-close after 3s (so Esc / close button works normally)
-    QTimer.singleShot(3000, lambda: app.setQuitOnLastWindowClosed(True))
+    QTimer.singleShot(200, _go_fullscreen)
+
+    # Step 3: Start voice pipeline 1.5s after event loop starts
+    QTimer.singleShot(1500, window._start_pipeline)
+    print("[BOOT] voice pipeline scheduled", flush=True)
 
     print("[DEBUG] app.exec() starting — UI is alive", flush=True)
-    return app.exec()
+    result = app.exec()
+    print(f"[DEBUG] app.exec() returned {result}", flush=True)
+    return result
