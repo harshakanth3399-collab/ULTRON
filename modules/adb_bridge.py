@@ -19,6 +19,14 @@ import time
 from typing import Optional
 
 
+def _get_adb_executable() -> str:
+    """Returns path to adb executable, preferring local bundled tools/platform-tools/adb.exe."""
+    local_adb = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tools", "platform-tools", "adb.exe")
+    if os.path.exists(local_adb):
+        return local_adb
+    return "adb"
+
+
 class ADBBridge:
     """Persistent Wireless ADB Connection Manager & Phone Controller."""
 
@@ -30,7 +38,8 @@ class ADBBridge:
 
     def _run_adb(self, *args: str) -> str:
         """Executes an adb command line and returns clean stdout output."""
-        cmd = ["adb"] + list(args)
+        adb_exe = _get_adb_executable()
+        cmd = [adb_exe] + list(args)
         try:
             res = subprocess.run(
                 cmd, capture_output=True, text=True, timeout=8.0, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
@@ -38,6 +47,7 @@ class ADBBridge:
             return res.stdout.strip()
         except Exception as e:
             return f"ADB Error: {e}"
+
 
     def get_connected_devices(self) -> tuple[list[str], bool]:
         """Returns list of currently connected ADB device identifiers and authorization status."""
