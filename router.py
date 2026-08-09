@@ -330,10 +330,12 @@ def process(command: str) -> tuple:
                 replies.append("On it, Harsha.")
             continue
 
-        # AI fallback
-        ai_response = ask_ai(task)
-        if ai_response:
-            replies.append(ai_response)
+        # Agentic Execution with Semantic Memory & Multi-Step Reasoning
+        from agent import ultron_agent
+        _, agent_response = ultron_agent.process_task(task)
+        if agent_response:
+            replies.append(agent_response)
+
 
     if replies:
         return True, " ".join(replies)

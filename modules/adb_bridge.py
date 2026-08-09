@@ -203,6 +203,45 @@ class ADBBridge:
         self._run_adb("shell", "input", "keyevent", "3")
         return f"Opening {app_name} on your smartphone, Harsha!"
 
+    def take_screenshot(self, save_path: str = "phone_screenshot.png") -> str:
+        """Captures phone screen and saves to laptop."""
+        self._run_adb("shell", "screencap", "-p", "/sdcard/screen.png")
+        self._run_adb("pull", "/sdcard/screen.png", save_path)
+        return f"Phone screen captured and saved to {save_path}, Harsha!"
+
+    def copy_to_phone_clipboard(self, text: str) -> str:
+        """Pushes text directly to smartphone clipboard via ADB."""
+        try:
+            clean_text = text.replace('"', '\\"').replace("'", "\\'")
+            self._run_adb("shell", "input", "text", f'"{clean_text}"')
+            return "Pushed text directly to your smartphone, Harsha!"
+        except Exception as e:
+            return f"Failed to sync clipboard: {e}"
+
+    def push_file_to_phone(self, local_path: str) -> str:
+        """Pushes local file from laptop directly to smartphone Download folder."""
+        p = Path(local_path)
+        if not p.exists():
+            return f"File {local_path} does not exist on laptop."
+        target_path = f"/sdcard/Download/{p.name}"
+        res = self._run_adb("push", str(p), target_path)
+        if "error" not in res.lower():
+            return f"Successfully sent {p.name} to your phone Downloads folder, Harsha!"
+        return f"Failed to send file to phone: {res}"
+
+    def capture_phone_camera_vision(self) -> str:
+        """Launches camera on smartphone and captures high-res frame for AI vision."""
+        # Launch camera app
+        self._run_adb("shell", "monkey", "-p", "com.android.camera", "-c", "android.intent.category.LAUNCHER", "1")
+        time.sleep(1.5)
+        # Take screencap of camera view
+        save_path = Path(__file__).parent.parent / "scratch" / "phone_camera_view.png"
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        self._run_adb("shell", "screencap", "-p", "/sdcard/camera_view.png")
+        self._run_adb("pull", "/sdcard/camera_view.png", str(save_path))
+        return f"Captured live camera view from smartphone to {save_path.name}, Harsha!"
+
+
 
     def take_screenshot(self, save_path: str = "phone_screenshot.png") -> str:
         """Captures phone screen and saves to laptop."""

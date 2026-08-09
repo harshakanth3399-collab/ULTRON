@@ -34,6 +34,16 @@ def main() -> int:
     try:
         from web_server import start_server_in_background
         ip, port = start_server_in_background()
+        
+        # Auto-index personal project data & memory in background
+        try:
+            import threading
+            from modules.memory.vector_memory import vector_memory
+            threading.Thread(target=vector_memory.index_workspace, args=(".",), daemon=True).start()
+            print("[BOOT] Long-Term Semantic Vector Memory active & indexing workspace.", flush=True)
+        except Exception as e:
+            print(f"[VECTOR MEMORY BOOT] Note: {e}", flush=True)
+
         print(f"\n==================================================", flush=True)
         print(f"[MOBILE] ULTRON MOBILE WEB SERVER ACTIVE!", flush=True)
         print(f"[MOBILE] Open this URL on your phone Chrome browser:")
