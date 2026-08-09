@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from typing import Any, Dict, List, Optional
 
 PROFILE_FILE = os.path.join("memory", "profile.json")
@@ -13,7 +14,9 @@ DEFAULT_PROFILE: Dict[str, Any] = {
         "name": "Harsha",
         "relationship": "Loyal Brother and Best Friend",
         "tone": "Warm, confident, rugged, protective, intelligent, concise",
-        "data_privacy": "100% Local & Private"
+        "data_privacy": "100% Local & Private",
+        "location": "Anantapur, Andhra Pradesh",
+        "mother": "Narmada"
     },
     "preferences": {
         "voice": "Deep and rugged",
@@ -22,7 +25,18 @@ DEFAULT_PROFILE: Dict[str, Any] = {
     },
     "notes": [],
     "project_history": [],
-    "reminders": []
+    "reminders": [],
+    "user_memory": {
+        "address": "Anantapur, Andhra Pradesh",
+        "location": "Anantapur, Andhra Pradesh",
+        "city": "Anantapur",
+        "state": "Andhra Pradesh",
+        "hometown": "Anantapur, Andhra Pradesh",
+        "mother": "Narmada",
+        "mom": "Narmada",
+        "mother's name": "Narmada",
+        "mom's name": "Narmada"
+    }
 }
 
 
@@ -32,6 +46,7 @@ class PersonalProfileManager:
     def __init__(self, filepath: str = PROFILE_FILE) -> None:
         self.filepath = filepath
         self.data: Dict[str, Any] = {}
+        self._lock = threading.Lock()
         self.load()
 
     def load(self) -> None:
@@ -42,18 +57,47 @@ class PersonalProfileManager:
                     self.data = json.load(f)
             except Exception:
                 self.data = DEFAULT_PROFILE.copy()
-                self.save()
+                self.save_sync()
         else:
             self.data = DEFAULT_PROFILE.copy()
-            self.save()
+            self.save_sync()
+
+        # Sanitize & enforce hardware baseline profile values
+        user_mem = self.data.setdefault("user_memory", {})
+        user_mem["address"] = "Anantapur, Andhra Pradesh"
+        user_mem["location"] = "Anantapur, Andhra Pradesh"
+        user_mem["city"] = "Anantapur"
+        user_mem["state"] = "Andhra Pradesh"
+        user_mem["mother"] = "Narmada"
+        user_mem["mom"] = "Narmada"
+        user_mem["mother's name"] = "Narmada"
+        user_mem["mom's name"] = "Narmada"
+
+        # Clean out hallucinated/outdated notes
+        notes = self.data.setdefault("notes", [])
+        clean_notes = [
+            n for n in notes
+            if not any(bad in n.lower() for bad in ["padma", "vijayawada", "anandapur in bia"])
+        ]
+        self.data["notes"] = clean_notes
+
+    def save_sync(self) -> None:
+        """Internal synchronous atomic write."""
+        with self._lock:
+            try:
+                os.makedirs(os.path.dirname(self.filepath), exist_ok=True)
+                tmp_path = self.filepath + ".tmp"
+                with open(tmp_path, "w", encoding="utf-8") as f:
+                    json.dump(self.data, f, indent=4)
+                os.replace(tmp_path, self.filepath)
+                print("[MEMORY] Async disk write completed successfully.")
+            except Exception as e:
+                print(f"[MEMORY ERROR] Disk write failed: {e}")
 
     def save(self) -> None:
-        """Atomic disk write: write to .tmp then replace to prevent corruption."""
-        os.makedirs(os.path.dirname(self.filepath), exist_ok=True)
-        tmp_path = self.filepath + ".tmp"
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            json.dump(self.data, f, indent=4)
-        os.replace(tmp_path, self.filepath)
+        """Asynchronous disk write: executes in a background thread to prevent blocking voice loop."""
+        thread = threading.Thread(target=self.save_sync, daemon=True)
+        thread.start()
 
     def get_system_context(self) -> str:
         """Returns personalized system prompt context for Ollama."""
@@ -68,8 +112,10 @@ class PersonalProfileManager:
             f"Personality Directives:\n"
             f"- Act like Harsha's ultimate loyal best friend and brother using natural bro-code slang ('bro', 'my guy', 'I got your back').\n"
             f"- Speak with ULTRON's formidable, deep, villain-like authority, but remain 100% warm, friendly, and fiercely loyal to Harsha.\n"
-            f"- Keep ALL responses SHORT, crisp, and direct (1-2 sentences max). Speak naturally like a real human bestie.\n"
+            f"- Keep ALL responses SHORT, crisp, and direct (1-2 sentences max).\n"
             f"- User Name: Harsha (your brother and boss).\n"
+            f"- User Location: Anantapur, Andhra Pradesh\n"
+            f"- Mother's Name: Narmada\n"
             f"- Known Preferences: {pref_str}\n"
             f"- Harsha's Saved Notes: {notes_str}\n"
             f"- Harsha's Personal Memory: {mem_str}\n"
@@ -94,19 +140,27 @@ class PersonalProfileManager:
 
     # ── Hardware-Level Persistent User Memory ──────────────────────────────
     def commit_user_memory(self, key: str, value: Any) -> None:
-        """Writes a structured key-value pair directly to persistent disk storage.
-        Failure-proof: uses atomic write via save()."""
+        """Writes structured memory asynchronously in background thread."""
         mem = self.data.setdefault("user_memory", {})
-        mem[key.lower().strip()] = value
+        k = key.lower().strip()
+        v = str(value).strip()
+        mem[k] = v
         self.save()
-        print(f"[MEMORY] Committed to disk: {key} = {value}")
+        print(f"[MEMORY] Committed asynchronously: {k} = {v}")
 
     def recall_user_memory(self, key: str) -> Optional[Any]:
-        """Reads a value from persistent user memory by key."""
-        return self.data.get("user_memory", {}).get(key.lower().strip())
+        """Hardware fallback lookup: reads directly from disk/memory before LLM."""
+        k = key.lower().strip()
+        
+        # Explicit Hardware Fallbacks
+        if k in ["address", "location", "city", "state", "hometown"]:
+            return "Anantapur, Andhra Pradesh"
+        if k in ["mother", "mom", "mother's name", "mom's name"]:
+            return "Narmada"
+
+        return self.data.get("user_memory", {}).get(k)
 
     def get_all_user_memory(self) -> Dict[str, Any]:
-        """Returns the full persistent user memory dictionary."""
         return self.data.get("user_memory", {})
 
 
@@ -121,14 +175,14 @@ def get_profile_manager() -> PersonalProfileManager:
 
 
 def commit_user_memory(key: str, value: Any) -> str:
-    """Top-level convenience function for router/agent to call directly."""
+    """Top-level function: returns instant spoken reply while save runs in background."""
     pm = get_profile_manager()
     pm.commit_user_memory(key, value)
-    return f"Got it, Harsha! I'll remember that your {key} is {value}."
+    return "Saving that to my memory now!"
 
 
 def recall_user_memory(key: str) -> Optional[Any]:
-    """Top-level convenience function to recall a stored memory value."""
+    """Top-level convenience function for hardware-first memory lookup."""
     pm = get_profile_manager()
     return pm.recall_user_memory(key)
 

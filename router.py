@@ -115,23 +115,27 @@ def process(command: str) -> tuple:
         pm.add_note(note)
         return True, f"Stored in memory, bro: '{note}'"
 
-    # Memory Recall & Memory Retrieval
+    # Memory Recall & Memory Retrieval (Hardware Fallback Enforcement)
     if any(k in raw for k in [
         "remember my", "do you remember", "what is my", "what's my",
         "do you know my", "where do i live", "show my notes", "what do you remember",
-        "my address", "my location", "my name", "my phone", "my city", "my state"
+        "my address", "my location", "my name", "my phone", "my city", "my state",
+        "my mother", "my mom", "mother's name", "mom's name"
     ]):
         from modules.memory.profile_manager import get_profile_manager
         pm = get_profile_manager()
 
-        # Specific key queries
-        keys_to_check = ["address", "location", "city", "state", "name", "phone", "email", "job", "college", "school", "hometown"]
+        # Specific key queries (HARDWARE DISK LOOKUP FIRST)
+        keys_to_check = [
+            "mother's name", "mom's name", "mother", "mom",
+            "address", "location", "city", "state", "name", "phone", "email", "job", "college", "school", "hometown"
+        ]
         for key in keys_to_check:
             if key in raw or (key == "address" and ("where do i live" in raw or "where i live" in raw or "address" in raw)):
                 val = pm.recall_user_memory(key)
                 if val:
                     reply = f"Yes Harsha, your {key} is {val}."
-                    print(f"[ROUTER] Memory hit: {reply}")
+                    print(f"[ROUTER] Hardware Memory hit: {reply}")
                     return True, reply
                 else:
                     reply = f"I do not have your {key} saved yet, Harsha. Please tell me your {key} so I can store it."
