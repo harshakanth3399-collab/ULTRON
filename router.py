@@ -97,12 +97,10 @@ def process(command: str) -> tuple:
 
     # ── VS Code & GitHub ──────────────────────────────────────────────────────
     if any(k in raw for k in ["vs code", "vscode", "visual studio code", "open code"]):
-        from commands import execute
         execute("code")
         return True, "Opening VS Code for you, Harsha!"
 
     if "github" in raw:
-        from commands import execute
         execute("github")
         return True, "Opening GitHub for you, Harsha!"
 

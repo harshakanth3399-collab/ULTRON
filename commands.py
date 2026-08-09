@@ -1,3 +1,4 @@
+import re
 import subprocess
 import webbrowser
 import urllib.parse

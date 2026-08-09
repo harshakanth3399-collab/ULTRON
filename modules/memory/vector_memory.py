@@ -27,17 +27,25 @@ class VectorMemory:
     def _load(self):
         try:
             if self.memory_file.exists():
-                with open(self.memory_file, "r", encoding="utf-8") as f:
-                    self.entries = json.load(f)
-        except Exception as e:
-            print(f"[VECTOR MEMORY ERROR] Load failed: {e}")
-            self.entries = []
+                raw = self.memory_file.read_text(encoding="utf-8")
+                if raw.strip():
+                    self.entries = json.loads(raw)
+                    return
+        except (json.JSONDecodeError, Exception) as e:
+            print(f"[VECTOR MEMORY] Corrupted store detected, starting fresh: {e}")
+            try:
+                self.memory_file.unlink(missing_ok=True)
+            except Exception:
+                pass
+        self.entries = []
 
     def _save(self):
         try:
             self.memory_file.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.memory_file, "w", encoding="utf-8") as f:
+            tmp_path = self.memory_file.with_suffix(".tmp")
+            with open(tmp_path, "w", encoding="utf-8") as f:
                 json.dump(self.entries, f, indent=2)
+            os.replace(str(tmp_path), str(self.memory_file))
         except Exception as e:
             print(f"[VECTOR MEMORY ERROR] Save failed: {e}")
 

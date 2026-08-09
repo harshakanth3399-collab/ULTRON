@@ -73,10 +73,18 @@ def get_latest_mic_rms() -> float:
     with _rms_lock:
         return _latest_mic_rms
 
+def get_energy_threshold() -> int:
+    """Returns the current energy threshold used for speech onset detection."""
+    try:
+        return _energy_threshold
+    except NameError:
+        return 30
+
 def _set_latest_mic_rms(val: float) -> None:
     global _latest_mic_rms
     with _rms_lock:
         _latest_mic_rms = val
+
 
 # ── Faster-Whisper model ──────────────────────────────────────────────────────
 print("[VOICE] Loading Faster-Whisper model...")
