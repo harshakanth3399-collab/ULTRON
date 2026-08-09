@@ -217,9 +217,8 @@ def process(command: str) -> tuple:
 
     # ── Phone connect ────────────────────────────────────────────────────────
     if "connect phone" in raw or "mobile link" in raw or "phone link" in raw:
-        from web_server import get_local_ip, PORT
-        ip = get_local_ip()
-        return True, f"Go to http://{ip}:{PORT} on your phone browser to connect."
+        return True, "Phone portal is ready, Harsha! Your connection link is displayed on screen."
+
 
     # ── Web search ──────────────────────────────────────────────────────────────────
     if raw.startswith(("search the web for", "search web for", "search for")):

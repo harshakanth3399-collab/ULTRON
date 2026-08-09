@@ -56,6 +56,17 @@ def _set_speaking(state: bool) -> None:
         pass
 
 
+import re
+
+def _clean_text_for_speech(text: str) -> str:
+    """Removes raw HTTP links and IP addresses so TTS never reads 'http colon slash slash' out loud."""
+    # Remove http:// or https:// URLs
+    text = re.sub(r'https?://\S+', '', text)
+    # Remove raw IP addresses (e.g. 10.83.134.102:8000)
+    text = re.sub(r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?\b', '', text)
+    return text.strip()
+
+
 def _play(text: str) -> None:
     """Generates and plays TTS. Runs in background thread."""
     global _is_speaking
@@ -63,17 +74,20 @@ def _play(text: str) -> None:
     _ready_event.clear()
     _done_event.clear()
 
+    # Clean text: never speak raw URLs or IP addresses
+    spoken_text = _clean_text_for_speech(text)
+    if not spoken_text:
+        spoken_text = "Check your screen, Harsha."
+
     try:
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
             filename = f.name
 
-        # ── Generate audio (this is the slow step: 1-3s on Jio hotspot) ──────
         try:
-            clean = _fix_phonetics(text)
+            clean = _fix_phonetics(spoken_text)
             communicate = edge_tts.Communicate(
                 text=clean, voice=VOICE, rate=RATE, pitch=PITCH
             )
-            # Use strict 6.0s timeout to prevent network hang deadlock
             asyncio.run(asyncio.wait_for(communicate.save(filename), timeout=6.0))
         except Exception as e:
             print(f"[TTS ERROR] edge-tts generation failed or timed out: {e}")
@@ -91,28 +105,27 @@ def _play(text: str) -> None:
             try:
                 pygame.mixer.music.load(filename)
                 pygame.mixer.music.play()
-                print(f"[TTS] Playing: '{text[:60]}...'")
+                print(f"[TTS] Playing: '{spoken_text[:60]}...'")
             except Exception as e:
                 print(f"[TTS ERROR] Pygame play error: {e}")
                 _set_speaking(False)
                 _done_event.set()
                 return
 
-        # Signal that audio is NOW actually playing
         _ready_event.set()
 
-        # Wait for playback to finish (with live voice barge-in detection)
+        # Wait for playback to finish (with ultra-sensitive live voice barge-in detection)
         while pygame.mixer.music.get_busy():
             if _stop_flag.is_set():
                 pygame.mixer.music.stop()
                 break
 
-            # Live voice barge-in: cut off TTS immediately if Harsha speaks over ULTRON
+            # Live ultra-sensitive voice barge-in: ANY spoken sound from Harsha (RMS > 8) IMMEDIATELY STOPS ULTRON!
             try:
-                from speech import get_latest_mic_rms, _energy_threshold
+                from speech import get_latest_mic_rms
                 rms = get_latest_mic_rms()
-                if rms > max(35.0, float(_energy_threshold) * 2.5):
-                    print(f"[TTS BARGE-IN] Harsha's voice detected (RMS={rms:.1f}) — stopping ULTRON speech!")
+                if rms > 8.0:
+                    print(f"[TTS BARGE-IN] Harsha interrupted ULTRON (RMS={rms:.1f}) — stopping speech immediately!")
                     _stop_flag.set()
                     pygame.mixer.music.stop()
                     break
@@ -120,6 +133,7 @@ def _play(text: str) -> None:
                 pass
 
             pygame.time.Clock().tick(30)
+
 
 
         try:
