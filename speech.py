@@ -104,8 +104,10 @@ def _measure_ambient_rms(device_idx: Optional[int], rate: int, channels: int) ->
 _MIC_IDX, _MIC_RATE, _MIC_CHANNELS = _probe_mic()
 _AMBIENT_RMS = _measure_ambient_rms(_MIC_IDX, _MIC_RATE, _MIC_CHANNELS)
 
-# KEY FIX: Hardware-calibrated energy threshold (Minimum 4, maximum 300)
-_energy_threshold = max(4, min(300, int(_AMBIENT_RMS * 3.5)))
+# KEY FIX: Hardware-calibrated energy threshold
+# Multiplier 2.0 (was 3.5) keeps threshold low enough for normal speech.
+# Hard cap of 50 prevents loud-room false negatives.
+_energy_threshold = max(3, min(50, int(_AMBIENT_RMS * 2.0)))
 print(f"[VOICE] Final calibrated energy threshold set to {_energy_threshold}")
 
 # ── Permanent Audio Stream ─────────────────────────────────────────────────────
@@ -234,13 +236,26 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> str:
             beam_size=5,
             best_of=5,
             temperature=0.0,
-            vad_filter=False,  # Keep False to protect short phrases
+            vad_filter=True,   # Filter silence / hallucination
             condition_on_previous_text=False,
         )
         raw = " ".join(s.text.strip() for s in segments).strip()
         if not raw:
             print("[VOICE] [WHISPER] Transcript is empty.")
             return ""
+
+        # ── Hallucination filter ──────────────────────────────────────────
+        # Whisper commonly hallucinates these phrases on silence/noise.
+        _HALLUCINATIONS = [
+            "thank you for watching", "see you in the next video",
+            "thanks for watching", "please subscribe", "like and subscribe",
+            "don't forget to", "www.", "http", "subtitles by",
+        ]
+        raw_lower = raw.lower()
+        if any(h in raw_lower for h in _HALLUCINATIONS):
+            print(f"[VOICE] [WHISPER] Hallucination detected, ignoring: '{raw[:60]}'")
+            return ""
+
         final = correct(raw)
         print(f"[VOICE] [WHISPER] Transcript: '{final}'")
         return final
