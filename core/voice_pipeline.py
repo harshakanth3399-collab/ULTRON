@@ -87,42 +87,33 @@ class VoicePipeline:
         self._chat("ULTRON", text)
         speak(text)
         wait_until_done(timeout=90.0)    # blocks here until audio truly done
-        time.sleep(0.40)                 # 400ms speaker echo dissipation
-
-    # ── Wake-word detection ────────────────────────────────────────────────────
+        time.sleep(0.40)                 # 400ms speaker echo dissip    # ── Wake-word detection ("Hey" trigger + inline command extraction) ───────
 
     def _is_wake(self, text: str) -> tuple[bool, str]:
-        """Returns (is_wake_word, inline_command_if_any)."""
+        """
+        Returns (is_wake_word, inline_command_if_any).
+        Triggered by "hey", "hi", "hello", "ok", "okay", or "ultron".
+        """
         clean = text.lower().strip()
         if not clean:
             return False, ""
 
         clean_norm = re.sub(r'[^\w\s]', '', clean)
 
-        # Target wake tokens for ULTRON
-        wake_tokens = [
-            "ultron", "ultra", "ultram", "altron", "alltron", "ul tron",
-            "outron", "autron", "eltron", "oltron", "aultron", "haltron",
-            "hailtron", "hail tron", "tron"
+        # Wake prefix triggers: "hey", "hi", "hello", "ok", "okay", "ultron", "altron", "tron"
+        wake_prefixes = [
+            r"^\s*(?:hey|hi|hello|ok|okay)\s+ultron\b",
+            r"^\s*(?:hey|hi|hello|ok|okay)\b",
+            r"^\s*(?:ultron|ultra|ultram|altron|alltron|outron|autron|eltron|oltron|hailtron|tron)\b",
         ]
 
-        for tok in wake_tokens:
-            if tok in clean_norm:
-                cmd = re.sub(
-                    r'^\s*(hey|hi|hello|ok|okay|yo|bro)?\s*'
-                    r'(ultron|ultra|ultram|altron|alltron|all\s+tron|ul\s+tron|outron|autron|eltron|oltron|aultron|ol\s+tron|haltron|alteron|outeron|hail\s*tron|hailtron|hail|hay\s*tron|haytron|hell\s*tron|heil\s*tron|tron)?\s*',
-                    '', clean_norm
-                ).strip()
+        for pat in wake_prefixes:
+            if re.search(pat, clean_norm):
+                # Extract inline command after wake prefix
+                cmd = re.sub(pat, '', clean_norm).strip()
                 return True, cmd
 
-        # Also match explicit greeting + ultron combinations
-        if any(w in clean_norm for w in ["hey ultron", "hi ultron", "hello ultron", "ok ultron", "okay ultron"]):
-            cmd = re.sub(r'^\s*(hey|hi|hello|ok|okay)\s+ultron\s*', '', clean_norm).strip()
-            return True, cmd
-
         return False, ""
-
-
 
     # ── Main loop ──────────────────────────────────────────────────────────────
 
@@ -135,8 +126,7 @@ class VoicePipeline:
         print("[BOOT] startup greeting finished", flush=True)
 
         voice_state_manager.transition_to(VoiceState.IDLE)
-        print("[BOOT] wake-word listener started", flush=True)
-        print("[VOICE] === Wake listening started. Say 'Hey Ultron' or 'Ultron'. ===", flush=True)
+        print("[BOOT] wake listener active. Say 'Hey' or 'Hey, [command]'.", flush=True)
 
         in_session = False        # True when command session is open
         session_end = 0.0         # Epoch when session expires
@@ -145,10 +135,10 @@ class VoicePipeline:
             try:
                 # ── Session timeout ──────────────────────────────────────────
                 if in_session and time.time() > session_end:
-                    print("[VOICE] Session timed out. Back to wake-word mode.")
+                    print("[VOICE] Session timed out. Returning to IDLE.")
                     in_session = False
                     voice_state_manager.transition_to(
-                        VoiceState.IDLE, "Say 'Ultron' to wake me."
+                        VoiceState.IDLE, "Say 'Hey' to wake me."
                     )
 
                 # ── Status label ─────────────────────────────────────────────
@@ -156,69 +146,67 @@ class VoicePipeline:
                     voice_state_manager.transition_to(
                         VoiceState.LISTENING, "Listening for command..."
                     )
-                    print("[VOICE] COMMAND mode — listening...")
                 else:
                     voice_state_manager.transition_to(
-                        VoiceState.IDLE, "Waiting for wake word..."
+                        VoiceState.IDLE, "Say 'Hey' to begin"
                     )
-                    print("[VOICE] WAKE mode — listening for 'Hey Ultron'...")
 
                 # ── Capture audio ────────────────────────────────────────────
+                t_cap_0 = time.time()
                 voice_state_manager.transition_to(VoiceState.RECORDING)
                 audio_bytes = listen_for_audio(
                     timeout=6.0 if not in_session else 8.0,
-                    phrase_time_limit=12.0
+                    phrase_time_limit=10.0
                 )
 
                 if not self._running:
                     break
 
                 if not audio_bytes:
-                    print("[VOICE] No audio captured (silence/timeout). Retrying.")
                     continue
 
-                print(f"[VOICE] Audio captured: {len(audio_bytes)} bytes")
+                t_cap = int((time.time() - t_cap_0) * 1000)
+                print(f"[TIME] speech captured: {t_cap} ms ({len(audio_bytes)} bytes)")
 
                 # ── Transcribe ───────────────────────────────────────────────
                 voice_state_manager.transition_to(VoiceState.TRANSCRIBING)
                 transcript = transcribe_audio_bytes(audio_bytes)
 
                 if not transcript:
-                    print("[VOICE] Empty transcript. Retrying.")
                     continue
 
-                print(f"[VOICE] Transcript: '{transcript}'")
-
-                # ── Wake mode: check for wake word ───────────────────────────
+                # ── Wake mode: check for 'Hey' wake trigger ──────────────────
                 if not in_session:
                     is_wake, inline_cmd = self._is_wake(transcript)
                     if not is_wake:
-                        print(f"[VOICE] Not a wake word: '{transcript}'. Ignoring.")
+                        print(f"[VOICE] Not a wake trigger: '{transcript}'. Ignoring.")
                         continue
 
-                    print(f"[VOICE] Wake detected: '{transcript}'")
+                    print(f"[VOICE] Wake trigger detected: '{transcript}'")
                     voice_state_manager.transition_to(VoiceState.WAKE_DETECTED, transcript)
-                    self._chat("USER", transcript)
 
-                    # Greet Harsha and open 45s session
-                    voice_state_manager.transition_to(VoiceState.GREETING)
-                    self._say("Hey Harsha, what can I help you with?")
-                    in_session = True
-                    session_end = time.time() + 45.0  # 45s session to respond
-                    if inline_cmd and len(inline_cmd) > 2:
-                        print(f"[VOICE] Inline command detected: '{inline_cmd}'")
+                    if inline_cmd and len(inline_cmd) > 1:
+                        # Single-utterance "Hey + Command": Process command directly without 2-step greeting delay!
+                        print(f"[VOICE] Single-utterance command: '{inline_cmd}'")
                         transcript = inline_cmd
+                        in_session = True
+                        session_end = time.time() + 45.0
                     else:
+                        # User only said "Hey" -> Greet and open session
+                        self._chat("USER", transcript)
+                        voice_state_manager.transition_to(VoiceState.GREETING)
+                        self._say("Hey Harsha, what can I help you with?")
+                        in_session = True
+                        session_end = time.time() + 45.0
                         continue
-
 
                 # ── Command processing ────────────────────────────────────────
                 self._chat("USER", transcript)
                 voice_state_manager.transition_to(
                     VoiceState.PROCESSING, f"Processing: '{transcript}'"
                 )
-                print(f"[VOICE] Sending to router: '{transcript}'")
 
+                t_rout_0 = time.time()
                 try:
                     running_flag, response = router_process(transcript)
                 except Exception as e:
@@ -227,15 +215,16 @@ class VoicePipeline:
                     response = "Something went wrong, Harsha. Let me try again."
                     running_flag = True
 
+                t_rout = int((time.time() - t_rout_0) * 1000)
+                print(f"[TIME] router: {t_rout} ms")
                 print(f"[VOICE] Response: {str(response)[:100]!r}")
 
-                # Fallback: router returned None response (e.g. command executed silently)
                 if not response:
                     response = "Done, bro."
 
                 self._say(response)
 
-                # Keep session alive, extend deadline after each exchange
+                # Keep session active for follow-up commands
                 in_session = True
                 session_end = time.time() + 45.0
 

@@ -82,21 +82,23 @@ def run_verification():
     except Exception as e:
         results["English transcription"] = f"FAIL: {e}"
 
-    # TEST 5 & 6: Wake word detection & command extraction
+    # TEST 5 & 6: Wake word detection & post-wake command extraction
     print("\n[TEST 5 & 6] Testing wake-word detection & post-wake command extraction...")
     try:
-        is_w1, cmd1 = voice_pipeline._is_wake("hey ultron")
-        is_w2, cmd2 = voice_pipeline._is_wake("hey ultron what is the time")
-        is_w3, cmd3 = voice_pipeline._is_wake("hello world")
-        print(f"  --> 'hey ultron': is_wake={is_w1}, cmd='{cmd1}'")
-        print(f"  --> 'hey ultron what is the time': is_wake={is_w2}, cmd='{cmd2}'")
-        print(f"  --> 'hello world': is_wake={is_w3}")
-        if is_w1 and is_w2 and not is_w3 and cmd2 == "what is the time":
-            results["Hey Ultron & Command capture"] = "PASS"
+        is_w1, cmd1 = voice_pipeline._is_wake("hey")
+        is_w2, cmd2 = voice_pipeline._is_wake("hey what is the time")
+        is_w3, cmd3 = voice_pipeline._is_wake("hey open chrome")
+        is_w4, cmd4 = voice_pipeline._is_wake("random statement without wake")
+        print(f"  --> 'hey': is_wake={is_w1}, cmd='{cmd1}'")
+        print(f"  --> 'hey what is the time': is_wake={is_w2}, cmd='{cmd2}'")
+        print(f"  --> 'hey open chrome': is_wake={is_w3}, cmd='{cmd3}'")
+        print(f"  --> 'random statement': is_wake={is_w4}")
+        if is_w1 and is_w2 and is_w3 and not is_w4 and cmd2 == "what is the time" and cmd3 == "open chrome":
+            results["Hey trigger & Single-Utterance Command"] = "PASS"
         else:
-            results["Hey Ultron & Command capture"] = "FAIL: Unexpected wake mapping"
+            results["Hey trigger & Single-Utterance Command"] = f"FAIL: Unexpected wake mapping (w1={is_w1}, w2={is_w2}, cmd2='{cmd2}', cmd3='{cmd3}')"
     except Exception as e:
-        results["Hey Ultron & Command capture"] = f"FAIL: {e}"
+        results["Hey trigger & Single-Utterance Command"] = f"FAIL: {e}"
 
     # TEST 7 & 8: Router & AI response
     print("\n[TEST 7 & 8] Testing Router & Command response...")

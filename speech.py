@@ -263,16 +263,21 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> str:
             filename = f.name
 
         print("[VOICE] [WHISPER] Starting model transcription...")
+        t0 = time.time()
         segments, _info = model.transcribe(
             filename,
             language="en",
-            beam_size=5,
-            best_of=5,
+            beam_size=1,
+            best_of=1,
             temperature=0.0,
             vad_filter=True,   # Filter silence / hallucination
             condition_on_previous_text=False,
         )
         raw = " ".join(s.text.strip() for s in segments).strip()
+        t_whisp = int((time.time() - t0) * 1000)
+        print(f"[TIME] transcription: {t_whisp} ms")
+        print(f"[RAW] '{raw}'")
+
         if not raw:
             print("[VOICE] [WHISPER] Transcript is empty.")
             return ""
@@ -370,7 +375,7 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> str:
                 return ""
 
         final = correct(raw)
-        print(f"[VOICE] [WHISPER] Transcript: '{final}'")
+        print(f"[FINAL] '{final}'")
         return final
     except Exception as e:
         print(f"[VOICE] [WHISPER] ERROR: Transcription failed: {e}")
