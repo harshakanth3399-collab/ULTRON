@@ -81,21 +81,35 @@ def _play(text: str) -> None:
 
         _stop_flag.clear()
 
+        # Create temporary file and close handle immediately to prevent WinError 32 on Windows
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
             filename = f.name
-
+            f.close()
 
         try:
             clean = _fix_phonetics(spoken_text)
             communicate = edge_tts.Communicate(
                 text=clean, voice=VOICE, rate=RATE, pitch=PITCH
             )
-            asyncio.run(asyncio.wait_for(communicate.save(filename), timeout=6.0))
+            asyncio.run(asyncio.wait_for(communicate.save(filename), timeout=8.0))
         except Exception as e:
-            print(f"[TTS ERROR] edge-tts generation failed or timed out: {e}")
-            _set_speaking(False)
-            _done_event.set()
-            return
+            print(f"[TTS NOTE] edge-tts unavailable ({e}). Using offline SAPI5 voice fallback.")
+            try:
+                import pyttsx3
+                engine = pyttsx3.init()
+                engine.setProperty('rate', 165)
+                voices = engine.getProperty('voices')
+                for v in voices:
+                    if any(k in v.name.lower() for k in ['david', 'male', 'george', 'hazel', 'uk', 'english']):
+                        engine.setProperty('voice', v.id)
+                        break
+                engine.save_to_file(clean, filename)
+                engine.runAndWait()
+            except Exception as pyttsx_err:
+                print(f"[TTS ERROR] Offline pyttsx3 fallback failed: {pyttsx_err}")
+                _set_speaking(False)
+                _done_event.set()
+                return
 
         if _stop_flag.is_set():
             _set_speaking(False)
@@ -107,7 +121,7 @@ def _play(text: str) -> None:
             try:
                 pygame.mixer.music.load(filename)
                 pygame.mixer.music.play()
-                print(f"[TTS] Playing: '{spoken_text[:60]}...'")
+                print(f"[TTS] Playing ({VOICE}): '{spoken_text[:60]}...'")
             except Exception as e:
                 print(f"[TTS ERROR] Pygame play error: {e}")
                 _set_speaking(False)
@@ -116,30 +130,12 @@ def _play(text: str) -> None:
 
         _ready_event.set()
 
-        # Wait for playback to finish (with dynamic live voice barge-in detection)
+        # Wait for playback to finish cleanly
         while pygame.mixer.music.get_busy():
             if _stop_flag.is_set():
                 pygame.mixer.music.stop()
                 break
-
-            # Live voice barge-in: spoken sound from Harsha cuts off speech immediately
-            try:
-                from speech import get_latest_mic_rms, get_energy_threshold
-                rms = get_latest_mic_rms()
-                thresh = max(35.0, float(get_energy_threshold()) + 15.0)
-                if rms > thresh:
-                    print(f"[TTS BARGE-IN] Harsha interrupted ULTRON (RMS={rms:.1f} > {thresh:.1f}) — stopping speech immediately!")
-                    _stop_flag.set()
-                    pygame.mixer.music.stop()
-                    break
-            except Exception:
-                pass
-
-
-
             pygame.time.Clock().tick(30)
-
-
 
         try:
             pygame.mixer.music.unload()
@@ -152,6 +148,10 @@ def _play(text: str) -> None:
         _set_speaking(False)
         _done_event.set()
         if filename:
+            try:
+                pygame.mixer.music.unload()
+            except Exception:
+                pass
             try:
                 os.remove(filename)
             except Exception:

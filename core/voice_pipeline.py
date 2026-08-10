@@ -99,11 +99,11 @@ class VoicePipeline:
 
         clean_norm = re.sub(r'[^\w\s]', '', clean)
 
-        # Triggers: any phrase containing ultron, ultra, altron, outron, autron, hail, tron, hey, hi, hello, etc.
+        # Target wake tokens for ULTRON
         wake_tokens = [
             "ultron", "ultra", "ultram", "altron", "alltron", "ul tron",
             "outron", "autron", "eltron", "oltron", "aultron", "haltron",
-            "hail", "tron", "hey", "hi", "hello", "ok", "okay", "bro", "yo", "assistant"
+            "hailtron", "hail tron", "tron"
         ]
 
         for tok in wake_tokens:
@@ -115,10 +115,10 @@ class VoicePipeline:
                 ).strip()
                 return True, cmd
 
-        # Fallback: any short spoken input (1-5 words) while waiting in wake mode triggers session!
-        words = clean_norm.split()
-        if len(words) <= 5:
-            return True, clean_norm
+        # Also match explicit greeting + ultron combinations
+        if any(w in clean_norm for w in ["hey ultron", "hi ultron", "hello ultron", "ok ultron", "okay ultron"]):
+            cmd = re.sub(r'^\s*(hey|hi|hello|ok|okay)\s+ultron\s*', '', clean_norm).strip()
+            return True, cmd
 
         return False, ""
 
@@ -205,7 +205,11 @@ class VoicePipeline:
                     self._say("Hey Harsha, what can I help you with?")
                     in_session = True
                     session_end = time.time() + 45.0  # 45s session to respond
-                    continue
+                    if inline_cmd and len(inline_cmd) > 2:
+                        print(f"[VOICE] Inline command detected: '{inline_cmd}'")
+                        transcript = inline_cmd
+                    else:
+                        continue
 
 
                 # ── Command processing ────────────────────────────────────────
