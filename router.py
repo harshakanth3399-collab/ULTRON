@@ -112,6 +112,61 @@ def process(command: str) -> tuple:
         curr_addr = pm.data.get("preferences", {}).get("preferred_address", "Sir")
         return True, f"{curr_addr}."
 
+    # ── Focus Study Zone & DND Management ─────────────────────────────────────
+    if any(k in raw for k in ["keep steady environment", "serious study zone", "serious study mode", "steady environment"]):
+        from modules.focus_mode import set_focus_mode
+        _, msg = set_focus_mode("SERIOUS_STUDY")
+        return True, msg
+
+    if any(k in raw for k in ["just study zone", "study zone", "study mode"]):
+        from modules.focus_mode import set_focus_mode
+        _, msg = set_focus_mode("STUDY_ZONE")
+        return True, msg
+
+    if any(k in raw for k in ["end study zone", "normal mode", "exit study zone", "stop study zone"]):
+        from modules.focus_mode import set_focus_mode
+        _, msg = set_focus_mode("NORMAL")
+        return True, msg
+
+    # ── Voice Reminders & Scheduler ───────────────────────────────────────────
+    m_rem = re.search(r"remind me (?:to|about)\s+(.*?)\s+in\s+(\d+)\s*(minute|minutes|min|mins|hour|hours)", raw, re.IGNORECASE)
+    if m_rem:
+        from modules.scheduler import add_voice_reminder
+        task = m_rem.group(1).strip()
+        num = int(m_rem.group(2))
+        unit = m_rem.group(3).lower()
+        mins = num * 60 if "hour" in unit else num
+        msg = add_voice_reminder(task, mins)
+        return True, msg
+
+    # ── Media Control & Shortcuts ───────────────────────────────────────────────
+    if any(k in raw for k in ["pause music", "play music", "toggle music", "toggle play", "pause song"]):
+        from modules.shortcuts import media_play_pause
+        return True, media_play_pause()
+
+    if any(k in raw for k in ["next song", "next track", "skip song", "skip track"]):
+        from modules.shortcuts import media_next
+        return True, media_next()
+
+    if any(k in raw for k in ["previous song", "previous track"]):
+        from modules.shortcuts import media_previous
+        return True, media_previous()
+
+    if "volume up" in raw or "increase volume" in raw:
+        from modules.shortcuts import volume_up
+        return True, volume_up()
+
+    if "volume down" in raw or "decrease volume" in raw:
+        from modules.shortcuts import volume_down
+        return True, volume_down()
+
+    if any(k in raw for k in ["set up coding workspace", "python workspace", "workspace preset"]):
+        from modules.shortcuts import launch_coding_workspace
+        return True, launch_coding_workspace()
+
+
+
+
     # ── Memory commands ─────────────────────────────────────────────────────────
 
     # Structured profile memory saving: "my address is ...", "my favorite X is Y", "remember my address is ..."

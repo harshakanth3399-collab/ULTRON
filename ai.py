@@ -24,6 +24,22 @@ OLLAMA_URL = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"
 DEFAULT_LOCAL_MODEL = "qwen2.5:3b"
 GROQ_MODEL = "llama-3.3-70b-versatile"
 
+def _load_env_file() -> None:
+    env_path = os.path.join(os.path.dirname(__file__), ".env")
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        os.environ[k.strip()] = v.strip().strip("'\"")
+        except Exception:
+            pass
+
+_load_env_file()
+
+
 FORBIDDEN_ADDRESS_PATTERNS = [
     (r"\b(yeah|yes|sure|okay|thanks)\s+(man|bro|dude|buddy|mate|boss)\b", r"\1, Sir"),
     (r",\s*(man|bro|dude|buddy|mate|boss)\b", r", Sir"),
