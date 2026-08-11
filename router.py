@@ -52,10 +52,22 @@ def process(command: str) -> tuple:
             raw = raw[len(pfx):].strip()
             print(f"[ROUTER] Cleaned prefix '{pfx}' -> '{raw}'")
 
-    if not raw:
-        return True, "I'm listening, Harsha. Ask me anything!"
+    # Clean phonetic mishearings
+    raw = raw.replace("watch up", "whatsapp").replace("watchapp", "whatsapp").replace("watch app", "whatsapp")
+    if raw.startswith("okay open "):
+        raw = raw[10:].strip()
 
     LAST_ACTIVITY = time.time()
+
+    # ── High Priority WhatsApp & Messaging Intents (BEFORE multi-command split) ─────────
+    if "whatsapp" in raw or "message" in raw:
+        from modules.adb_bridge import adb_bridge
+        m_msg = re.search(r"message\s+(.*?)\s+to\s+(.*)", raw, re.IGNORECASE) or re.search(r"message\s+(.*)", raw, re.IGNORECASE)
+        contact = "contact"
+        if m_msg:
+            contact = m_msg.group(2).strip() if len(m_msg.groups()) > 1 else m_msg.group(1).strip()
+        adb_bridge.open_app("whatsapp")
+        return True, f"Opening WhatsApp to message {contact.capitalize()}, Sir."
 
     # ── Multi-Command Decomposition ─────────────────────────────────────────
     if any(sep in raw for sep in [" and ", " then ", " and then "]) and not ("favorite" in raw or "remember" in raw):
@@ -69,6 +81,7 @@ def process(command: str) -> tuple:
                     responses.append(resp)
             combined = " ".join(responses) if responses else "Executed all commands for you, Harsha!"
             return True, combined
+
 
     # ── High Priority Phone Target Actions ────────────────────────────────────
     if any(k in raw for k in ["in my phone", "on my phone", "on phone", "in phone", "in my mobile", "on my mobile", "in mobile", "on mobile"]):

@@ -129,10 +129,11 @@ def ask_ai(prompt: str) -> str:
     raw_answer = None
     model_used = "groq-llama3.3"
 
-    # 1. Try Groq API if GROQ_API_KEY environment variable is configured
+    # 1. Try Groq API only if a valid GROQ_API_KEY is configured
     groq_key = os.getenv("GROQ_API_KEY", "").strip()
-    if groq_key:
+    if groq_key and groq_key.startswith("gsk_") and "your_free_key_here" not in groq_key:
         raw_answer = _ask_groq(prompt, full_system_prompt, groq_key)
+
 
     # 2. Fallback to Local Ollama if Groq is unavailable or offline
     if not raw_answer:
