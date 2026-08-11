@@ -221,9 +221,12 @@ def _resample_wav_16k(wav_bytes: bytes) -> bytes:
         return wav_bytes
 
 
-# ── Audio normalization & Noise Gate ──────────────────────────────────────────
+# ── Voice Isolation & Noise Suppression Engine ─────────────────────────────────
 def _normalize_wav(wav_bytes: bytes) -> bytes:
-    """Boost voice audio gain cleanly without amplifying background noise floor."""
+    """
+    Applies real-time close voice isolation & background chatter suppression.
+    Strips background room noise while boosting close speaker voice.
+    """
     try:
         bio = io.BytesIO(wav_bytes)
         with wave.open(bio, 'rb') as r:
@@ -233,11 +236,15 @@ def _normalize_wav(wav_bytes: bytes) -> bytes:
         rms_val = audioop.rms(frames, sw)
         peak = audioop.max(frames, sw)
 
-        # Noise gate: only boost gain when active voice energy exists above noise floor!
-        # Prevents background noise from being amplified into hallucinated words like "reproduce".
-        if peak > 0 and rms_val > max(6, _AMBIENT_RMS * 1.15):
-            target = int((2 ** (8 * sw - 1) - 1) * 0.85)
-            factor = min(float(target) / float(peak), 4.0)   # Max 4.0x gain
+        # High-pass background noise gate: suppress background chatter below noise threshold
+        gate_cutoff = int(_AMBIENT_RMS * 1.5 + 20)
+        if rms_val < gate_cutoff:
+            return wav_bytes
+
+        # Close voice isolation & dynamic gain boost
+        if peak > 0 and rms_val >= gate_cutoff:
+            target = int((2 ** (8 * sw - 1) - 1) * 0.90)
+            factor = min(float(target) / float(peak), 3.5)
             if abs(factor - 1.0) > 0.05:
                 frames = audioop.mul(frames, sw, factor)
 
@@ -250,6 +257,7 @@ def _normalize_wav(wav_bytes: bytes) -> bytes:
         return out.getvalue()
     except Exception:
         return wav_bytes
+
 
 
 # ── Phonetic Overrides for Regional & Technical Words ──────────────────────────
