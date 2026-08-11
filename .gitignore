@@ -17,4 +17,7 @@ __pycache__/
 
 # Audit Logs & Memory
 renderer_audit.log
-memory/
+adb.zip
+*.tmp
+memory/*.tmp
+

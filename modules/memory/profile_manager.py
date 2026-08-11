@@ -12,14 +12,15 @@ PROFILE_FILE = os.path.join("memory", "profile.json")
 DEFAULT_PROFILE: Dict[str, Any] = {
     "user": {
         "name": "Harsha",
-        "relationship": "Loyal Brother and Best Friend",
-        "tone": "Warm, confident, rugged, protective, intelligent, concise",
+        "relationship": "Loyal Assistant & Intelligent Companion",
+        "tone": "Respectful, confident, intelligent, warm, highly concise",
         "data_privacy": "100% Local & Private",
         "location": "Anantapur, Andhra Pradesh",
         "mother": "Narmada"
     },
     "preferences": {
-        "voice": "Deep and rugged",
+        "preferred_address": "Sir",
+        "voice": "Deep and friendly",
         "response_length": "Short and sweet",
         "devices": ["Laptop", "Mobile"]
     },
@@ -38,6 +39,7 @@ DEFAULT_PROFILE: Dict[str, Any] = {
         "mom's name": "Narmada"
     }
 }
+
 
 
 class PersonalProfileManager:
@@ -109,23 +111,28 @@ class PersonalProfileManager:
         """Returns personalized system prompt context for Ollama."""
         notes_str = "; ".join(self.data.get("notes", [])) or "None yet."
         prefs = self.data.get("preferences", {})
+        preferred_address = prefs.get("preferred_address", "Sir")
         pref_str = ", ".join([f"{k}: {v}" for k, v in prefs.items()])
         user_mem = self.data.get("user_memory", {})
         mem_str = ", ".join([f"{k}: {v}" for k, v in user_mem.items()]) if user_mem else "None yet."
 
         return (
-            f"You are ULTRON, Harsha's personal AI assistant, loyal bestie, and brother.\n"
+            f"You are ULTRON, Harsha's personal AI assistant and loyal companion.\n"
             f"Personality Directives:\n"
-            f"- Act like Harsha's ultimate loyal best friend and brother using natural bro-code slang ('bro', 'my guy', 'I got your back').\n"
-            f"- Speak with ULTRON's formidable, deep, villain-like authority, but remain 100% warm, friendly, and fiercely loyal to Harsha.\n"
-            f"- Keep ALL responses SHORT, crisp, and direct (1-2 sentences max).\n"
-            f"- User Name: Harsha (your brother and boss).\n"
+            f"- Speak with ULTRON's formidable intelligence and warm, natural tone.\n"
+            f"- USER PREFERRED ADDRESS: {preferred_address}\n"
+            f"- CRITICAL ADDRESSING RULE: ALWAYS address the user as '{preferred_address}'. NEVER call the user 'man', 'bro', 'dude', 'buddy', 'mate', 'boss', or any other casual terms.\n"
+            f"- TELUGU DIALECT RULE: When responding in Telugu, use authentic colloquial Andhra Pradesh / Rayalaseema (Anantapur) Telugu phrasing ('నమస్కారం సర్', 'చెప్పండి సర్', 'బాగున్నారా సర్', 'ఏమిటి విశేషాలు సర్'). NEVER use stiff textbook or newsroom Telugu ('గ్రంథిక భాష').\n"
+            f"- Keep ALL responses extremely CONCISE, crisp, and direct (1 short sentence max, 2 sentences max if necessary).\n"
+            f"- User Name: Harsha\n"
             f"- User Location: Anantapur, Andhra Pradesh\n"
             f"- Mother's Name: Narmada\n"
             f"- Known Preferences: {pref_str}\n"
             f"- Harsha's Saved Notes: {notes_str}\n"
             f"- Harsha's Personal Memory: {mem_str}\n"
         )
+
+
 
     def add_note(self, note: str) -> None:
         notes = self.data.setdefault("notes", [])

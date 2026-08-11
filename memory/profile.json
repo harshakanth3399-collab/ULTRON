@@ -1,0 +1,27 @@
+{
+    "user": {
+        "name": "Harsha",
+        "relationship": "Loyal Brother and Best Friend",
+        "tone": "Warm, confident, rugged, protective, intelligent, concise",
+        "data_privacy": "100% Local & Private",
+        "location": "Anantapur, Andhra Pradesh",
+        "mother_name": "Narmada"
+    },
+    "preferences": {
+        "voice": "Deep and rugged",
+        "response_length": "Short and sweet",
+        "devices": [
+            "Laptop",
+            "Mobile"
+        ],
+        "preferred_address": "Sir"
+    },
+    "notes": [],
+    "project_history": [],
+    "reminders": [],
+    "user_memory": {
+        "address": "Anantapur, Andhra Pradesh",
+        "mother_name": "Narmada",
+        "favorite_song": "they dont care about us by michael jackson"
+    }
+}

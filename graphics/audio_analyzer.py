@@ -65,53 +65,10 @@ class AudioAnalyzer:
         except Exception:
             pass
 
-    # ── Microphone thread ──────────────────────────────────────────────────────
-
-    def _mic_thread(self) -> None:
-        try:
-            import pyaudio
-            p = pyaudio.PyAudio()
-            # Open at NATIVE rate to match hardware
-            stream = p.open(
-                format=pyaudio.paInt16,
-                channels=1,                  # mono for analysis
-                rate=self._mic_rate,
-                input=True,
-                input_device_index=self._mic_idx,
-                frames_per_buffer=512,
-            )
-            self._stream_obj = (p, stream)
-
-            while self._running:
-                try:
-                    data = stream.read(512, exception_on_overflow=False)
-                    samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
-                    rms = float(np.sqrt(np.mean(samples ** 2))) / 32768.0
-                    with self._lock:
-                        # Normalize: speech is typically 0.01-0.2 RMS normalized
-                        self._level = min(1.0, rms * AUDIO_GAIN * 15.0)
-                except Exception:
-                    pass
-
-            stream.stop_stream()
-            stream.close()
-            p.terminate()
-
-        except Exception:
-            # Fallback: synthesize a gentle pulse if mic can't be opened for particles
-            while self._running:
-                with self._lock:
-                    self._level = 0.15 + 0.12 * math.sin(time.time() * 2.0)
-                time.sleep(0.03)
+    # ── Microphone level reader (powered directly by speech.py) ───────────────
 
     def start_listening(self) -> None:
-        if self._running:
-            return
         self._running = True
-        self._thread = threading.Thread(
-            target=self._mic_thread, daemon=True, name="AudioAnalyzer-Mic"
-        )
-        self._thread.start()
 
     def stop(self) -> None:
         self._running = False

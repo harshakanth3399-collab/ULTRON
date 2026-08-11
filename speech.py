@@ -134,9 +134,10 @@ def _measure_ambient_rms(device_idx: Optional[int], rate: int, channels: int) ->
 
 _MIC_IDX, _MIC_RATE, _MIC_CHANNELS = _probe_mic()
 _AMBIENT_RMS = _measure_ambient_rms(_MIC_IDX, _MIC_RATE, _MIC_CHANNELS)
-# Dynamic threshold set relative to ambient floor: ensures ambient noise does not false-trigger VAD!
-_energy_threshold = max(35, int(_AMBIENT_RMS * 1.35 + 10.0))
+# Dynamic threshold set relative to ambient floor: robust 45 RMS floor to prevent ambient noise triggers
+_energy_threshold = max(45, int(_AMBIENT_RMS * 3.5 + 25.0))
 print(f"[VOICE] Optimal energy threshold locked to {_energy_threshold} (Ambient={_AMBIENT_RMS:.1f})")
+
 
 
 
@@ -220,19 +221,23 @@ def _resample_wav_16k(wav_bytes: bytes) -> bytes:
         return wav_bytes
 
 
-# ── Audio normalization ────────────────────────────────────────────────────────
+# ── Audio normalization & Noise Gate ──────────────────────────────────────────
 def _normalize_wav(wav_bytes: bytes) -> bytes:
-    """Boost voice audio gain so Whisper handles whispers cleanly."""
+    """Boost voice audio gain cleanly without amplifying background noise floor."""
     try:
         bio = io.BytesIO(wav_bytes)
         with wave.open(bio, 'rb') as r:
             nch, sw, fr, nf = r.getparams()[:4]
             frames = r.readframes(nf)
 
+        rms_val = audioop.rms(frames, sw)
         peak = audioop.max(frames, sw)
-        if peak > 0:
+
+        # Noise gate: only boost gain when active voice energy exists above noise floor!
+        # Prevents background noise from being amplified into hallucinated words like "reproduce".
+        if peak > 0 and rms_val > max(6, _AMBIENT_RMS * 1.15):
             target = int((2 ** (8 * sw - 1) - 1) * 0.85)
-            factor = min(float(target) / float(peak), 8.0)
+            factor = min(float(target) / float(peak), 4.0)   # Max 4.0x gain
             if abs(factor - 1.0) > 0.05:
                 frames = audioop.mul(frames, sw, factor)
 
@@ -247,11 +252,41 @@ def _normalize_wav(wav_bytes: bytes) -> bytes:
         return wav_bytes
 
 
+# ── Phonetic Overrides for Regional & Technical Words ──────────────────────────
+PHONETIC_OVERRIDES = {
+    "i draw them": "",
+    "i draw then": "",
+    "i draw": "",
+    "draw them": "",
+    "reproduce": "Andhra Pradesh",
+    "and reproduce": "Andhra Pradesh",
+    "under produce": "Andhra Pradesh",
+    "underproduce": "Andhra Pradesh",
+    "andro pradesh": "Andhra Pradesh",
+    "under pradesh": "Andhra Pradesh",
+    "and rapradesh": "Andhra Pradesh",
+    "ananta pur": "Anantapur",
+    "anantpur": "Anantapur",
+    "what's up": "whatsapp",
+    "whats up": "whatsapp",
+    "whatup": "whatsapp",
+    "a, d, b": "adb",
+    "a-d-b": "adb",
+    "a d b": "adb",
+    "a, b, b": "adb",
+}
+
+_PHONETIC_OVERRIDES = PHONETIC_OVERRIDES
+
+
 # ── Transcription ──────────────────────────────────────────────────────────────
-def transcribe_audio_bytes(wav_bytes: bytes) -> str:
-    """Transcribe WAV bytes using Faster-Whisper."""
+def transcribe_audio_bytes(wav_bytes: bytes) -> tuple[str, str]:
+    """
+    Transcribe WAV bytes using Faster-Whisper with automatic English/Telugu language detection.
+    Returns (transcript, language_code).
+    """
     if not wav_bytes:
-        return ""
+        return "", "en"
 
     resampled = _resample_wav_16k(wav_bytes)
     normalized = _normalize_wav(resampled)
@@ -264,9 +299,9 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> str:
 
         print("[VOICE] [WHISPER] Starting model transcription...")
         t0 = time.time()
-        segments, _info = model.transcribe(
+        # Omit explicit language parameter so Faster-Whisper auto-detects English vs Telugu!
+        segments, info = model.transcribe(
             filename,
-            language="en",
             beam_size=1,
             best_of=1,
             temperature=0.0,
@@ -275,40 +310,21 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> str:
         )
         raw = " ".join(s.text.strip() for s in segments).strip()
         t_whisp = int((time.time() - t0) * 1000)
-        print(f"[TIME] transcription: {t_whisp} ms")
-        print(f"[RAW] '{raw}'")
+
+        detected_lang = getattr(info, 'language', 'en') or 'en'
+        lang_prob = getattr(info, 'language_probability', 1.0)
+        print(f"[TIME] transcription: {t_whisp} ms | Language={detected_lang} (prob={lang_prob:.2f})")
+        print(f"[RAW TRANSCRIPTION] '{raw}'")
 
         if not raw:
             print("[VOICE] [WHISPER] Transcript is empty.")
-            return ""
-
-        # ── Phonetic correction engine ─────────────────────────────────────
-        # 1. Hardcoded override vocabulary for known regional mishearings
-        _PHONETIC_OVERRIDES = {
-            "i draw them": "",
-            "i draw then": "",
-            "i draw": "",
-            "draw them": "",
-            "reproduce": "andhra pradesh",
-            "and reproduce": "andhra pradesh",
-            "under produce": "andhra pradesh",
-            "underproduce": "andhra pradesh",
-            "andro pradesh": "andhra pradesh",
-            "under pradesh": "andhra pradesh",
-            "and rapradesh": "andhra pradesh",
-            "what's up": "whatsapp",
-            "whats up": "whatsapp",
-            "whatup": "whatsapp",
-            "a, d, b": "adb",
-            "a-d-b": "adb",
-            "a d b": "adb",
-            "a, b, b": "adb",
-        }
+            return "", detected_lang
 
         raw_corrected = raw
         raw_check = raw.lower()
         for mishearing, correction in _PHONETIC_OVERRIDES.items():
             if mishearing in raw_check:
+
                 raw_corrected = raw_check.replace(mishearing, correction)
                 raw_check = raw_corrected
                 print(f"[VOICE] [PHONETIC] Override: '{mishearing}' → '{correction}'")
@@ -331,24 +347,25 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> str:
             return prev_row[-1]
 
         _FUZZY_VOCAB = {
-            "andhra pradesh": 4,     # threshold: allow up to 4 edits
-            "telangana": 3,
-            "karnataka": 3,
-            "bangalore": 3,
-            "hyderabad": 3,
-            "visakhapatnam": 5,
-            "vijayawada": 4,
-            "tirupati": 3,
+            "Andhra Pradesh": 4,     # threshold: allow up to 4 edits
+            "Anantapur": 3,
+            "Telangana": 3,
+            "Karnataka": 3,
+            "Bangalore": 3,
+            "Hyderabad": 3,
+            "Visakhapatnam": 5,
+            "Vijayawada": 4,
+            "Tirupati": 3,
         }
 
-        words_in_transcript = raw_corrected.lower().split()
+        words_in_transcript = raw_corrected.split()
         for target_word, threshold in _FUZZY_VOCAB.items():
             target_parts = target_word.split()
             window = len(target_parts)
             for i in range(len(words_in_transcript) - window + 1):
                 candidate = " ".join(words_in_transcript[i:i + window])
-                dist = _levenshtein(candidate, target_word)
-                if 0 < dist <= threshold and candidate != target_word:
+                dist = _levenshtein(candidate.lower(), target_word.lower())
+                if 0 < dist <= threshold and candidate.lower() != target_word.lower():
                     print(f"[VOICE] [PHONETIC] Fuzzy match: '{candidate}' → '{target_word}' (dist={dist})")
                     for j in range(i, i + window):
                         words_in_transcript[j] = ""
@@ -357,9 +374,11 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> str:
 
         raw = " ".join(w for w in words_in_transcript if w).strip() or raw_corrected
 
+        # Check for Telugu Unicode characters
+        if any('\u0C00' <= char <= '\u0C7F' for char in raw):
+            detected_lang = "te"
+
         # ── Hallucination filter ──────────────────────────────────────────
-        # Whisper commonly hallucinates these phrases on silence/noise.
-        # Bypass filter for legitimate music keywords and user statements!
         _MUSIC_KEYWORDS = ["song", "by", "track", "music", "sing", "michael jackson", "favorite song", "fav song"]
         raw_lower = raw.lower()
 
@@ -372,14 +391,12 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> str:
             ]
             if any(h in raw_lower for h in _HALLUCINATIONS):
                 print(f"[VOICE] [WHISPER] Hallucination detected, ignoring: '{raw[:60]}'")
-                return ""
-
         final = correct(raw)
-        print(f"[FINAL] '{final}'")
-        return final
+        print(f"[FINAL TRANSCRIPTION] '{final}' (Language={detected_lang})")
+        return final, detected_lang
     except Exception as e:
         print(f"[VOICE] [WHISPER] ERROR: Transcription failed: {e}")
-        return ""
+        return "", "en"
     finally:
         if filename:
             try:
@@ -405,11 +422,16 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
             time.sleep(1.0)
             return b""
 
-    print(f"[VOICE] Listening... Gate threshold={_energy_threshold}")
+    # Flush stale frames so capture starts clean
+    flush_mic_stream()
 
+    print(f"[VOICE] Listening... Gate threshold={_energy_threshold}")
+    print(f"[VOICE] INPUT DEVICE: {_MIC_IDX} | SAMPLE RATE: {_MIC_RATE}Hz | CHANNELS: {_MIC_CHANNELS}")
 
     speech_frames = []
     speaking_started = False
+    max_rms_seen = 0
+    max_peak_seen = 0
 
     # Ring buffer to preserve 4 chunks (~100ms) before onset detection
     pre_buffer = collections.deque(maxlen=4)
@@ -418,10 +440,11 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
     silence_limit_chunks = int(_MIC_RATE / 1024 * 0.80)
     silence_counter = 0
 
-
     max_chunks = int(_MIC_RATE / 1024 * phrase_time_limit)
     timeout_chunks = int(_MIC_RATE / 1024 * timeout)
     chunk_counter = 0
+
+    t_start = time.time()
 
     while True:
         _wait_if_speaking()
@@ -434,22 +457,29 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
             continue
 
         rms_val = audioop.rms(data, 2)
+        peak_val = audioop.max(data, 2)
         _set_latest_mic_rms(float(rms_val))
 
+        if rms_val > max_rms_seen:
+            max_rms_seen = rms_val
+        if peak_val > max_peak_seen:
+            max_peak_seen = peak_val
+
         if not speaking_started:
-            # Maintain rolling ring buffer of quiet pre-speech audio
+            # Maintain rolling ring buffer of quiet pre-speech audio (6 chunks = ~150ms)
             pre_buffer.append(data)
 
-            # Listening for speech onset
-            if rms_val > _energy_threshold:
-                print(f"[VOICE] Speech onset detected (RMS={rms_val} > threshold={_energy_threshold})")
+            # Listening for genuine human speech onset (both RMS and Peak thresholds must be met)
+            if rms_val > _energy_threshold and peak_val > int(_AMBIENT_RMS * 4.0 + 50.0):
+                t_onset = int((time.time() - t_start) * 1000)
+                print(f"[VOICE] Speech onset detected (RMS={rms_val} > threshold={_energy_threshold}, PEAK={peak_val}) after {t_onset}ms wait")
                 speaking_started = True
-                # Include pre-buffer audio so start of utterance is preserved
                 speech_frames.extend(pre_buffer)
             else:
                 chunk_counter += 1
                 if chunk_counter > timeout_chunks:
-                    print("[VOICE] Silence timeout reached.")
+                    duration = time.time() - t_start
+                    print(f"[VOICE] FRAMES READ: {chunk_counter * 1024} | MAX RMS: {max_rms_seen} | MAX PEAK: {max_peak_seen} | DURATION: {duration:.2f}s | AUDIO RECEIVED: NO (Silence/Timeout)")
                     return b""
         else:
             # Accumulating active speech
@@ -466,8 +496,13 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
                 print("[VOICE] Phrase time limit exceeded.")
                 break
 
-    if not speech_frames:
+    if not speech_frames or max_rms_seen < 35 or max_peak_seen < 120:
+        print(f"[VOICE] Low-energy audio discarded (Max RMS={max_rms_seen}, Max Peak={max_peak_seen}).")
         return b""
+
+    total_bytes = sum(len(f) for f in speech_frames)
+    duration = total_bytes / (2 * _MIC_RATE)
+    print(f"[VOICE] SPEECH CAPTURED: {total_bytes // 2} samples | MAX RMS: {max_rms_seen} | MAX PEAK: {max_peak_seen} | SPEECH DURATION: {duration:.2f}s")
 
     # Package frames to WAV bytes
     out = io.BytesIO()
@@ -481,12 +516,14 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
 
 
 
-def listen() -> str:
+
+def listen() -> tuple[str, str]:
     wav = listen_for_audio()
     if not wav:
-        return ""
+        return "", "en"
     return transcribe_audio_bytes(wav)
 
 
 # Eagerly initialize mic stream at startup to eliminate lag
 init_mic()
+

@@ -26,10 +26,20 @@ import threading
 import edge_tts
 import pygame
 
-# ── Locked voice config ────────────────────────────────────────────────────────
-VOICE = "en-GB-RyanNeural"
-RATE  = "-10%"
-PITCH = "-14Hz"
+# ── Dual Voice Configuration ──────────────────────────────────────────────────
+VOICE_EN = "en-GB-RyanNeural"
+RATE_EN  = "-3%"     # Natural human speed — friendly & conversational
+PITCH_EN = "-4Hz"    # Warm & natural tone
+
+VOICE_TE = "te-IN-ShrutiNeural"
+RATE_TE  = "+0%"
+PITCH_TE = "+0Hz"
+
+
+# Backward compatibility alias
+VOICE = VOICE_EN
+RATE  = RATE_EN
+PITCH = PITCH_EN
 
 pygame.mixer.pre_init(44100, -16, 1, 512)
 pygame.mixer.init()
@@ -39,6 +49,11 @@ _is_speaking  = False
 _ready_event  = threading.Event()   # set when audio starts playing
 _done_event   = threading.Event()   # set when playback finishes
 _stop_flag    = threading.Event()   # set to interrupt current playback
+
+
+def _is_telugu(text: str) -> bool:
+    """Checks if text contains Telugu Unicode characters."""
+    return any('\u0C00' <= char <= '\u0C7F' for char in text)
 
 
 def _fix_phonetics(text: str) -> str:
@@ -67,7 +82,7 @@ def _clean_text_for_speech(text: str) -> str:
     return text.strip()
 
 
-def _play(text: str) -> None:
+def _play(text: str, lang: str = "en") -> None:
     """Generates and plays TTS. Runs in background thread."""
     global _is_speaking
     filename = ""
@@ -77,23 +92,39 @@ def _play(text: str) -> None:
     try:
         spoken_text = _clean_text_for_speech(text)
         if not spoken_text:
-            spoken_text = "Check your screen, Harsha."
+            spoken_text = "Check your screen, Sir."
+
+        from ai import validate_and_correct_address
+        from modules.memory.profile_manager import get_profile_manager
+        pm = get_profile_manager()
+        pref_addr = pm.data.get("preferences", {}).get("preferred_address", "Sir")
+        spoken_text = validate_and_correct_address(spoken_text, target_address=pref_addr)
 
         _stop_flag.clear()
+
 
         # Create temporary file and close handle immediately to prevent WinError 32 on Windows
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as f:
             filename = f.name
             f.close()
 
-        try:
+        # Determine voice & prosody based on language & script
+        if lang == "te" or _is_telugu(spoken_text):
+            voice_id, rate_val, pitch_val = VOICE_TE, RATE_TE, PITCH_TE
+            clean = spoken_text
+            print(f"[TTS] Mode: TELUGU FEMALE ({voice_id})")
+        else:
+            voice_id, rate_val, pitch_val = VOICE_EN, RATE_EN, PITCH_EN
             clean = _fix_phonetics(spoken_text)
+            print(f"[TTS] Mode: ENGLISH MALE FRIENDLY ({voice_id})")
+
+        try:
             communicate = edge_tts.Communicate(
-                text=clean, voice=VOICE, rate=RATE, pitch=PITCH
+                text=clean, voice=voice_id, rate=rate_val, pitch=pitch_val
             )
             asyncio.run(asyncio.wait_for(communicate.save(filename), timeout=8.0))
         except Exception as e:
-            print(f"[TTS NOTE] edge-tts unavailable ({e}). Using offline SAPI5 voice fallback.")
+            print(f"[TTS NOTE] edge-tts unavailable ({e}). Using offline fallback.")
             try:
                 import pyttsx3
                 engine = pyttsx3.init()
@@ -121,7 +152,7 @@ def _play(text: str) -> None:
             try:
                 pygame.mixer.music.load(filename)
                 pygame.mixer.music.play()
-                print(f"[TTS] Playing ({VOICE}): '{spoken_text[:60]}...'")
+                print(f"[TTS] Playing ({voice_id}): '{spoken_text[:60]}...'")
             except Exception as e:
                 print(f"[TTS ERROR] Pygame play error: {e}")
                 _set_speaking(False)
@@ -158,9 +189,9 @@ def _play(text: str) -> None:
                 pass
 
 
-def speak(text: str) -> None:
+def speak(text: str, lang: str = "en") -> None:
     """
-    Speak text using locked en-GB-RyanNeural voice.
+    Speak text using locked friendly male (English) or natural female (Telugu) voice.
     Returns immediately — playback happens in background thread.
     Call wait_until_done() to block until audio finishes.
     """
@@ -171,8 +202,9 @@ def speak(text: str) -> None:
     _stop_flag.clear()
     _set_speaking(True)  # Mark speaking before thread so pipeline waits
 
-    thread = threading.Thread(target=_play, args=(text,), daemon=True)
+    thread = threading.Thread(target=_play, args=(text, lang), daemon=True)
     thread.start()
+
 
 
 def wait_until_done(timeout: float = 25.0) -> None:

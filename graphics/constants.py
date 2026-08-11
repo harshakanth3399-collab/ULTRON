@@ -23,23 +23,25 @@ AUDIO_ATTACK = 0.42
 AUDIO_RELEASE = 0.08
 AUDIO_GAIN = 2.8
 
-# ── Palette (linear RGB - MCU J.A.R.V.I.S. Amber Gold Matrix) ───────────────
-COLOR_CORE = (1.0, 0.65, 0.12)     # Radiant Amber Gold Core
-COLOR_GLOW = (1.0, 0.42, 0.05)     # Fiery Copper Orange Glow
-COLOR_ARC = (1.0, 0.78, 0.22)      # Glowing Electric Gold Filaments
-COLOR_DEEP = (0.25, 0.06, 0.01)    # Deep Amber Space Shadow
+# ── Palette (linear RGB - MCU J.A.R.V.I.S. Dual-Tone Cyan & Gold Matrix) ───
+COLOR_CORE = (0.0, 0.92, 1.00)     # Electric Holographic Cyan Core
+COLOR_GLOW = (1.0, 0.55, 0.05)     # Radiant Iron Man Amber Gold Glow
+COLOR_ARC  = (0.0, 0.85, 1.00)     # High-Intensity Cyan Arc Filaments
+COLOR_DEEP = (0.02, 0.12, 0.25)    # Deep Quantum Space Void Shadow
+
 
 # ── State multipliers ───────────────────────────────────────────────────────
 STATE_CONFIG = {
     "idle": {
-        "pulse_speed": 0.65,
-        "pulse_amp": 0.018,
-        "turbulence": 0.85,
-        "glow": 0.75,
-        "arc_activity": 0.35,
-        "rotation": 0.12,
-        "audio_influence": 0.15,
+        "pulse_speed": 1.25,
+        "pulse_amp": 0.035,
+        "turbulence": 1.45,
+        "glow": 0.85,
+        "arc_activity": 0.45,
+        "rotation": 0.45,
+        "audio_influence": 0.25,
     },
+
     "listening": {
         "pulse_speed": 1.4,
         "pulse_amp": 0.045,

@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ULTRON Mobile - Holographic AI</title>
+    <title>ULTRON 3D Holographic AI</title>
+    <!-- Three.js 3D WebGL Graphics Engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -13,14 +15,14 @@
             -webkit-tap-highlight-color: transparent;
         }
         body {
-            background-color: #000000;
+            background-color: #03070d;
             color: #ffffff;
             height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 16px;
+            padding: 16px;
             overflow: hidden;
         }
         header {
@@ -28,14 +30,14 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-top: 8px;
+            padding-top: 4px;
         }
         .logo {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 900;
             letter-spacing: 5px;
-            color: #E8630A;
-            text-shadow: 0 0 12px rgba(232,99,10,0.6);
+            color: #00E5FF;
+            text-shadow: 0 0 12px rgba(0, 229, 255, 0.7);
         }
         .status-badge {
             padding: 5px 14px;
@@ -43,42 +45,43 @@
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 2px;
-            background: rgba(232,99,10,0.1);
-            border: 1px solid rgba(232,99,10,0.45);
-            color: rgba(232,99,10,0.9);
+            background: rgba(0, 229, 255, 0.1);
+            border: 1px solid rgba(0, 229, 255, 0.45);
+            color: rgba(0, 229, 255, 0.95);
             transition: all 0.3s ease;
         }
-        /* Matrix Container */
+        /* 3D WebGL Matrix Container */
         .visualizer-container {
             position: relative;
-            width: 250px;
-            height: 250px;
+            width: 320px;
+            height: 320px;
             display: flex;
             justify-content: center;
             align-items: center;
             margin: auto;
         }
-        canvas {
+        #webgl-canvas {
             width: 100%;
             height: 100%;
+            border-radius: 50%;
         }
         .state-label {
             font-size: 12px;
             font-weight: 700;
             letter-spacing: 3px;
-            color: rgba(232,99,10,0.8);
+            color: rgba(0, 229, 255, 0.85);
             text-transform: uppercase;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             text-align: center;
         }
         .chat-container {
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            margin-bottom: 16px;
-            min-height: 50px;
+            gap: 6px;
+            margin-bottom: 12px;
+            min-height: 45px;
         }
         .chat-line {
             font-size: 13px;
@@ -89,18 +92,19 @@
             color: rgba(210, 210, 210, 0.75);
         }
         .ai-line {
-            color: rgba(255, 160, 55, 0.95);
+            color: #00E5FF;
             font-weight: 600;
+            text-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
         }
         /* Controls & Input Area */
         .controls-wrapper {
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 16px;
-            padding-bottom: 10px;
+            gap: 12px;
+            padding-bottom: 6px;
         }
         .controls {
             display: flex;
@@ -108,34 +112,34 @@
             align-items: center;
         }
         .mic-btn {
-            width: 68px;
-            height: 68px;
+            width: 64px;
+            height: 64px;
             border-radius: 50%;
-            background: radial-gradient(circle, #3A0E00 0%, #1A0500 100%);
-            border: 1px solid rgba(180,40,15,0.6);
+            background: radial-gradient(circle, #004D5A 0%, #001A24 100%);
+            border: 1px solid rgba(0, 229, 255, 0.6);
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            box-shadow: 0 0 24px rgba(232,99,10,0.25);
+            box-shadow: 0 0 24px rgba(0, 229, 255, 0.3);
             transition: all 0.2s ease;
         }
         .mic-btn.active {
             background: radial-gradient(circle, #FF3311 0%, #AA1100 100%);
-            border: 2px solid rgba(255,60,20,0.95);
-            box-shadow: 0 0 35px rgba(255,60,20,0.7);
+            border: 2px solid rgba(255, 60, 20, 0.95);
+            box-shadow: 0 0 35px rgba(255, 60, 20, 0.7);
             animation: pulse-ring 1.5s infinite;
         }
         @keyframes pulse-ring {
-            0% { box-shadow: 0 0 0 0 rgba(255,60,20,0.6); }
-            70% { box-shadow: 0 0 0 18px rgba(255,60,20,0); }
-            100% { box-shadow: 0 0 0 0 rgba(255,60,20,0); }
+            0% { box-shadow: 0 0 0 0 rgba(255, 60, 20, 0.6); }
+            70% { box-shadow: 0 0 0 18px rgba(255, 60, 20, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 60, 20, 0); }
         }
         .mic-icon {
             width: 24px;
             height: 24px;
             fill: none;
-            stroke: #E8630A;
+            stroke: #00E5FF;
             stroke-width: 2;
             stroke-linecap: round;
             stroke-linejoin: round;
@@ -151,26 +155,27 @@
         }
         .cmd-input {
             flex: 1;
-            background: rgba(30, 10, 5, 0.8);
-            border: 1px solid rgba(232, 99, 10, 0.4);
+            background: rgba(5, 25, 40, 0.85);
+            border: 1px solid rgba(0, 229, 255, 0.4);
             border-radius: 20px;
-            padding: 12px 16px;
+            padding: 10px 16px;
             color: #ffffff;
             font-size: 14px;
             outline: none;
         }
         .cmd-input::placeholder {
-            color: rgba(232, 99, 10, 0.4);
+            color: rgba(0, 229, 255, 0.45);
         }
         .send-btn {
-            background: linear-gradient(135deg, #E8630A, #B4280F);
+            background: linear-gradient(135deg, #00E5FF, #0088CC);
             border: none;
             border-radius: 20px;
             padding: 0 18px;
-            color: #ffffff;
-            font-weight: 700;
-            font-size: 13px;
+            color: #000000;
+            font-weight: 800;
+            font-size: 12px;
             cursor: pointer;
+            letter-spacing: 1px;
         }
     </style>
 </head>
@@ -181,11 +186,11 @@
     </header>
 
     <div class="visualizer-container">
-        <canvas id="matrix-canvas"></canvas>
+        <canvas id="webgl-canvas"></canvas>
     </div>
 
     <div style="width:100%; text-align:center;">
-        <div class="state-label" id="state-text">SAY 'HEY ULTRON' OR TAP MIC</div>
+        <div class="state-label" id="state-text">SAY 'HEY' OR TAP MIC</div>
 
         <div class="chat-container">
             <div class="chat-line user-line" id="user-text"></div>
@@ -212,204 +217,148 @@
     </div>
 
     <script>
-        // ── Canvas Scintillating Particle Matrix ──────────────────────────────
-        const canvas = document.getElementById('matrix-canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 250;
-        canvas.height = 250;
+        // ── Three.js 3D WebGL Holographic Engine ─────────────────────────────
+        const container = document.querySelector('.visualizer-container');
+        const canvas = document.getElementById('webgl-canvas');
+        
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+        camera.position.z = 4.2;
 
-        let time = 0;
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+        renderer.setSize(320, 320);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
         let isListening = false;
         let isSpeaking = false;
-        let wakeWordMode = true;
 
-        function renderMatrix() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const cx = canvas.width / 2;
-            const cy = canvas.height / 2;
+        // 1. Particle Core Swarm
+        const particleCount = 4500;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
 
-            time += isSpeaking ? 0.08 : (isListening ? 0.05 : 0.03);
+        const cyanColor = new THREE.Color(0x00E5FF);
+        const goldColor = new THREE.Color(0xFF9900);
 
-            const rad = isSpeaking ? 85 : (isListening ? 70 : 55);
-            const grad = ctx.createRadialGradient(cx, cy, 5, cx, cy, rad);
-            grad.addColorStop(0, isSpeaking ? 'rgba(255, 180, 50, 0.95)' : 'rgba(232, 99, 10, 0.85)');
-            grad.addColorStop(0.5, 'rgba(232, 99, 10, 0.25)');
-            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(cx, cy, rad, 0, Math.PI * 2);
-            ctx.fill();
+        for (let i = 0; i < particleCount; i++) {
+            const u = Math.random();
+            const v = Math.random();
+            const theta = u * 2.0 * Math.PI;
+            const phi = Math.acos(2.0 * v - 1.0);
+            const r = 0.85 + Math.random() * 0.45;
 
-            const ringCount = 3;
-            for (let r = 0; r < ringCount; r++) {
-                const radius = 40 + r * 28 + Math.sin(time * 2 + r) * 5;
-                const count = 35 + r * 18;
-                const dir = r % 2 === 0 ? 1 : -1;
-                const speed = time * dir * (0.8 + r * 0.3);
+            positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+            positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            positions[i * 3 + 2] = r * Math.cos(phi);
 
-                for (let i = 0; i < count; i++) {
-                    const angle = (i / count) * Math.PI * 2 + speed;
-                    const px = cx + Math.cos(angle) * radius;
-                    const py = cy + Math.sin(angle) * radius * 0.65;
-
-                    const phase = (i * 12.9898 + r * 78.233) % 6.28;
-                    const blink = 0.5 + 0.5 * Math.sin(time * 24.0 + phase);
-                    const size = (1.5 + Math.sin(phase) * 1.0 + (isSpeaking ? 1.5 : 0)) * blink;
-
-                    ctx.fillStyle = isSpeaking ? `rgba(255, 200, 60, ${0.4 + blink * 0.6})` : `rgba(232, 99, 10, ${0.3 + blink * 0.7})`;
-                    ctx.beginPath();
-                    ctx.arc(px, py, size, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-
-            requestAnimationFrame(renderMatrix);
+            const mixColor = u > 0.5 ? cyanColor : goldColor;
+            colors[i * 3] = mixColor.r;
+            colors[i * 3 + 1] = mixColor.g;
+            colors[i * 3 + 2] = mixColor.b;
         }
-        renderMatrix();
 
-        // ── Speech Recognition Engine ───────────────────────────────────────
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition = null;
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-        function initSpeech() {
-            if (!SpeechRecognition) {
-                console.log("Speech recognition not supported on this browser.");
-                return;
-            }
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 0.035,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.85,
+            blending: THREE.AdditiveBlending
+        });
 
-            recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
+        const particleSystem = new THREE.Points(geometry, particleMaterial);
+        scene.add(particleSystem);
 
-            recognition.onstart = function() {
-                isListening = true;
-                updateBadge('● LISTENING', '#FF3311');
-                document.getElementById('state-text').innerText = 'LISTENING... SAY "HEY ULTRON"';
-            };
+        // 2. Concentric Orbital Rings
+        const ringGroup = new THREE.Group();
+        const ringCount = 3;
+        for (let r = 0; r < ringCount; r++) {
+            const ringGeo = new THREE.TorusGeometry(1.1 + r * 0.3, 0.008, 16, 100);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: r % 2 === 0 ? 0x00E5FF : 0xFF9900,
+                transparent: true,
+                opacity: 0.65,
+                blending: THREE.AdditiveBlending
+            });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI * (0.2 + r * 0.25);
+            ring.rotation.y = Math.PI * (0.15 * r);
+            ringGroup.add(ring);
+        }
+        scene.add(ringGroup);
 
-            recognition.onend = function() {
-                isListening = false;
-                if (wakeWordMode) {
-                    // Auto-restart continuous wake word listening
-                    try { recognition.start(); } catch(e) {}
-                } else if (!isSpeaking) {
-                    updateBadge('● ONLINE', 'rgba(232,99,10,0.9)');
-                    document.getElementById('state-text').innerText = "SAY 'HEY ULTRON' OR TAP MIC";
-                }
-            };
+        // 3. Animation Loop
+        let clock = new THREE.Clock();
 
-            recognition.onresult = function(event) {
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    const transcript = event.results[i][0].transcript.trim();
-                    const rawLower = transcript.toLowerCase();
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
 
-                    if (event.results[i].isFinal) {
-                        console.log("Final Transcript:", transcript);
+            const speed = isSpeaking ? 1.8 : (isListening ? 1.2 : 0.6);
+            particleSystem.rotation.y = elapsedTime * 0.3 * speed;
+            particleSystem.rotation.x = Math.sin(elapsedTime * 0.2) * 0.2;
 
-                        // Wake word check
-                        if (rawLower.includes("hey ultron") || rawLower.includes("ultron") || rawLower.includes("hey altan") || rawLower.includes("hey eltron")) {
-                            updateBadge('🔥 WAKE DETECTED', '#FF6600');
-                            document.getElementById('state-text').innerText = 'WAKE DETECTED!';
-                            
-                            // Extract command after wake word if present
-                            let cmd = transcript.replace(/hey ultron|ultron|hey altan|hey eltron/gi, "").strip();
-                            if (cmd) {
-                                sendCommand(cmd);
-                            } else {
-                                sendCommand("hello");
-                            }
-                        } else if (!wakeWordMode) {
-                            sendCommand(transcript);
-                        }
-                    }
-                }
-            };
+            ringGroup.children.forEach((ring, idx) => {
+                ring.rotation.z = elapsedTime * (idx % 2 === 0 ? 0.4 : -0.5) * speed;
+            });
 
-            try { recognition.start(); } catch(e) {}
+            // Pulse radius on active states
+            const scale = 1.0 + Math.sin(elapsedTime * 3.0) * (isSpeaking ? 0.08 : 0.03);
+            particleSystem.scale.set(scale, scale, scale);
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // ── Web Socket & State Synchronization ──────────────────────────────
+        function updateBadge(text, color) {
+            const badge = document.getElementById('badge');
+            badge.innerText = text;
+            badge.style.color = color;
+            badge.style.borderColor = color;
         }
 
         function toggleMic() {
-            if (!recognition) {
-                initSpeech();
-            }
-            wakeWordMode = false;
-            if (isListening) {
-                try { recognition.stop(); } catch(e) {}
-            }
-            try { recognition.start(); } catch(e) {}
-            document.getElementById('mic-btn').classList.add('active');
-        }
-
-        function sendTextCommand() {
-            const input = document.getElementById('cmd-input');
-            const text = input.value.trim();
-            if (text) {
-                sendCommand(text);
-                input.value = '';
+            const btn = document.getElementById('mic-btn');
+            if (btn.classList.contains('active')) {
+                btn.classList.remove('active');
+                updateBadge('● ONLINE', '#00E5FF');
+                document.getElementById('state-text').innerText = "SAY 'HEY' OR TAP MIC";
+            } else {
+                btn.classList.add('active');
+                updateBadge('● LISTENING', '#FF3311');
+                document.getElementById('state-text').innerText = "LISTENING FOR SIR...";
             }
         }
 
         function handleKeyPress(e) {
-            if (e.key === 'Enter') {
-                sendTextCommand();
-            }
+            if (e.key === 'Enter') sendTextCommand();
         }
 
-        function sendCommand(text) {
-            document.getElementById('user-text').innerText = 'YOU   ' + text;
-            updateBadge('◌ THINKING', '#FFC823');
-            document.getElementById('state-text').innerText = 'PROCESSING...';
+        function sendTextCommand() {
+            const input = document.getElementById('cmd-input');
+            const val = input.value.strip ? input.value.strip() : input.value.trim();
+            if (!val) return;
+
+            document.getElementById('user-text').innerText = "You: " + val;
+            input.value = "";
 
             fetch('/api/command', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ command: text })
+                body: JSON.stringify({ command: val })
             })
             .then(res => res.json())
             .then(data => {
-                const reply = data.reply || "Done, Harsha!";
-                speakResponse(reply);
+                if (data.response) {
+                    document.getElementById('ai-text').innerText = "ULTRON: " + data.response;
+                }
             })
-            .catch(err => {
-                speakResponse("Processed command, Harsha!");
-            });
+            .catch(err => console.error(err));
         }
-
-        function speakResponse(text) {
-            isSpeaking = true;
-            updateBadge('◎ SPEAKING', '#00C8FF');
-            document.getElementById('state-text').innerText = 'SPEAKING...';
-            document.getElementById('ai-text').innerText = 'ULTRON   ' + text;
-
-            if (window.speechSynthesis) {
-                window.speechSynthesis.cancel();
-                const utter = new SpeechSynthesisUtterance(text);
-                utter.onend = function() {
-                    isSpeaking = false;
-                    updateBadge('● ONLINE', 'rgba(232,99,10,0.9)');
-                    document.getElementById('state-text').innerText = "SAY 'HEY ULTRON' OR TAP MIC";
-                };
-                window.speechSynthesis.speak(utter);
-            } else {
-                setTimeout(() => {
-                    isSpeaking = false;
-                    updateBadge('● ONLINE', 'rgba(232,99,10,0.9)');
-                    document.getElementById('state-text').innerText = "SAY 'HEY ULTRON' OR TAP MIC";
-                }, 3000);
-            }
-        }
-
-        function updateBadge(text, color) {
-            const b = document.getElementById('badge');
-            b.innerText = text;
-            b.style.color = color;
-        }
-
-        // Initialize Speech Engine on load
-        window.onload = function() {
-            initSpeech();
-        };
     </script>
 </body>
 </html>

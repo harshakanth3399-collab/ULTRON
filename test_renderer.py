@@ -6,7 +6,7 @@ from PySide6.QtGui import QSurfaceFormat
 from PySide6.QtWidgets import QApplication
 
 from graphics.renderer import UltronRenderer
-
+# 
 
 def _configure_gl() -> None:
     fmt = QSurfaceFormat()

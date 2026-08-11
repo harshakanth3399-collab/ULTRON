@@ -98,7 +98,22 @@ def process(command: str) -> tuple:
     if raw == "intruder_detected":
         return True, "Get lost! This is Harsha's laptop. You are NOT authorised."
 
+    # ── Preferred Address Management ──────────────────────────────────────────
+    if re.search(r"\b(call me|address me as|refer to me as)\s+(.*)", raw, re.IGNORECASE):
+        pm = get_profile_manager()
+        m = re.search(r"\b(call me|address me as|refer to me as)\s+(.*)", raw, re.IGNORECASE)
+        raw_addr = m.group(2).strip().strip(".!").capitalize() if m else "Sir"
+        new_addr = "Sir" if raw_addr.lower() in ["sir", "man", "bro", "dude"] else raw_addr
+        pm.set_preference("preferred_address", new_addr)
+        return True, f"Of course, {new_addr}."
+
+    if any(k in raw for k in ["what should you call me", "what do you call me", "how should you address me", "what is my title", "what do you address me as"]):
+        pm = get_profile_manager()
+        curr_addr = pm.data.get("preferences", {}).get("preferred_address", "Sir")
+        return True, f"{curr_addr}."
+
     # ── Memory commands ─────────────────────────────────────────────────────────
+
     # Structured profile memory saving: "my address is ...", "my favorite X is Y", "remember my address is ..."
     _PROFILE_PATTERNS = [
         (r"(?:my|i live in|i'm from|remember my|store my|save my)\s+(address|city|state|hometown|location)\s+(?:is|in|=|:)\s+(.*)", None),
@@ -123,8 +138,8 @@ def process(command: str) -> tuple:
     if raw.startswith("remember that"):
         note = raw.replace("remember that", "").strip()
         remember("note", note)
-        from modules.memory.profile_manager import get_profile_manager
         pm = get_profile_manager()
+
         pm.add_note(note)
         return True, f"Stored in memory, bro: '{note}'"
 
@@ -137,16 +152,16 @@ def process(command: str) -> tuple:
 
     # ── Follow-Up Conversation Memory ──────────────────────────────────────────
     if any(k in raw for k in ["what did i just say", "what was my last command", "what did i ask"]):
-        from modules.memory.profile_manager import get_profile_manager
         pm = get_profile_manager()
+
         last = pm.get_last_turn()
         if last and last.get("user"):
             return True, f"You just said: '{last['user']}', Harsha!"
         return True, "I don't have a previous command recorded yet, Harsha."
 
     if any(k in raw for k in ["what was your last reply", "what did you say", "what was your last answer"]):
-        from modules.memory.profile_manager import get_profile_manager
         pm = get_profile_manager()
+
         last = pm.get_last_turn()
         if last and last.get("ai"):
             return True, f"My last reply was: '{last['ai']}', Harsha!"
@@ -159,8 +174,8 @@ def process(command: str) -> tuple:
         "my address", "my location", "my name", "my phone", "my city", "my state",
         "my mother", "my mom", "mother's name", "mom's name", "my favorite song", "my fav song"
     ]):
-        from modules.memory.profile_manager import get_profile_manager
         pm = get_profile_manager()
+
 
         # Specific key queries (HARDWARE DISK LOOKUP FIRST)
         keys_to_check = [

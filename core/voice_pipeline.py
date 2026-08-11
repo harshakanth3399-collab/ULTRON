@@ -70,24 +70,36 @@ class VoicePipeline:
 
     # ── TTS helper — THE CRITICAL FIX ──────────────────────────────────────────
 
-    def _say(self, text: str) -> None:
+    # ── TTS helper ────────────────────────────────────────────────────────────
+
+    def _say(self, text: str, lang: str = "en") -> None:
         """
         Speak text and BLOCK until audio fully finishes playing.
-
-        This is the fix for the primary bug:
-          - speak() launches background thread, returns immediately
-          - wait_until_done() blocks until:
-              a) edge-tts generates the audio file
-              b) pygame plays it to completion
-          - Only then does microphone reopen
+        Dynamically dispatches to male English or female Telugu voice.
         """
         if not text:
             return
+        t_tts_0 = time.time()
         voice_state_manager.transition_to(VoiceState.SPEAKING, text[:80])
         self._chat("ULTRON", text)
-        speak(text)
+        speak(text, lang=lang)
+        
+        from speech_engine import _ready_event
+        t_gen_0 = time.time()
+        _ready_event.wait(timeout=6.0)
+        t_gen = int((time.time() - t_gen_0) * 1000)
+        print(f"[TIME] TTS generation: {t_gen} ms")
+
+        t_play_0 = time.time()
         wait_until_done(timeout=90.0)    # blocks here until audio truly done
-        time.sleep(0.40)                 # 400ms speaker echo dissip    # ── Wake-word detection ("Hey" trigger + inline command extraction) ───────
+        time.sleep(0.35)                 # speaker echo dissipation
+        t_play = int((time.time() - t_play_0) * 1000)
+        t_tts_total = int((time.time() - t_tts_0) * 1000)
+        print(f"[TIME] audio playback: {t_play} ms")
+        print(f"[TIME] TTS total: {t_tts_total} ms")
+
+
+    # ── Wake-word detection ("Hey" trigger + inline command extraction) ───────
 
     def _is_wake(self, text: str) -> tuple[bool, str]:
         """
@@ -152,6 +164,7 @@ class VoicePipeline:
                     )
 
                 # ── Capture audio ────────────────────────────────────────────
+                t_pipeline_0 = time.time()
                 t_cap_0 = time.time()
                 voice_state_manager.transition_to(VoiceState.RECORDING)
                 audio_bytes = listen_for_audio(
@@ -166,11 +179,13 @@ class VoicePipeline:
                     continue
 
                 t_cap = int((time.time() - t_cap_0) * 1000)
-                print(f"[TIME] speech captured: {t_cap} ms ({len(audio_bytes)} bytes)")
+                print(f"[TIME] mic capture: {t_cap} ms ({len(audio_bytes)} bytes)")
 
                 # ── Transcribe ───────────────────────────────────────────────
                 voice_state_manager.transition_to(VoiceState.TRANSCRIBING)
-                transcript = transcribe_audio_bytes(audio_bytes)
+                t_trans_0 = time.time()
+                transcript, detected_lang = transcribe_audio_bytes(audio_bytes)
+                t_trans = int((time.time() - t_trans_0) * 1000)
 
                 if not transcript:
                     continue
@@ -192,13 +207,17 @@ class VoicePipeline:
                         in_session = True
                         session_end = time.time() + 45.0
                     else:
-                        # User only said "Hey" -> Greet and open session
+                        # User only said "Hey" -> Short local acknowledgement & open session
                         self._chat("USER", transcript)
                         voice_state_manager.transition_to(VoiceState.GREETING)
-                        self._say("Hey Harsha, what can I help you with?")
+                        from modules.memory.profile_manager import get_profile_manager
+                        pm = get_profile_manager()
+                        pref_addr = pm.data.get("preferences", {}).get("preferred_address", "Sir")
+                        self._say(f"Yes, {pref_addr}?", lang=detected_lang)
                         in_session = True
                         session_end = time.time() + 45.0
                         continue
+
 
                 # ── Command processing ────────────────────────────────────────
                 self._chat("USER", transcript)
@@ -217,12 +236,14 @@ class VoicePipeline:
 
                 t_rout = int((time.time() - t_rout_0) * 1000)
                 print(f"[TIME] router: {t_rout} ms")
-                print(f"[VOICE] Response: {str(response)[:100]!r}")
+                print(f"[VOICE] Response ({detected_lang}): {str(response)[:100]!r}")
 
                 if not response:
                     response = "Done, bro."
 
-                self._say(response)
+                self._say(response, lang=detected_lang)
+                t_total = int((time.time() - t_pipeline_0) * 1000)
+                print(f"[TIME] TOTAL PIPELINE LATENCY: {t_total} ms")
 
                 # Keep session active for follow-up commands
                 in_session = True
@@ -232,6 +253,7 @@ class VoicePipeline:
                     voice_state_manager.transition_to(VoiceState.IDLE, "Session ended.")
                     self.stop()
                     break
+
 
             except Exception as exc:
                 print(f"[VOICE] Pipeline exception:")

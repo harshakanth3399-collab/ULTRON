@@ -154,55 +154,53 @@ class ParticleEngine:
 
         # ── Shockwave on audio spike ──────────────────────────────────────────
         spike = audio_level - self._prev_audio
-        if spike > 0.18:                  # voice onset detected
+        if spike > 0.12:                  # voice onset detected
             self._shockwave = 1.0         # trigger expansion
-        self._shockwave = max(0.0, self._shockwave - dt * 2.5)   # decay
+        self._shockwave = max(0.0, self._shockwave - dt * 2.2)   # decay
         self._prev_audio = audio_level
 
-        # ── Rotation accumulation (fast continuous 60 FPS motion) ─────────────
-        spin_boost = 1.0 + audio * 3.5
-        self._rotation += dt * (rotation_spd * 3.0 + audio * 1.5) * spin_boost
+        # ── Rotation accumulation (continuous kinetic fluid motion) ─────────────
+        spin_boost = 1.5 + audio * 4.5
+        self._rotation += dt * (rotation_spd * 3.8 + audio * 2.5) * spin_boost
 
         n_core   = int(self.count * 0.25)
         n_shell  = int(self.count * 0.45)
         n_tracks = self.count - n_core - n_shell
 
-        cos_r = math.cos(self._rotation * 0.35)
-        sin_r = math.sin(self._rotation * 0.35)
+        cos_r = math.cos(self._rotation * 0.50)
+        sin_r = math.sin(self._rotation * 0.50)
 
-
-        # ─── 1. NUCLEUS: breathes dramatically with audio ─────────────────────
-        # Hard pulse on voice — nucleus expands visibly when Harsha speaks
+        # ─── 1. NUCLEUS: breathes & pulses dramatically with audio ─────────────
         nucleus_pulse = (
             1.0
-            + math.sin(time * pulse_speed * 1.6) * pulse_amp * 0.5
-            + audio * 0.55                      # voice pushes nucleus outward
-            + self._shockwave * 0.35            # shockwave expands nucleus
+            + math.sin(time * pulse_speed * 2.2) * pulse_amp * 0.8
+            + audio * 0.75                      # voice pushes nucleus outward
+            + self._shockwave * 0.45            # shockwave expands nucleus
         )
         self._positions[:n_core] = self._base[:n_core] * nucleus_pulse
 
-        # ─── 2. PLASMA SHELL: turbulent FBM fluid motion ─────────────────────
+        # ─── 2. PLASMA SHELL: turbulent FBM fluid vector motion ─────────────
         bx = self._base[n_core:n_core + n_shell, 0]
         by = self._base[n_core:n_core + n_shell, 1]
         bz = self._base[n_core:n_core + n_shell, 2]
 
-        # Rotate the noise input so the turbulence itself rotates with the sphere
+        # Swirling rotation around vertical Y-axis
         rot_x = bx * cos_r - bz * sin_r
         rot_z = bx * sin_r + bz * cos_r
 
-        # Noise coordinates: time offset creates flowing motion
-        noise_scale = 1.8 + turbulence * 0.55 + audio * 1.2
-        nx = rot_x * noise_scale + time * (0.28 + audio * 0.55)
-        ny = by    * noise_scale + time * (0.22 + audio * 0.45)
-        nz = rot_z * noise_scale + time * (0.18 + audio * 0.45)
+        # Noise coordinates: time offset creates flowing fluid motion
+        noise_scale = 1.8 + turbulence * 0.6 + audio * 1.5
+        nx = rot_x * noise_scale + time * (0.45 + audio * 0.85)
+        ny = by    * noise_scale + time * (0.35 + audio * 0.75)
+        nz = rot_z * noise_scale + time * (0.30 + audio * 0.75)
 
         # Three FBM layers for rich fluid turbulence
         n1 = fbm3(nx,         ny,         nz,         octaves=3)
         n2 = fbm3(nx + 17.3,  ny + 8.1,   nz + 5.7,   octaves=2)
-        n3 = simplex3(nx * 2.1 + 42.0, ny * 2.1, nz * 2.1 + time * (0.6 + audio * 1.5))
+        n3 = simplex3(nx * 2.1 + 42.0, ny * 2.1, nz * 2.1 + time * (0.8 + audio * 2.0))
 
         # Displacement magnitude scales hard with audio — plasma erupts on voice!
-        disp_scale = 0.07 * (turbulence + audio * 2.8 + self._shockwave * 1.2) * SPHERE_RADIUS
+        disp_scale = 0.09 * (turbulence + audio * 3.5 + self._shockwave * 1.5) * SPHERE_RADIUS
         disp = np.stack((n1, n2, n3), axis=1).astype(np.float32) * disp_scale
 
         # Shell breathing pulse — each particle oscillates at its own phase
@@ -210,12 +208,13 @@ class ParticleEngine:
         shell_pulse = (
             1.0
             + np.sin(time * pulse_speed + shell_ph) * pulse_amp
-            + audio * 0.35
-            + self._shockwave * np.sin(shell_ph) * 0.2
+            + audio * 0.50
+            + self._shockwave * np.sin(shell_ph) * 0.3
         )
         self._positions[n_core:n_core + n_shell] = (
             self._base[n_core:n_core + n_shell] * shell_pulse[:, np.newaxis] + disp
         )
+
 
         # ─── 3. ORBITAL TRACKS: counter-rotate, ripple on voice ──────────────
         n_per = n_tracks // 3
