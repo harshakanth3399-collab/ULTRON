@@ -28,10 +28,11 @@ def set_focus_mode(mode: str) -> Tuple[str, str]:
     pref_address = pm.data.get("preferences", {}).get("preferred_address", "Sir")
 
     mode_upper = mode.upper()
-    if "SERIOUS" in mode_upper or "STEADY" in mode_upper:
+    if "SERIOUS" in mode_upper or "STEADY" in mode_upper or "KEEP_STUDY" in mode_upper:
         current_mode = MODE_SERIOUS_STUDY
         allowed = ALLOWED_SERIOUS_STUDY
         msg = f"Serious study zone activated, {pref_address}. Notifications muted. Only Amma can reach you now."
+
     elif "STUDY" in mode_upper:
         current_mode = MODE_STUDY_ZONE
         allowed = ALLOWED_STUDY_ZONE

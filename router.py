@@ -113,7 +113,7 @@ def process(command: str) -> tuple:
         return True, f"{curr_addr}."
 
     # ── Focus Study Zone & DND Management ─────────────────────────────────────
-    if any(k in raw for k in ["keep steady environment", "serious study zone", "serious study mode", "steady environment"]):
+    if any(k in raw for k in ["keep study environment", "study environment", "keep steady environment", "serious study zone", "serious study mode", "steady environment"]):
         from modules.focus_mode import set_focus_mode
         _, msg = set_focus_mode("SERIOUS_STUDY")
         return True, msg
@@ -122,6 +122,7 @@ def process(command: str) -> tuple:
         from modules.focus_mode import set_focus_mode
         _, msg = set_focus_mode("STUDY_ZONE")
         return True, msg
+
 
     if any(k in raw for k in ["end study zone", "normal mode", "exit study zone", "stop study zone"]):
         from modules.focus_mode import set_focus_mode
