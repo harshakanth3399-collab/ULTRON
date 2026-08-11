@@ -174,6 +174,12 @@ def process(command: str) -> tuple:
         from modules.email_engine import send_pending_reply
         return True, send_pending_reply()
 
+    # ── Document & File Auto-Trainer ──────────────────────────────────────────
+    if any(k in raw for k in ["train from documents", "scan my documents", "train my files", "read my documents"]):
+        from modules.memory.doc_trainer import auto_index_user_documents
+        return True, auto_index_user_documents()
+
+
 
 
 
