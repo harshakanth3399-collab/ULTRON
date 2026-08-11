@@ -109,7 +109,7 @@ try:
     print(f"  [AI] Host: {ai.OLLAMA_HOST}")
     print(f"  [AI] Port: {ai.OLLAMA_PORT}")
     print(f"  [AI] Connection: {status_str}")
-    print(f"  [AI] Configured Model: {ai.DEFAULT_MODEL}")
+    print(f"  [AI] Configured Model: {ai.DEFAULT_LOCAL_MODEL}")
     print(f"  [AI] Available Models: {models}")
 
     if is_healthy and len(models) > 0:
@@ -118,9 +118,10 @@ try:
         test_reply = ai.ask_ai("Say hello in 3 words.")
         print(f"  [AI] Test Prompt Reply: '{test_reply}'")
         if test_reply and "offline" not in test_reply.lower() and "unreachable" not in test_reply.lower():
-            log_test("AI Model Generation", "PASS", f"Model '{ai.DEFAULT_MODEL}' responded cleanly")
+            log_test("AI Model Generation", "PASS", f"Model '{ai.DEFAULT_LOCAL_MODEL}' responded cleanly")
         else:
             log_test("AI Model Generation", "FAIL", f"Model generation failed: '{test_reply}'")
+
     else:
         log_test("AI Backend Health", "FAIL", f"Ollama service unreachable on {ai.OLLAMA_URL}")
         log_test("AI Model Generation", "FAIL", "Backend offline")
@@ -199,7 +200,18 @@ try:
 except Exception as e:
     log_test("Persistent Address 'Sir'", "FAIL", str(e))
 
+# ── 7. SQLite Database Storage Engine ─────────────────────────────────────────
+print("\n--- 7. SQLITE DATABASE STORAGE ENGINE ---")
+try:
+    from modules.database import get_chat_stats, search_chat_history
+    stats = get_chat_stats()
+    log_test("SQLite ultron.db Engine", "PASS", f"Database initialized (Total Chats={stats['total_chats']}, Size={stats['db_size_kb']} KB)")
+except Exception as e:
+    log_test("SQLite ultron.db Engine", "FAIL", str(e))
+
+
 print("\n" + "=" * 75)
+
 print("                     DIAGNOSTIC REPORT CARD")
 print("=" * 75)
 all_pass = True
