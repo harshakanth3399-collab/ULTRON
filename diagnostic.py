@@ -220,7 +220,17 @@ except Exception as e:
     log_test("Gmail Assistant & Job Selection Alert", "FAIL", str(e))
     log_test("Personal Data & ChatGPT Trainer", "FAIL", str(e))
 
+# ── 9. Universal Autonomous Task Execution Engine ───────────────────────────────
+print("\n--- 9. UNIVERSAL AUTONOMOUS TASK EXECUTION ENGINE ---")
+try:
+    import modules.universal_executor as ue
+    res = ue.execute_universal_task("disk space")
+    log_test("Universal Autonomous Task Executor", "PASS", f"Module operational (Sample query result: '{res}')")
+except Exception as e:
+    log_test("Universal Autonomous Task Executor", "FAIL", str(e))
+
 print("\n" + "=" * 75)
+
 
 
 print("                     DIAGNOSTIC REPORT CARD")

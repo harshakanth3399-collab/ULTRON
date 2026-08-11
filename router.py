@@ -525,4 +525,7 @@ def process(command: str) -> tuple:
     if replies:
         return True, " ".join(replies)
 
-    return True, "I heard you, Harsha. Ask me anything or tell me what to open!"
+    # Universal Task Execution Engine fallback
+    from modules.universal_executor import execute_universal_task
+    univ_reply = execute_universal_task(command)
+    return True, univ_reply
