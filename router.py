@@ -179,6 +179,11 @@ def process(command: str) -> tuple:
         from modules.memory.doc_trainer import auto_index_user_documents
         return True, auto_index_user_documents()
 
+    if any(k in raw for k in ["sync phone documents", "sync documents from phone", "read phone documents", "import phone files"]):
+        from modules.adb_bridge import adb_bridge
+        return True, adb_bridge.sync_phone_documents()
+
+
 
 
 

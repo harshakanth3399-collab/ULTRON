@@ -249,6 +249,22 @@ class ADBBridge:
         self._run_adb("pull", "/sdcard/screen.png", save_path)
         return f"Phone screenshot captured and saved to {save_path}, Harsha!"
 
+    def sync_phone_documents(self) -> str:
+        """Pulls Documents and Downloads folders from phone storage and indexes them into ULTRON memory."""
+        target_dir = Path(__file__).parent.parent / "memory" / "user_documents"
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        res1 = self._run_adb("pull", "/sdcard/Documents/", str(target_dir))
+        res2 = self._run_adb("pull", "/sdcard/Download/", str(target_dir))
+
+        from modules.memory.doc_trainer import auto_index_user_documents
+        idx_res = auto_index_user_documents()
+
+        from modules.memory.profile_manager import get_profile_manager
+        pref_addr = get_profile_manager().data.get("preferences", {}).get("preferred_address", "Sir")
+        return f"Pulled documents from your phone into ULTRON memory, {pref_addr}! {idx_res}"
+
 
 # Global Singleton
 adb_bridge = ADBBridge()
+
