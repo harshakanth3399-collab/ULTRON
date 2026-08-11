@@ -209,8 +209,19 @@ try:
 except Exception as e:
     log_test("SQLite ultron.db Engine", "FAIL", str(e))
 
+# ── 8. Gmail Assistant & Personal Data Trainer ────────────────────────────────
+print("\n--- 8. GMAIL ASSISTANT & PERSONAL DATA TRAINER ---")
+try:
+    import modules.email_engine as ee
+    import modules.memory.trainer as tr
+    log_test("Gmail Assistant & Job Selection Alert", "PASS", "Module loaded (voice job alerts & formal AI reply ready)")
+    log_test("Personal Data & ChatGPT Trainer", "PASS", "Module loaded (conversations.json & TXT memory ingestion ready)")
+except Exception as e:
+    log_test("Gmail Assistant & Job Selection Alert", "FAIL", str(e))
+    log_test("Personal Data & ChatGPT Trainer", "FAIL", str(e))
 
 print("\n" + "=" * 75)
+
 
 print("                     DIAGNOSTIC REPORT CARD")
 print("=" * 75)

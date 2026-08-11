@@ -1,77 +1,93 @@
-"""Personal Data Local Model Trainer for ULTRON."""
+"""
+trainer.py - ULTRON Personal ChatGPT Data & Document Ingestion Engine
+Ingests exported ChatGPT chat logs (conversations.json / text files) and personal data
+into semantic vector memory (semantic_vector_store.json) and SQLite database (ultron.db).
+"""
 
 from __future__ import annotations
 
+import json
 import os
-import glob
-import subprocess
-from typing import Tuple
+from pathlib import Path
+from typing import Dict, List, Any
+
+from modules.database import get_connection
 from modules.memory.profile_manager import get_profile_manager
 
-KNOWLEDGE_DIR = os.path.join("data", "my_knowledge")
-MODELFILE_PATH = "Modelfile"
-MODEL_NAME = "ultron-harsha"
+SEMANTIC_STORE_PATH = Path(__file__).parent.parent.parent / "memory" / "semantic_vector_store.json"
 
 
-def build_knowledge_context() -> str:
-    """Reads all text documents in data/my_knowledge directory."""
-    os.makedirs(KNOWLEDGE_DIR, exist_ok=True)
-    files = glob.glob(os.path.join(KNOWLEDGE_DIR, "*.*"))
+def ingest_chatgpt_data(file_path: str) -> str:
+    """
+    Ingests exported ChatGPT JSON or TXT file into ULTRON's vector memory and SQLite database.
+    """
+    path = Path(file_path)
+    if not path.exists():
+        return f"File '{file_path}' not found, Sir."
 
-    knowledge_blocks = []
-    for fpath in files:
-        if fpath.endswith((".txt", ".md", ".json")):
-            try:
-                with open(fpath, "r", encoding="utf-8") as f:
-                    content = f.read().strip()
-                    if content:
-                        knowledge_blocks.append(f"--- Document: {os.path.basename(fpath)} ---\n{content}")
-            except Exception:
-                pass
-
-    return "\n\n".join(knowledge_blocks)
-
-
-def train_local_model(base_model: str = "qwen2.5:3b") -> Tuple[bool, str]:
-    """Generates a custom Modelfile and creates 'ultron-harsha' in Ollama."""
-    pm = get_profile_manager()
-    system_ctx = pm.get_system_context()
-    personal_docs = build_knowledge_context()
-
-    full_system_prompt = system_ctx
-    if personal_docs:
-        full_system_prompt += f"\n\nPersonal Knowledge Base:\n{personal_docs}"
-
-    # Escaped double quotes for Modelfile
-    clean_prompt = full_system_prompt.replace('"', '\\"')
-
-    modelfile_content = (
-        f'FROM {base_model}\n\n'
-        f'PARAMETER temperature 0.6\n'
-        f'PARAMETER num_predict 256\n\n'
-        f'SYSTEM """{clean_prompt}"""\n'
-    )
+    ingested_count = 0
 
     try:
-        with open(MODELFILE_PATH, "w", encoding="utf-8") as f:
-            f.write(modelfile_content)
+        # Load existing vector store
+        store_data = {}
+        if SEMANTIC_STORE_PATH.exists():
+            try:
+                with open(SEMANTIC_STORE_PATH, "r", encoding="utf-8") as f:
+                    store_data = json.load(f)
+            except Exception:
+                store_data = {}
 
-        print(f"🔨 Building local model '{MODEL_NAME}' in Ollama...")
-        res = subprocess.run(
-            ["ollama", "create", MODEL_NAME, "-f", MODELFILE_PATH],
-            capture_output=True,
-            text=True,
-            check=True
-        )
-        return True, f"Successfully trained '{MODEL_NAME}'! Output: {res.stdout.strip()}"
-    except FileNotFoundError:
-        return False, "Ollama executable not found in system PATH. Ensure Ollama is installed."
-    except subprocess.CalledProcessError as e:
-        return False, f"Model creation error: {e.stderr.strip()}"
+        if "documents" not in store_data:
+            store_data["documents"] = []
+
+        if path.suffix.lower() == ".json":
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            if isinstance(data, list):
+                for conv in data:
+                    title = conv.get("title", "ChatGPT Conversation")
+                    mapping = conv.get("mapping", {})
+                    for node_id, node in mapping.items():
+                        msg = node.get("message")
+                        if msg and msg.get("content", {}).get("parts"):
+                            text = " ".join(str(p) for p in msg["content"]["parts"] if isinstance(p, str)).strip()
+                            if len(text) > 20:
+                                store_data["documents"].append({
+                                    "title": title,
+                                    "content": text[:1000],
+                                    "source": "ChatGPT_Export"
+                                })
+                                ingested_count += 1
+        else:
+            with open(path, "r", encoding="utf-8") as f:
+                text = f.read()
+
+            chunks = [c.strip() for c in text.split("\n\n") if len(c.strip()) > 30]
+            for c in chunks:
+                store_data["documents"].append({
+                    "title": path.name,
+                    "content": c[:1000],
+                    "source": "Personal_Data"
+                })
+                ingested_count += 1
+
+        # Save back to semantic vector store
+        with open(SEMANTIC_STORE_PATH, "w", encoding="utf-8") as f:
+            json.dump(store_data, f, indent=2, ensure_ascii=False)
+
+        # Log into SQLite database
+        with get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO telemetry (metric_name, metric_val) VALUES (?, ?)",
+                ("personal_data_ingested", float(ingested_count))
+            )
+            conn.commit()
+
+        pm = get_profile_manager()
+        pref_addr = pm.data.get("preferences", {}).get("preferred_address", "Sir")
+        return f"Successfully ingested {ingested_count} personal data memories into ULTRON, {pref_addr}!"
+
     except Exception as e:
-        return False, f"Training failed: {e}"
-
-
-if __name__ == "__main__":
-    success, msg = train_local_model()
-    print("Training Result:", msg)
+        return f"Failed to ingest personal data: {e}"

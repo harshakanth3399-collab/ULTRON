@@ -164,6 +164,16 @@ def process(command: str) -> tuple:
         from modules.shortcuts import launch_coding_workspace
         return True, launch_coding_workspace()
 
+    # ── Gmail & Job Selection Assistant ─────────────────────────────────────────
+    if any(k in raw for k in ["check my emails", "check job applications", "check email", "check mail", "check job email"]):
+        from modules.email_engine import check_job_emails
+        return True, check_job_emails()
+
+    if any(k in raw for k in ["send reply", "send email reply", "reply to email", "send the email", "send email"]):
+        from modules.email_engine import send_pending_reply
+        return True, send_pending_reply()
+
+
 
 
 
