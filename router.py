@@ -42,7 +42,7 @@ def process(command: str) -> tuple:
     if not raw:
         return True, "I'm listening, Harsha. Speak your command!"
 
-    # Clean Whisper artifacts/prefixes (e.g. "i draw them", "i draw then")
+    # Clean Whisper artifacts/prefixes
     _NOISE_PREFIXES = [
         "i draw them", "i draw then", "i draw", "draw them",
         "and reproduce", "under produce", "underproduce"
@@ -52,12 +52,55 @@ def process(command: str) -> tuple:
             raw = raw[len(pfx):].strip()
             print(f"[ROUTER] Cleaned prefix '{pfx}' -> '{raw}'")
 
-    # Clean phonetic mishearings
+    # Clean phonetic mishearings & resolve short-term references
     raw = raw.replace("watch up", "whatsapp").replace("watchapp", "whatsapp").replace("watch app", "whatsapp")
     if raw.startswith("okay open "):
         raw = raw[10:].strip()
 
+    from modules.short_term_memory import short_term_memory
+    clean_search_query, resolved_prompt = short_term_memory.resolve_references(raw)
+    raw = clean_search_query.lower().strip()
+
     LAST_ACTIVITY = time.time()
+
+    # Helper function to wrap returns and record short-term memory
+    def _respond(status: bool, response_text: str, search_results: Optional[List[Dict[str, str]]] = None) -> tuple:
+        short_term_memory.add_turn(command, response_text, search_results=search_results)
+        return status, response_text
+
+    web_research_keywords = [
+        "search", "google", "check in google", "check the internet", "look up", "find online",
+        "latest", "current", "today", "where are", "how many locations", "what are the branches",
+        "locations in", "branches in", "q-spiders", "qspiders", "q spider", "tell me about",
+        "placement details", "current price", "nearest", "those locations", "the first one"
+    ]
+    is_history_query = any(k in command.lower() for k in ["what did i just ask", "what did i ask", "what was my last question", "what did you say", "what was your reply"])
+    is_web_query = any(k in raw or k in command.lower() for k in web_research_keywords) and not is_history_query and not any(k in raw for k in ["open google", "open chrome", "open youtube"])
+
+
+    if is_web_query:
+        from modules.web_research import research
+        print(f"[ROUTER] Categorized as WEB RESEARCH REQUEST: '{clean_search_query}'")
+        res = research(clean_search_query)
+        if res.get("success") and res.get("evidence_text"):
+            evidence = res["evidence_text"]
+            sources_str = ", ".join(res["sources"]) if res.get("sources") else "web sources"
+            prompt = (
+                f"User Question: '{command}' ({resolved_prompt})\n"
+                f"Web Evidence (from {sources_str}):\n{evidence}\n\n"
+                f"INSTRUCTIONS: Answer Harsha directly in 1-3 clear sentences based ONLY on the web evidence above. "
+                f"Cite the source site names. NEVER invent numbers, branch counts, or addresses. "
+                f"If the web evidence does not specify an exact count or detail, state clearly that it could not be verified."
+            )
+            ai_reply = ask_ai(prompt)
+            print(f"[WEB] Final answer generated: {ai_reply}")
+            return _respond(True, ai_reply, search_results=res.get("results"))
+        else:
+            fail_msg = f"I couldn't find reliable web sources to verify '{command}', Sir."
+            print(f"[WEB] Final answer generated: {fail_msg}")
+            return _respond(True, fail_msg)
+
+
 
     # ── High Priority WhatsApp & Messaging Intents (BEFORE multi-command split) ─────────
     if "whatsapp" in raw or "message" in raw:
@@ -495,24 +538,8 @@ def process(command: str) -> tuple:
 
 
 
-    # ── Live Web Search ─────────────────────────────────────────────────────────────
-    if any(k in raw for k in ["search", "google", "check in google", "locations of", "where are", "where is", "find in google"]) and not any(k in raw for k in ["open google", "open chrome"]):
-        from modules.internet import search_web_live
-        query = re.sub(r"(search|the|web|for|google|check|in|tell|me|give|information|area|names|where|are|located)", " ", raw)
-        clean_q = " ".join(query.split()).strip()
-        search_target = f"QSpiders locations {clean_q}" if "spider" in raw else (clean_q or raw)
-
-        web_info = search_web_live(search_target)
-        if web_info:
-            ai_summary = ask_ai(
-                f"Answer Harsha directly in 1-2 short sentences giving the exact real location area names based on these "
-                f"live search results:\n{web_info}"
-            )
-            if ai_summary:
-                return True, ai_summary
-        return True, f"Searched live for '{search_target}' but found no results."
-
     # ── YouTube / Play ─────────────────────────────────────────────────────────────
+
     if "youtube" in raw or raw.startswith("play "):
         execute(raw)
         search = re.sub(r"(play|youtube|open|on|and|for me|please)", "", raw).strip()

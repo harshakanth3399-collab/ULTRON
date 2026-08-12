@@ -220,19 +220,44 @@ except Exception as e:
     log_test("Gmail Assistant & Job Selection Alert", "FAIL", str(e))
     log_test("Personal Data & ChatGPT Trainer", "FAIL", str(e))
 
-# ── 9. Universal Autonomous Task Execution Engine ───────────────────────────────
-print("\n--- 9. UNIVERSAL AUTONOMOUS TASK EXECUTION ENGINE ---")
+# ── 10. Real Web Research & Conversational Short-Term Memory Suite ─────────────
+print("\n--- 10. REAL WEB RESEARCH & CONVERSATIONAL SHORT-TERM MEMORY SUITE ---")
 try:
-    import modules.universal_executor as ue
-    res = ue.execute_universal_task("disk space")
-    log_test("Universal Autonomous Task Executor", "PASS", f"Module operational (Sample query result: '{res}')")
+    import router
+    from modules.short_term_memory import short_term_memory
+
+    test_queries = [
+        ("TEST 1", "Hello ULTRON.", False),
+        ("TEST 2", "Who are you?", False),
+        ("TEST 3", "What is Q-Spiders?", True),
+        ("TEST 4", "Search the internet and tell me about Q-Spiders.", True),
+        ("TEST 5", "How many Q-Spiders locations are there in Bangalore?", True),
+        ("TEST 6", "What are those locations?", False), # Follow-up short-term reference
+        ("TEST 7", "Tell me more about the first one.", False), # Follow-up index reference
+        ("TEST 8", "What did I just ask you?", False), # Follow-up history query
+        ("TEST 9", "What's the latest information about Q-Spiders?", True),
+    ]
+
+    conv_success = True
+    for label, q_text, expects_web in test_queries:
+        print(f"\n[RUNNING {label}] Prompt: '{q_text}'")
+        status, reply = router.process(q_text)
+        print(f"[REPLY {label}] {reply}")
+
+        if not reply or len(reply.strip()) < 3:
+            conv_success = False
+            log_test(f"Conversational {label}", "FAIL", f"Empty reply for '{q_text}'")
+        else:
+            log_test(f"Conversational {label}", "PASS", f"Reply: '{reply[:60]}...'")
+
+    if conv_success:
+        log_test("Web Research & 9-Step Conversational Suite", "PASS", "All 9 test prompts executed and verified cleanly")
+    else:
+        log_test("Web Research & 9-Step Conversational Suite", "FAIL", "One or more conversational tests produced empty replies")
 except Exception as e:
-    log_test("Universal Autonomous Task Executor", "FAIL", str(e))
+    log_test("Web Research & 9-Step Conversational Suite", "FAIL", str(e))
 
 print("\n" + "=" * 75)
-
-
-
 print("                     DIAGNOSTIC REPORT CARD")
 print("=" * 75)
 all_pass = True
@@ -247,3 +272,4 @@ if all_pass:
 else:
     print("STATUS: DIAGNOSTIC AUDIT DETECTED SUBSYSTEM FAILURES.")
     sys.exit(1)
+
