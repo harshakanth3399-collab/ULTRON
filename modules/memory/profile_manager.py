@@ -164,13 +164,35 @@ class PersonalProfileManager:
         return k
 
     def commit_user_memory(self, key: str, value: Any) -> None:
-        """Writes structured memory asynchronously with key consolidation."""
+        """Writes structured memory with key consolidation and synchronous disk write."""
         mem = self.data.setdefault("user_memory", {})
         norm_key = self._normalize_key(key)
         cleaned_val = str(value).strip()
         mem[norm_key] = cleaned_val
-        self.save()
-        print(f"[MEMORY] Committed asynchronously: {norm_key} = {cleaned_val}")
+        self.save_sync()
+        print(f"[MEMORY] Committed to disk: {norm_key} = {cleaned_val}")
+
+    def delete_user_memory(self, key: str) -> bool:
+        """Permanently removes key from user_memory dictionary and flushes to disk."""
+        mem = self.data.setdefault("user_memory", {})
+        norm_key = self._normalize_key(key)
+        deleted = False
+        if norm_key in mem:
+            del mem[norm_key]
+            deleted = True
+        
+        # Check notes list as well
+        notes = self.data.get("notes", [])
+        new_notes = [n for n in notes if norm_key not in n.lower() and key.lower() not in n.lower()]
+        if len(new_notes) != len(notes):
+            self.data["notes"] = new_notes
+            deleted = True
+
+        if deleted:
+            self.save_sync()
+            print(f"[MEMORY] Deleted memory for: '{norm_key}'")
+            return True
+        return False
 
     def recall_user_memory(self, key: str) -> Optional[Any]:
         """Hardware fallback lookup: reads directly from disk/memory using consolidated keys."""
@@ -186,6 +208,7 @@ class PersonalProfileManager:
 
     def get_all_user_memory(self) -> Dict[str, Any]:
         return self.data.get("user_memory", {})
+
 
     # ── Conversational Context Buffer ──────────────────────────────────────
     def add_turn(self, user_msg: str, ai_reply: str) -> None:
@@ -211,14 +234,22 @@ def get_profile_manager() -> PersonalProfileManager:
 
 
 def commit_user_memory(key: str, value: Any) -> str:
-    """Top-level function: returns instant spoken reply while save runs in background."""
+    """Top-level function: updates memory synchronously on disk and returns confirmation."""
     pm = get_profile_manager()
     pm.commit_user_memory(key, value)
-    return "Saving that to my memory now!"
+    pref_addr = pm.data.get("preferences", {}).get("preferred_address", "Sir")
+    return f"Done, {pref_addr}. Your {key} is now {value}."
 
 
 def recall_user_memory(key: str) -> Optional[Any]:
     """Top-level convenience function for hardware-first memory lookup."""
     pm = get_profile_manager()
     return pm.recall_user_memory(key)
+
+
+def delete_user_memory(key: str) -> bool:
+    """Top-level convenience function to delete memory key permanently."""
+    pm = get_profile_manager()
+    return pm.delete_user_memory(key)
+
 

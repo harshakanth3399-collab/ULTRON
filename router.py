@@ -245,12 +245,32 @@ def process(command: str) -> tuple:
 
 
 
-    # ── Memory commands ─────────────────────────────────────────────────────────
+    # ── Memory CRUD Operations (Create, Query, Update, Delete) ─────────────────
+    from modules.memory.profile_manager import get_profile_manager, commit_user_memory, delete_user_memory, recall_user_memory
+    pm = get_profile_manager()
+    pref_addr = pm.data.get("preferences", {}).get("preferred_address", "Sir")
 
-    # Structured profile memory saving: "my address is ...", "my favorite X is Y", "remember my address is ..."
+    # 1. MEMORY DELETE: "forget my X", "delete my X", "remove my X"
+    m_del = re.search(r"\b(forget|delete|remove|clear)\s+(?:my\s+)?(favorite\s+\w+|fav\s+\w+|favourite\s+\w+|\w+)", raw, re.IGNORECASE)
+    if m_del:
+        raw_key = m_del.group(2).strip()
+        deleted = delete_user_memory(raw_key)
+        if deleted:
+            return _respond(True, f"Forgotten, {pref_addr}. Your {raw_key} has been removed from memory.")
+        return _respond(True, f"I didn't have your {raw_key} saved in memory, {pref_addr}.")
+
+    # 2. MEMORY UPDATE: "change my X to Y", "update my X to Y", "set my X to Y"
+    m_upd = re.search(r"\b(change|update|set|replace)\s+(?:my\s+)?(favorite\s+\w+|fav\s+\w+|favourite\s+\w+|\w+)\s+(?:to|=|is)\s+(.*)", raw, re.IGNORECASE)
+    if m_upd:
+        raw_key = m_upd.group(2).strip()
+        new_val = m_upd.group(3).strip().strip(".!")
+        commit_user_memory(raw_key, new_val)
+        return _respond(True, f"Done, {pref_addr}. Your {raw_key} is now {new_val}.")
+
+    # 3. MEMORY CREATE: "my favorite X is Y", "my address is X", "remember my X is Y"
     _PROFILE_PATTERNS = [
         (r"(?:my|i live in|i'm from|remember my|store my|save my)\s+(address|city|state|hometown|location)\s+(?:is|in|=|:)\s+(.*)", None),
-        (r"my\s+(?:favorite|fav|favourite)\s+(\w+)\s+is\s+(.*)", None),
+        (r"my\s+(?:favorite|fav|favourite)\s+(\w+)\s+is\s+(.*)", "favorite_song"),
         (r"my\s+(name|age|birthday|phone|email|college|school|company|job|address|city|state)\s+is\s+(.*)", None),
         (r"i\s+(?:am|live|work|study)\s+(?:in|at|from)\s+(.*)", "location"),
     ]
@@ -258,23 +278,27 @@ def process(command: str) -> tuple:
     for pattern, forced_key in _PROFILE_PATTERNS:
         match = re.search(pattern, raw, re.IGNORECASE)
         if match:
-            from modules.memory.profile_manager import commit_user_memory
-            if forced_key:
+            if forced_key and "favorite" in pattern:
+                key = f"favorite_{match.group(1).strip()}"
+                value = match.group(2).strip()
+            elif forced_key:
                 key = forced_key
                 value = match.group(1).strip()
             else:
                 key = match.group(1).strip()
                 value = match.group(2).strip()
-            resp = commit_user_memory(key, value)
-            return True, resp
+            commit_user_memory(key, value)
+            return _respond(True, f"Saved, {pref_addr}. Your {key} is set to {value}.")
+
 
     if raw.startswith("remember that"):
         note = raw.replace("remember that", "").strip()
         remember("note", note)
         pm = get_profile_manager()
-
+        pref_addr = pm.data.get("preferences", {}).get("preferred_address", "Sir")
         pm.add_note(note)
-        return True, f"Stored in memory, bro: '{note}'"
+        return _respond(True, f"Stored in memory, {pref_addr}: '{note}'")
+
 
     # ── System automation & Diagnostics ────────────────────────────────────────
     if any(k in raw for k in ["volume", "battery", "cpu", "system status", "brightness", "lock screen", "lock laptop", "disk space", "storage space", "my ip", "ip address", "mute", "unmute"]):
