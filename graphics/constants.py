@@ -23,11 +23,12 @@ AUDIO_ATTACK = 0.42
 AUDIO_RELEASE = 0.08
 AUDIO_GAIN = 2.8
 
-# ── Palette (linear RGB - MCU J.A.R.V.I.S. Dual-Tone Cyan & Gold Matrix) ───
-COLOR_CORE = (0.0, 0.92, 1.00)     # Electric Holographic Cyan Core
-COLOR_GLOW = (1.0, 0.55, 0.05)     # Radiant Iron Man Amber Gold Glow
-COLOR_ARC  = (0.0, 0.85, 1.00)     # High-Intensity Cyan Arc Filaments
-COLOR_DEEP = (0.02, 0.12, 0.25)    # Deep Quantum Space Void Shadow
+# ── Palette (linear RGB - ULTRON Red Holographic & Cyan Energy Matrix) ───
+COLOR_CORE = (1.0, 0.0, 0.20)     # Electric Crimson Red (#FF0033) Core
+COLOR_GLOW = (0.0, 0.90, 1.00)     # Radiant Holographic Cyan (#00E5FF) Glow
+COLOR_ARC  = (1.0, 0.15, 0.05)     # High-Intensity Crimson Arc Filaments
+COLOR_DEEP = (0.15, 0.0, 0.05)     # Deep Quantum Crimson Void Shadow
+
 
 
 # ── State multipliers ───────────────────────────────────────────────────────

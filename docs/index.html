@@ -239,7 +239,7 @@
         const colors = new Float32Array(particleCount * 3);
 
         const cyanColor = new THREE.Color(0x00E5FF);
-        const goldColor = new THREE.Color(0xFF9900);
+        const redColor = new THREE.Color(0xFF0033);
 
         for (let i = 0; i < particleCount; i++) {
             const u = Math.random();
@@ -252,11 +252,12 @@
             positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
             positions[i * 3 + 2] = r * Math.cos(phi);
 
-            const mixColor = u > 0.5 ? cyanColor : goldColor;
+            const mixColor = u > 0.4 ? redColor : cyanColor;
             colors[i * 3] = mixColor.r;
             colors[i * 3 + 1] = mixColor.g;
             colors[i * 3 + 2] = mixColor.b;
         }
+
 
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));

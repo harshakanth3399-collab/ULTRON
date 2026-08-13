@@ -187,8 +187,10 @@ class VoicePipeline:
                 transcript, detected_lang = transcribe_audio_bytes(audio_bytes)
                 t_trans = int((time.time() - t_trans_0) * 1000)
 
-                if not transcript:
+                if not transcript or not transcript.strip():
+                    print("[VOICE] Empty transcript — ignored.")
                     continue
+
 
                 # ── Wake mode: check for 'Hey' wake trigger ──────────────────
                 if not in_session:
