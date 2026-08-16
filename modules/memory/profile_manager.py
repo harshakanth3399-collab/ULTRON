@@ -120,23 +120,44 @@ class PersonalProfileManager:
             return ""
         return f"{prefix}{addr}"
 
+    def get_active_language(self) -> str:
+        prefs = self.data.get("preferences", {})
+        return prefs.get("active_language", "en")
+
+    def set_active_language(self, lang: str) -> None:
+        valid_lang = "te" if lang.lower() in ["te", "telugu"] else "en"
+        self.set_preference("active_language", valid_lang)
+
     def get_system_context(self) -> str:
-        """Returns personalized system prompt context for Ollama."""
+        """Returns personalized system prompt context for Ollama/Groq."""
         notes_str = "; ".join(self.data.get("notes", [])) or "None yet."
         prefs = self.data.get("preferences", {})
         preferred_address = self.get_preferred_address()
+        active_lang = self.get_active_language()
         pref_str = ", ".join([f"{k}: {v}" for k, v in prefs.items()])
         user_mem = self.data.get("user_memory", {})
         mem_str = ", ".join([f"{k}: {v}" for k, v in user_mem.items()]) if user_mem else "None yet."
 
         addr_instruction = f"Address the user as '{preferred_address}'." if preferred_address else "Respond naturally without forcing titles like 'Sir'."
 
+        if active_lang == "te":
+            lang_instruction = (
+                "STRICT LANGUAGE DIRECTIVE: The user has explicitly requested to speak in Telugu. "
+                "Respond in clear, natural, colloquial Andhra Pradesh / Rayalaseema (Anantapur) Telugu phrasing."
+            )
+        else:
+            lang_instruction = (
+                "STRICT LANGUAGE DIRECTIVE: ALWAYS respond entirely in English. "
+                "Do NOT respond in Telugu, Hindi, or any other language unless the user explicitly commands 'Switch to Telugu'. "
+                "Merely mentioning the word 'Telugu', locations like Anantapur, or profile details MUST NOT make you switch language."
+            )
+
         return (
             f"You are ULTRON, Harsha's personal AI assistant and loyal companion.\n"
             f"Personality Directives:\n"
             f"- Speak with ULTRON's formidable intelligence and warm, natural tone.\n"
             f"- {addr_instruction}\n"
-            f"- TELUGU DIALECT RULE: When responding in Telugu, use authentic colloquial Andhra Pradesh / Rayalaseema (Anantapur) Telugu phrasing ('నమస్కారం', 'చెప్పండి', 'బాగున్నారా', 'ఏమిటి విశేషాలు'). NEVER use stiff textbook or newsroom Telugu ('గ్రంథిక భాష').\n"
+            f"- {lang_instruction}\n"
             f"- Keep ALL responses extremely CONCISE, crisp, and direct (1 short sentence max, 2 sentences max if necessary).\n"
             f"- User Name: Harsha\n"
             f"- User Location: Anantapur, Andhra Pradesh\n"
@@ -145,6 +166,7 @@ class PersonalProfileManager:
             f"- Harsha's Saved Notes: {notes_str}\n"
             f"- Harsha's Personal Memory: {mem_str}\n"
         )
+
 
 
 

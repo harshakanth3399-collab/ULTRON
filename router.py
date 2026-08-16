@@ -78,7 +78,18 @@ def process(command: str) -> tuple:
         short_term_memory.add_turn(command, response_text, search_results=search_results)
         return status, response_text
 
+    # ── Language Mode Management ────────────────────────────────────────────────
+    # Default is ALWAYS English ("en"). Switches ONLY on explicit user command.
+    if any(k in raw for k in ["switch to telugu", "speak in telugu", "speak telugu", "talk in telugu", "change language to telugu", "use telugu"]):
+        pm.set_active_language("te")
+        return _respond(True, "తెలుగు భాషలోకి మారానండి.")
+
+    if any(k in raw for k in ["switch to english", "switch back to english", "speak in english", "speak english", "talk in english", "change language to english", "use english"]):
+        pm.set_active_language("en")
+        return _respond(True, "Switched back to English.")
+
     # ── Preferred Address & Title Management ───────────────────────────────────
+
     # Handle: "Don't always call me sir, remember it", "Don't call me sir", "Call me Sir", "What should you call me"
     if any(k in raw for k in ["don't always call me sir", "dont always call me sir", "don't call me sir", "dont call me sir", "stop calling me sir", "no need to call me sir"]):
         pm.set_preference("preferred_address", "Harsha")

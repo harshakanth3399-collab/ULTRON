@@ -214,8 +214,9 @@ class VoicePipeline:
                         voice_state_manager.transition_to(VoiceState.GREETING)
                         from modules.memory.profile_manager import get_profile_manager
                         pm = get_profile_manager()
-                        pref_addr = pm.data.get("preferences", {}).get("preferred_address", "Sir")
-                        self._say(f"Yes, {pref_addr}?", lang=detected_lang)
+                        pref_addr = pm.get_preferred_address() or "Harsha"
+                        active_lang = pm.get_active_language()
+                        self._say(f"Yes, {pref_addr}?", lang=active_lang)
                         in_session = True
                         session_end = time.time() + 45.0
                         continue
@@ -238,12 +239,16 @@ class VoicePipeline:
 
                 t_rout = int((time.time() - t_rout_0) * 1000)
                 print(f"[TIME] router: {t_rout} ms")
-                print(f"[VOICE] Response ({detected_lang}): {str(response)[:100]!r}")
+                from modules.memory.profile_manager import get_profile_manager
+                pm = get_profile_manager()
+                active_lang = pm.get_active_language()
+                print(f"[VOICE] Response ({active_lang}): {str(response)[:100]!r}")
 
                 if not response:
-                    response = "Done, bro."
+                    response = "Done."
 
-                self._say(response, lang=detected_lang)
+                self._say(response, lang=active_lang)
+
                 t_total = int((time.time() - t_pipeline_0) * 1000)
                 print(f"[TIME] TOTAL PIPELINE LATENCY: {t_total} ms")
 

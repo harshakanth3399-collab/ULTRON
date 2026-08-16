@@ -108,8 +108,10 @@ def _play(text: str, lang: str = "en") -> None:
             filename = f.name
             f.close()
 
+        active_lang = pm.get_active_language()
+
         # Determine voice & prosody based on language & script
-        if lang == "te" or _is_telugu(spoken_text):
+        if active_lang == "te" or (lang == "te" and _is_telugu(spoken_text)):
             voice_id, rate_val, pitch_val = VOICE_TE, RATE_TE, PITCH_TE
             clean = spoken_text
             print(f"[TTS] Mode: TELUGU FEMALE ({voice_id})")
@@ -117,6 +119,7 @@ def _play(text: str, lang: str = "en") -> None:
             voice_id, rate_val, pitch_val = VOICE_EN, RATE_EN, PITCH_EN
             clean = _fix_phonetics(spoken_text)
             print(f"[TTS] Mode: ENGLISH MALE FRIENDLY ({voice_id})")
+
 
         try:
             communicate = edge_tts.Communicate(

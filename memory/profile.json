@@ -14,7 +14,8 @@
             "Laptop",
             "Mobile"
         ],
-        "preferred_address": "Harsha"
+        "preferred_address": "Harsha",
+        "active_language": "en"
     },
     "notes": [
         "User requested not to be called Sir all the time."

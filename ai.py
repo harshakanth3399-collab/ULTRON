@@ -120,15 +120,22 @@ def ask_ai(prompt: str) -> str:
     t0 = time.time()
     pm = get_profile_manager()
     pref_address = pm.get_preferred_address()
+    active_lang = pm.get_active_language()
     system_ctx = pm.get_system_context()
 
     addr_prompt_line = f"Address the user as '{pref_address}'." if pref_address else "Respond naturally without forcing titles like 'Sir'."
 
+    if active_lang == "te":
+        lang_line = "STRICT LANGUAGE RULE: Respond in clear, natural Telugu script/phrasing as requested."
+    else:
+        lang_line = "STRICT LANGUAGE RULE: ALWAYS respond in 100% English. Do NOT output Telugu script or Telugu words."
+
     full_system_prompt = (
         f"{system_ctx}\n"
         f"STRICT FORMATTING RULE: Keep your response extremely short and concise (1 short sentence max, 15-20 words limit). "
-        f"Do NOT give long explanations. {addr_prompt_line}"
+        f"Do NOT give long explanations. {addr_prompt_line} {lang_line}"
     )
+
 
 
     raw_answer = None
