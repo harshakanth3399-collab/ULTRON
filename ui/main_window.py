@@ -6,7 +6,7 @@ Design from reference images:
   - Particle renderer occupies the entire canvas
   - Minimal transparent amber/gold overlay:
       top-left:     ULTRON wordmark
-      top-right:    live status badge
+      top-right:    live status badge + exit button
       bottom-center: state text (LISTENING... THINKING... etc.)
       bottom-left:  clean conversation (YOU / ULTRON lines)
       bottom-right: red mic button
@@ -140,7 +140,6 @@ class UltronWindow(QMainWindow):
         self._ov = QWidget(self._renderer)
         self._ov.setStyleSheet("background:transparent;")
 
-
         # ── Wordmark ──────────────────────────────────────────────────────
         self._wm = QLabel(self._ov)
         self._wm.setText(
@@ -179,7 +178,6 @@ class UltronWindow(QMainWindow):
         self._close_btn.clicked.connect(self.clean_shutdown)
 
         # ── State label ───────────────────────────────────────────────────
-
         self._state = QLabel("Say  'Hey Ultron'  to begin", self._ov)
         self._state.setAlignment(Qt.AlignCenter)
         self._state.setStyleSheet(
@@ -228,13 +226,9 @@ class UltronWindow(QMainWindow):
         self._heartbeat.start(30_000)  # Every 30s, silent
 
         print("[BOOT] renderer initialized", flush=True)
-        # NOTE: showFullScreen() is called by app.py AFTER __init__ returns.
-        # Do NOT call it here — doing so before app.exec() can cause Qt to
-        # collapse the window and immediately fire lastWindowClosed -> quit.
 
     def _on_heartbeat(self) -> None:
         self._heartbeat_count += 1
-        # Only log every 60th beat (~30 min) to avoid console flood
         if self._heartbeat_count % 60 == 1:
             print(f"[HEALTH] ULTRON alive — heartbeat #{self._heartbeat_count}", flush=True)
 
@@ -281,6 +275,112 @@ class UltronWindow(QMainWindow):
         conv_h = self._conv_you.height() + self._conv_ai.height() + 6
         self._conv_you.move(P, H - conv_h - P - 8)
         self._conv_ai.move(P, H - self._conv_ai.height() - P - 8)
+
+    # ── Helpers ───────────────────────────────────────────────────────────────
+
+    def _badge_style(self, color: str) -> str:
+        dim = color.replace("0.9)", "0.35)")
+        return (
+            f"background:rgba(232,99,10,0.09);"
+            f"border:1px solid {dim};"
+            f"border-radius:14px;"
+            f"color:{color};"
+            f"font-size:11px;font-weight:700;letter-spacing:2px;padding:4px 14px;"
+        )
+
+    def _is_speaking(self) -> bool:
+        try:
+            from speech_engine import speaking
+            return speaking()
+        except Exception:
+            return False
+
+    # ── Voice state callbacks ─────────────────────────────────────────────────
+
+    def _on_voice_state(self, state: VoiceState, message: str) -> None:
+        QTimer.singleShot(0, lambda: self._apply_state(state))
+
+    def _apply_state(self, state: VoiceState) -> None:
+        AMBER = "rgba(232,99,10,0.9)"
+        DIM   = "rgba(232,99,10,0.45)"
+        RED   = "rgba(255,55,25,0.9)"
+        CYAN  = "rgba(0,200,255,0.9)"
+        WHITE = "rgba(240,240,240,0.88)"
+        GOLD  = "rgba(255,200,45,0.9)"
+
+        mic_active = False
+
+        if state == VoiceState.IDLE:
+            self._set_badge("● ONLINE",    AMBER)
+            self._set_state("Say  'Hey Ultron'  to begin", DIM)
+            self._renderer.set_state(UltronState.IDLE)
+
+        elif state == VoiceState.WAKE_DETECTED:
+            self._set_badge("⚡ WAKE",     GOLD)
+            self._set_state("Wake detected...", GOLD)
+
+        elif state == VoiceState.GREETING:
+            self._set_badge("◎ GREETING",  AMBER)
+            self._set_state("", AMBER)
+            self._renderer.set_state(UltronState.SPEAKING)
+
+        elif state in (VoiceState.LISTENING, VoiceState.RECORDING):
+            self._set_badge("● LISTENING", RED)
+            self._set_state("Listening...", RED)
+            self._renderer.set_state(UltronState.LISTENING)
+            mic_active = True
+
+        elif state == VoiceState.TRANSCRIBING:
+            self._set_badge("◌ UNDERSTANDING", WHITE)
+            self._set_state("Understanding...", WHITE)
+
+        elif state == VoiceState.PROCESSING:
+            self._set_badge("◌ THINKING",  GOLD)
+            self._set_state("Thinking...", GOLD)
+
+        elif state == VoiceState.SPEAKING:
+            self._set_badge("◎ SPEAKING",  CYAN)
+            self._set_state("", CYAN)
+            self._renderer.set_state(UltronState.SPEAKING)
+
+        elif state == VoiceState.ERROR:
+            self._set_badge("⚠ ERROR",     RED)
+            self._set_state("Recovering...", RED)
+            self._renderer.set_state(UltronState.IDLE)
+
+        self._mic.set_active(mic_active)
+        self._layout_widgets()
+
+    def _set_badge(self, text: str, color: str) -> None:
+        self._badge.setText(text)
+        self._badge.setStyleSheet(self._badge_style(color))
+
+    def _set_state(self, text: str, color: str) -> None:
+        self._state.setText(text)
+        self._state.setStyleSheet(
+            f"color:{color};font-size:13px;font-weight:700;"
+            f"letter-spacing:4px;background:transparent;"
+        )
+
+    # ── Chat callback ─────────────────────────────────────────────────────────
+
+    def _on_chat(self, speaker: str, text: str) -> None:
+        QTimer.singleShot(0, lambda: self._update_chat(speaker, text))
+
+    def _update_chat(self, speaker: str, text: str) -> None:
+        short = text[:120] + ("..." if len(text) > 120 else "")
+        if speaker == "USER":
+            self._conv_you.setText(f"YOU    {short}")
+        elif speaker == "ULTRON":
+            self._conv_ai.setText(f"ULTRON   {short}")
+        self._layout_widgets()
+
+    # ── Tick ──────────────────────────────────────────────────────────────────
+
+    def _tick(self) -> None:
+        self._pulse_t += FRAME_MS / 1000.0
+        self._mic.set_pulse(self._pulse_t)
+        self._renderer.update()
 
     # ── Clean Shutdown ────────────────────────────────────────────────────────
 
@@ -333,4 +433,3 @@ class UltronWindow(QMainWindow):
     def closeEvent(self, event) -> None:
         self.clean_shutdown()
         super().closeEvent(event)
-
