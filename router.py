@@ -170,17 +170,20 @@ def process(command: str) -> tuple:
             prompt = (
                 f"User Question: '{command}' ({resolved_prompt})\n"
                 f"Web Evidence (from {sources_str}):\n{evidence}\n\n"
-                f"INSTRUCTIONS: Answer Harsha directly in 1-3 clear sentences based ONLY on the web evidence above. "
-                f"Cite the source site names. NEVER invent numbers, branch counts, or addresses. "
-                f"If the web evidence does not specify an exact count or detail, state clearly that it could not be verified."
+                f"INSTRUCTIONS: Answer Harsha directly in 1-3 clear sentences based ONLY on the verified web evidence above. "
+                f"Prefer official/primary sources. Compare multiple snippets if present. "
+                f"If reliable sources disagree, explicitly state that they disagree. "
+                f"If sufficient evidence is unavailable to verify the answer, state 'I couldn't verify that'. "
+                f"NEVER invent, guess, or use stale pre-training memory for live factual data."
             )
             ai_reply = ask_ai(prompt)
             print(f"[WEB] Final answer generated: {ai_reply}")
             return _respond(True, ai_reply, search_results=res.get("results"))
         else:
-            fail_msg = f"I couldn't find reliable web sources to verify '{command}'{pm.get_address_suffix(', ')}."
+            fail_msg = f"I couldn't verify that{pm.get_address_suffix(', ')}."
             print(f"[WEB] Final answer generated: {fail_msg}")
             return _respond(True, fail_msg)
+
 
     # ── High Priority YouTube / Music / Action Intents (BEFORE Memory Read) ───
     # Distinguishes ACTION (play song on YouTube) from MEMORY QUERY (what is my favorite song)
