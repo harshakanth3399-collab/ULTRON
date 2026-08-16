@@ -115,18 +115,21 @@ def _ask_groq(prompt: str, system_prompt: str, api_key: str) -> Optional[str]:
 def ask_ai(prompt: str) -> str:
     """
     Invokes Hybrid AI Engine (Groq Online -> Ollama Offline fallback),
-    sanitizes addressing ('Sir'), and logs to SQLite database (memory/ultron.db).
+    sanitizes addressing, and logs to SQLite database (memory/ultron.db).
     """
     t0 = time.time()
     pm = get_profile_manager()
-    pref_address = pm.data.get("preferences", {}).get("preferred_address", "Sir")
+    pref_address = pm.get_preferred_address()
     system_ctx = pm.get_system_context()
+
+    addr_prompt_line = f"Address the user as '{pref_address}'." if pref_address else "Respond naturally without forcing titles like 'Sir'."
 
     full_system_prompt = (
         f"{system_ctx}\n"
         f"STRICT FORMATTING RULE: Keep your response extremely short and concise (1 short sentence max, 15-20 words limit). "
-        f"Do NOT give long explanations. ALWAYS address the user as {pref_address}."
+        f"Do NOT give long explanations. {addr_prompt_line}"
     )
+
 
     raw_answer = None
     model_used = "groq-llama3.3"

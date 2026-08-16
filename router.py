@@ -2,24 +2,32 @@
 router.py - ULTRON Command Router
 
 Routes English transcript to the appropriate handler:
-  1. Memory commands
-  2. System automation
-  3. Daily life (WhatsApp, phone, banking, files, etc.) -- NEW
-  4. Web commands (YouTube, Google, search)
-  5. AI (Ollama local model with fallback)
+  1. Preferred Address & Title Management
+  2. Web Research Engine
+  3. Action Intent (YouTube, Music, Playback)
+  4. Explicit Memory CRUD (Set, Update, Delete)
+  5. Follow-Up Context & Passive Memory Queries
+  6. Desktop & System Automation
+  7. Hybrid AI Generation
 """
 from __future__ import annotations
 
 import re
 import time
+from typing import Optional, List, Dict, Any
 
 from corrector import correct
 from planner import plan
 from intent import detect_intent
-from commands import execute
+from commands import execute, play_youtube
 from ai import ask_ai
 from memory import remember, recall
-from modules.memory.profile_manager import get_profile_manager
+from modules.memory.profile_manager import (
+    get_profile_manager,
+    commit_user_memory,
+    delete_user_memory,
+    recall_user_memory,
+)
 
 AWAKE = True
 LAST_ACTIVITY = time.time()
@@ -40,7 +48,9 @@ def process(command: str) -> tuple:
 
     raw = command.lower().strip()
     if not raw:
-        return True, "I'm listening, Harsha. Speak your command!"
+        return True, "I'm listening. Speak your command!"
+
+    pm = get_profile_manager()
 
     # Clean Whisper artifacts/prefixes
     _NOISE_PREFIXES = [
@@ -68,6 +78,27 @@ def process(command: str) -> tuple:
         short_term_memory.add_turn(command, response_text, search_results=search_results)
         return status, response_text
 
+    # ── Preferred Address & Title Management ───────────────────────────────────
+    # Handle: "Don't always call me sir, remember it", "Don't call me sir", "Call me Sir", "What should you call me"
+    if any(k in raw for k in ["don't always call me sir", "dont always call me sir", "don't call me sir", "dont call me sir", "stop calling me sir", "no need to call me sir"]):
+        pm.set_preference("preferred_address", "Harsha")
+        pm.add_note("User requested not to be called Sir all the time.")
+        return _respond(True, "Understood! I'll address you naturally, Harsha.")
+
+    if re.search(r"\b(call me|address me as|refer to me as)\s+(.*)", raw, re.IGNORECASE):
+        m = re.search(r"\b(call me|address me as|refer to me as)\s+(.*)", raw, re.IGNORECASE)
+        raw_addr = m.group(2).strip().strip(".!").capitalize() if m else "Sir"
+        new_addr = "Harsha" if raw_addr.lower() in ["no sir", "harsha", "none", "nothing"] else ("Sir" if raw_addr.lower() in ["sir", "man", "bro", "dude"] else raw_addr)
+        pm.set_preference("preferred_address", new_addr)
+        if new_addr == "Harsha" or not new_addr:
+            return _respond(True, "Got it! I won't call you Sir.")
+        return _respond(True, f"Of course, {new_addr}.")
+
+    if any(k in raw for k in ["what should you call me", "what do you call me", "how should you address me", "what is my title", "what do you address me as"]):
+        curr_addr = pm.get_preferred_address() or "Harsha"
+        return _respond(True, f"{curr_addr}.")
+
+    # ── Category C: Web Research Requests ──────────────────────────────────────
     web_research_keywords = [
         "search", "google", "check in google", "check the internet", "look up", "find online",
         "latest", "current", "today", "where are", "how many locations", "what are the branches",
@@ -75,8 +106,7 @@ def process(command: str) -> tuple:
         "placement details", "current price", "nearest", "those locations", "the first one"
     ]
     is_history_query = any(k in command.lower() for k in ["what did i just ask", "what did i ask", "what was my last question", "what did you say", "what was your reply"])
-    is_web_query = any(k in raw or k in command.lower() for k in web_research_keywords) and not is_history_query and not any(k in raw for k in ["open google", "open chrome", "open youtube"])
-
+    is_web_query = any(k in raw or k in command.lower() for k in web_research_keywords) and not is_history_query and not any(k in raw for k in ["open google", "open chrome", "open youtube", "play my favorite song", "play this song"])
 
     if is_web_query:
         from modules.web_research import research
@@ -85,6 +115,7 @@ def process(command: str) -> tuple:
         if res.get("success") and res.get("evidence_text"):
             evidence = res["evidence_text"]
             sources_str = ", ".join(res["sources"]) if res.get("sources") else "web sources"
+            addr_suffix = pm.get_address_suffix(", ")
             prompt = (
                 f"User Question: '{command}' ({resolved_prompt})\n"
                 f"Web Evidence (from {sources_str}):\n{evidence}\n\n"
@@ -96,13 +127,60 @@ def process(command: str) -> tuple:
             print(f"[WEB] Final answer generated: {ai_reply}")
             return _respond(True, ai_reply, search_results=res.get("results"))
         else:
-            fail_msg = f"I couldn't find reliable web sources to verify '{command}', Sir."
+            fail_msg = f"I couldn't find reliable web sources to verify '{command}'{pm.get_address_suffix(', ')}."
             print(f"[WEB] Final answer generated: {fail_msg}")
             return _respond(True, fail_msg)
 
+    # ── High Priority YouTube / Music / Action Intents (BEFORE Memory Read) ───
+    # Distinguishes ACTION (play song on YouTube) from MEMORY QUERY (what is my favorite song)
+    is_play_intent = any(k in raw for k in [
+        "play ", "open youtube", "search youtube", "watch ", "play on youtube", "play in youtube"
+    ]) and not any(k in raw for k in ["pause music", "volume", "next track", "previous track"])
 
+    if is_play_intent:
+        target_song = ""
+        
+        # 1. Favorite song action
+        if any(k in raw for k in ["favorite song", "fav song", "favourite song", "favorite track", "fav track"]):
+            val = pm.recall_user_memory("favorite_song")
+            if val:
+                target_song = val
+            else:
+                target_song = short_term_memory.last_resolved_song
+        
+        # 2. Conversational context reference ("this song", "that song", "it", "the song")
+        elif any(k in raw for k in ["this song", "that song", "the song", "play it", "open that", "play that"]):
+            target_song = short_term_memory.last_resolved_song or pm.recall_user_memory("favorite_song")
 
-    # ── High Priority WhatsApp & Messaging Intents (BEFORE multi-command split) ─────────
+        # 3. Explicit song target in prompt
+        if not target_song:
+            clean_target = raw
+            fillers = [
+                "open youtube and play", "play on youtube", "play in youtube",
+                "in the youtube tab you have opened", "i want you to play",
+                "now play this song in youtube", "now play", "open youtube",
+                "search youtube for", "play youtube", "play for me",
+                "play", "youtube", "please", "on youtube", "in youtube"
+            ]
+            for f in fillers:
+                clean_target = clean_target.replace(f, "")
+            clean_target = clean_target.strip().strip(".!")
+
+            if clean_target and clean_target not in ["this song", "that song", "the song", "it", "that", "song"]:
+                target_song = clean_target
+
+        if target_song:
+            short_term_memory.last_resolved_song = target_song
+            search_query = re.sub(r"[^\w\s]", " ", target_song)
+            search_query = " ".join(search_query.split()).strip()
+            
+            play_youtube(search_query)
+            
+            clean_title = target_song.split(",")[0].replace("song from", "").strip().title()
+            addr_suffix = pm.get_address_suffix(", ")
+            return _respond(True, f"Playing {clean_title} on YouTube for you{addr_suffix}.")
+
+    # ── High Priority WhatsApp & Messaging Intents ──────────────────────────────
     if "whatsapp" in raw or "message" in raw:
         from modules.adb_bridge import adb_bridge
         m_msg = re.search(r"message\s+(.*?)\s+to\s+(.*)", raw, re.IGNORECASE) or re.search(r"message\s+(.*)", raw, re.IGNORECASE)
@@ -110,7 +188,8 @@ def process(command: str) -> tuple:
         if m_msg:
             contact = m_msg.group(2).strip() if len(m_msg.groups()) > 1 else m_msg.group(1).strip()
         adb_bridge.open_app("whatsapp")
-        return True, f"Opening WhatsApp to message {contact.capitalize()}, Sir."
+        addr_suffix = pm.get_address_suffix(", ")
+        return _respond(True, f"Opening WhatsApp to message {contact.capitalize()}{addr_suffix}.")
 
     # ── Multi-Command Decomposition ─────────────────────────────────────────
     if any(sep in raw for sep in [" and ", " then ", " and then "]) and not ("favorite" in raw or "remember" in raw):
@@ -123,67 +202,41 @@ def process(command: str) -> tuple:
                 if resp and resp not in responses:
                     responses.append(resp)
             combined = " ".join(responses) if responses else "Executed all commands for you, Harsha!"
-            return True, combined
-
+            return _respond(True, combined)
 
     # ── High Priority Phone Target Actions ────────────────────────────────────
     if any(k in raw for k in ["in my phone", "on my phone", "on phone", "in phone", "in my mobile", "on my mobile", "in mobile", "on mobile"]):
         from modules.adb_bridge import adb_bridge
-
         raw_phone = raw.replace("what's up", "whatsapp").replace("whats up", "whatsapp").replace("whatup", "whatsapp")
-
         app_map = {
-            "whatsapp": "whatsapp",
-            "youtube": "youtube",
-            "instagram": "instagram",
-            "chrome": "chrome",
-            "spotify": "spotify",
-            "camera": "camera",
-            "settings": "settings",
-            "gallery": "gallery",
-            "photos": "photos",
-            "maps": "maps",
+            "whatsapp": "whatsapp", "youtube": "youtube", "instagram": "instagram",
+            "chrome": "chrome", "spotify": "spotify", "camera": "camera",
+            "settings": "settings", "gallery": "gallery", "photos": "photos", "maps": "maps"
         }
         for kw, app_name in app_map.items():
             if kw in raw_phone:
-                return True, adb_bridge.open_app(app_name)
-        return True, "Triggered action on your smartphone, Harsha!"
+                return _respond(True, adb_bridge.open_app(app_name))
+        return _respond(True, "Triggered action on your smartphone, Harsha!")
 
     # ── Security ────────────────────────────────────────────────────────────────
-
     if raw == "intruder_detected":
-        return True, "Get lost! This is Harsha's laptop. You are NOT authorised."
-
-    # ── Preferred Address Management ──────────────────────────────────────────
-    if re.search(r"\b(call me|address me as|refer to me as)\s+(.*)", raw, re.IGNORECASE):
-        pm = get_profile_manager()
-        m = re.search(r"\b(call me|address me as|refer to me as)\s+(.*)", raw, re.IGNORECASE)
-        raw_addr = m.group(2).strip().strip(".!").capitalize() if m else "Sir"
-        new_addr = "Sir" if raw_addr.lower() in ["sir", "man", "bro", "dude"] else raw_addr
-        pm.set_preference("preferred_address", new_addr)
-        return True, f"Of course, {new_addr}."
-
-    if any(k in raw for k in ["what should you call me", "what do you call me", "how should you address me", "what is my title", "what do you address me as"]):
-        pm = get_profile_manager()
-        curr_addr = pm.data.get("preferences", {}).get("preferred_address", "Sir")
-        return True, f"{curr_addr}."
+        return _respond(True, "Get lost! This is Harsha's laptop. You are NOT authorised.")
 
     # ── Focus Study Zone & DND Management ─────────────────────────────────────
     if any(k in raw for k in ["keep study environment", "study environment", "keep steady environment", "serious study zone", "serious study mode", "steady environment"]):
         from modules.focus_mode import set_focus_mode
         _, msg = set_focus_mode("SERIOUS_STUDY")
-        return True, msg
+        return _respond(True, msg)
 
     if any(k in raw for k in ["just study zone", "study zone", "study mode"]):
         from modules.focus_mode import set_focus_mode
         _, msg = set_focus_mode("STUDY_ZONE")
-        return True, msg
-
+        return _respond(True, msg)
 
     if any(k in raw for k in ["end study zone", "normal mode", "exit study zone", "stop study zone"]):
         from modules.focus_mode import set_focus_mode
         _, msg = set_focus_mode("NORMAL")
-        return True, msg
+        return _respond(True, msg)
 
     # ── Voice Reminders & Scheduler ───────────────────────────────────────────
     m_rem = re.search(r"remind me (?:to|about)\s+(.*?)\s+in\s+(\d+)\s*(minute|minutes|min|mins|hour|hours)", raw, re.IGNORECASE)
@@ -194,70 +247,61 @@ def process(command: str) -> tuple:
         unit = m_rem.group(3).lower()
         mins = num * 60 if "hour" in unit else num
         msg = add_voice_reminder(task, mins)
-        return True, msg
+        return _respond(True, msg)
 
     # ── Media Control & Shortcuts ───────────────────────────────────────────────
     if any(k in raw for k in ["pause music", "play music", "toggle music", "toggle play", "pause song"]):
         from modules.shortcuts import media_play_pause
-        return True, media_play_pause()
+        return _respond(True, media_play_pause())
 
     if any(k in raw for k in ["next song", "next track", "skip song", "skip track"]):
         from modules.shortcuts import media_next
-        return True, media_next()
+        return _respond(True, media_next())
 
     if any(k in raw for k in ["previous song", "previous track"]):
         from modules.shortcuts import media_previous
-        return True, media_previous()
+        return _respond(True, media_previous())
 
     if "volume up" in raw or "increase volume" in raw:
         from modules.shortcuts import volume_up
-        return True, volume_up()
+        return _respond(True, volume_up())
 
     if "volume down" in raw or "decrease volume" in raw:
         from modules.shortcuts import volume_down
-        return True, volume_down()
+        return _respond(True, volume_down())
 
     if any(k in raw for k in ["set up coding workspace", "python workspace", "workspace preset"]):
         from modules.shortcuts import launch_coding_workspace
-        return True, launch_coding_workspace()
+        return _respond(True, launch_coding_workspace())
 
     # ── Gmail & Job Selection Assistant ─────────────────────────────────────────
     if any(k in raw for k in ["check my emails", "check job applications", "check email", "check mail", "check job email"]):
         from modules.email_engine import check_job_emails
-        return True, check_job_emails()
+        return _respond(True, check_job_emails())
 
     if any(k in raw for k in ["send reply", "send email reply", "reply to email", "send the email", "send email"]):
         from modules.email_engine import send_pending_reply
-        return True, send_pending_reply()
+        return _respond(True, send_pending_reply())
 
     # ── Document & File Auto-Trainer ──────────────────────────────────────────
     if any(k in raw for k in ["train from documents", "scan my documents", "train my files", "read my documents"]):
         from modules.memory.doc_trainer import auto_index_user_documents
-        return True, auto_index_user_documents()
+        return _respond(True, auto_index_user_documents())
 
     if any(k in raw for k in ["sync phone documents", "sync documents from phone", "read phone documents", "import phone files"]):
         from modules.adb_bridge import adb_bridge
-        return True, adb_bridge.sync_phone_documents()
+        return _respond(True, adb_bridge.sync_phone_documents())
 
-
-
-
-
-
-
-    # ── Memory CRUD Operations (Create, Query, Update, Delete) ─────────────────
-    from modules.memory.profile_manager import get_profile_manager, commit_user_memory, delete_user_memory, recall_user_memory
-    pm = get_profile_manager()
-    pref_addr = pm.data.get("preferences", {}).get("preferred_address", "Sir")
-
+    # ── Explicit Memory CRUD Operations (Set, Update, Delete) ─────────────────
     # 1. MEMORY DELETE: "forget my X", "delete my X", "remove my X"
     m_del = re.search(r"\b(forget|delete|remove|clear)\s+(?:my\s+)?(favorite\s+\w+|fav\s+\w+|favourite\s+\w+|\w+)", raw, re.IGNORECASE)
     if m_del:
         raw_key = m_del.group(2).strip()
         deleted = delete_user_memory(raw_key)
+        addr_suffix = pm.get_address_suffix(", ")
         if deleted:
-            return _respond(True, f"Forgotten, {pref_addr}. Your {raw_key} has been removed from memory.")
-        return _respond(True, f"I didn't have your {raw_key} saved in memory, {pref_addr}.")
+            return _respond(True, f"Forgotten. Your {raw_key} has been removed from memory{addr_suffix}.")
+        return _respond(True, f"I didn't have your {raw_key} saved in memory{addr_suffix}.")
 
     # 2. MEMORY UPDATE: "change my X to Y", "update my X to Y", "set my X to Y"
     m_upd = re.search(r"\b(change|update|set|replace)\s+(?:my\s+)?(favorite\s+\w+|fav\s+\w+|favourite\s+\w+|\w+)\s+(?:to|=|is)\s+(.*)", raw, re.IGNORECASE)
@@ -265,7 +309,10 @@ def process(command: str) -> tuple:
         raw_key = m_upd.group(2).strip()
         new_val = m_upd.group(3).strip().strip(".!")
         commit_user_memory(raw_key, new_val)
-        return _respond(True, f"Done, {pref_addr}. Your {raw_key} is now {new_val}.")
+        if "favorite" in raw_key:
+            short_term_memory.last_resolved_song = new_val
+        addr_suffix = pm.get_address_suffix(", ")
+        return _respond(True, f"Done. Your {raw_key} is now {new_val}{addr_suffix}.")
 
     # 3. MEMORY CREATE: "my favorite X is Y", "my address is X", "remember my X is Y"
     _PROFILE_PATTERNS = [
@@ -288,56 +335,51 @@ def process(command: str) -> tuple:
                 key = match.group(1).strip()
                 value = match.group(2).strip()
             commit_user_memory(key, value)
-            return _respond(True, f"Saved, {pref_addr}. Your {key} is set to {value}.")
+            if "favorite" in key:
+                short_term_memory.last_resolved_song = value
+            addr_suffix = pm.get_address_suffix(", ")
+            return _respond(True, f"Saved! Your {key} is set to {value}{addr_suffix}.")
 
-
-    if raw.startswith("remember that"):
-        note = raw.replace("remember that", "").strip()
+    if raw.startswith("remember that") or "remember to " in raw:
+        note = re.sub(r"^(remember that|remember to|remember)\s+", "", raw).strip()
         remember("note", note)
-        pm = get_profile_manager()
-        pref_addr = pm.data.get("preferences", {}).get("preferred_address", "Sir")
         pm.add_note(note)
-        return _respond(True, f"Stored in memory, {pref_addr}: '{note}'")
-
+        addr_suffix = pm.get_address_suffix(", ")
+        return _respond(True, f"Stored in memory: '{note}'{addr_suffix}.")
 
     # ── System automation & Diagnostics ────────────────────────────────────────
     if any(k in raw for k in ["volume", "battery", "cpu", "system status", "brightness", "lock screen", "lock laptop", "disk space", "storage space", "my ip", "ip address", "mute", "unmute"]):
         from core.system_automation import execute_system_command
         res = execute_system_command(raw)
         if res:
-            return True, res
+            return _respond(True, res)
 
-    # ── Follow-Up Conversation Memory ──────────────────────────────────────────
-    if any(k in raw for k in ["what did i just say", "what was my last command", "what did i ask"]):
-        pm = get_profile_manager()
-
-        last = pm.get_last_turn()
-        if last and last.get("user"):
-            return True, f"You just said: '{last['user']}', Harsha!"
-        return True, "I don't have a previous command recorded yet, Harsha."
+    # ── Follow-Up Conversation Memory & Memory Queries ─────────────────────────
+    if any(k in raw for k in ["what did i just ask you to remember", "what did i ask you to remember", "what did i just ask", "what was my last command", "what did i ask"]):
+        notes = pm.get_notes()
+        last_turn = pm.get_last_turn()
+        if notes:
+            return _respond(True, f"You asked me to remember: '{notes[-1]}'.")
+        if last_turn and last_turn.get("user"):
+            return _respond(True, f"You asked: '{last_turn['user']}'.")
+        return _respond(True, "I don't have a recent memory or command recorded yet.")
 
     if any(k in raw for k in ["what was your last reply", "what did you say", "what was your last answer"]):
-        pm = get_profile_manager()
+        last_turn = pm.get_last_turn()
+        if last_turn and last_turn.get("ai"):
+            return _respond(True, f"My last reply was: '{last_turn['ai']}'.")
+        return _respond(True, "I haven't said anything recently.")
 
-        last = pm.get_last_turn()
-        if last and last.get("ai"):
-            return True, f"My last reply was: '{last['ai']}', Harsha!"
-        return True, "I haven't said anything recently, Harsha."
-
-    # Memory Recall & Memory Retrieval (Hardware Fallback Enforcement)
+    # Passive Memory Queries: "what is my favorite song", "where do i live"
     if any(k in raw for k in [
         "remember my", "do you remember", "what is my", "what's my",
         "do you know my", "where do i live", "show my notes", "what do you remember",
         "my address", "my location", "my name", "my phone", "my city", "my state",
         "my mother", "my mom", "mother's name", "mom's name", "my favorite song", "my fav song"
     ]):
-        pm = get_profile_manager()
-
-
-        # Specific key queries (HARDWARE DISK LOOKUP FIRST)
         keys_to_check = [
-            "mother_name", "mother's name", "mom's name", "mother", "mom",
             "favorite_song", "favorite song", "fav song", "song",
+            "mother_name", "mother's name", "mom's name", "mother", "mom",
             "address", "location", "city", "state", "name", "phone", "email", "job", "college", "school", "hometown"
         ]
         for key in keys_to_check:
@@ -345,15 +387,14 @@ def process(command: str) -> tuple:
                 val = pm.recall_user_memory(key)
                 display_key = "mother's name" if key in ["mother_name", "mother", "mom", "mother's name", "mom's name"] else key
                 if val:
-                    reply = f"Yes Harsha, your {display_key} is {val}."
-                    print(f"[ROUTER] Hardware Memory hit: {reply}")
-                    return True, reply
+                    reply = f"Yes, your {display_key} is {val}."
+                    print(f"[ROUTER] Memory hit: {reply}")
+                    return _respond(True, reply)
                 else:
-                    reply = f"I do not have your {display_key} saved yet, Harsha. Please tell me your {display_key} so I can store it."
+                    reply = f"I do not have your {display_key} saved yet. Please tell me your {display_key} so I can store it."
                     print(f"[ROUTER] Memory miss: {reply}")
-                    return True, reply
+                    return _respond(True, reply)
 
-        # Fall back to general memory listing
         user_mem = pm.get_all_user_memory()
         notes = pm.get_notes()
         parts = []
@@ -362,215 +403,57 @@ def process(command: str) -> tuple:
         if notes:
             parts.append("Notes:\n- " + "\n- ".join(notes))
         if parts:
-            reply = "Here's what I remember, Harsha:\n" + "\n".join(parts)
-            return True, reply
-        reply = "I do not have your memory saved yet. Please tell me your address or details so I can store it."
-        return True, reply
+            return _respond(True, "Here's what I remember:\n" + "\n".join(parts))
+        return _respond(True, "I do not have your memory saved yet.")
 
     # ── Screenshot ───────────────────────────────────────────────────────────────
     if "screenshot" in raw or "take a screen" in raw:
         from commands_daily import screenshot
-        return True, screenshot()
+        return _respond(True, screenshot())
 
     # ── VS Code & GitHub ──────────────────────────────────────────────────────
     if any(k in raw for k in ["vs code", "vscode", "visual studio code", "open code"]):
         execute("code")
-        return True, "Opening VS Code for you, Harsha!"
+        return _respond(True, "Opening VS Code for you!")
 
     if "github" in raw:
         execute("github")
-        return True, "Opening GitHub for you, Harsha!"
-
-    # ── WhatsApp (Desktop App & Messaging) ────────────────────────────────────
-
-    raw_wa = raw.replace("what's up", "whatsapp").replace("whats up", "whatsapp").replace("whatup", "whatsapp")
-
-    if "whatsapp" in raw_wa or "message" in raw_wa or "text" in raw_wa or "msg" in raw_wa:
-        from commands_daily import whatsapp_call, whatsapp_message, whatsapp_im_busy, open_whatsapp
-
-        if any(k in raw_wa for k in ["mom", "mum", "mother", "dad", "father", "bro", "hi", "high", "hello", "send"]):
-            contact_target = "mum"
-            for c in ["mom", "mum", "mother", "dad", "father", "bro"]:
-                if c in raw_wa:
-                    contact_target = c
-                    break
-
-            msg = "Hi" if any(k in raw_wa for k in ["hi", "high", "hey", "hello"]) else ""
-            return True, whatsapp_message(contact_target, msg)
-
-        return True, open_whatsapp()
-
-
-
-    # ── Phone calls ──────────────────────────────────────────────────────────────
-    if raw.startswith("open phone link") or raw.startswith("launch phone link"):
-        from commands_daily import phone_call
-        return True, phone_call("")
-
-
+        return _respond(True, "Opening GitHub for you!")
 
     # ── Banking & Payments ────────────────────────────────────────────────────────
-    if any(k in raw for k in ["sbi", "hdfc", "icici", "kotak", "axis", "paytm",
-                                "gpay", "google pay", "phonepe", "phone pe",
-                                "cred", "upi", "neft", "bhim", "amazon pay", "banking"]):
+    if any(k in raw for k in ["sbi", "hdfc", "icici", "kotak", "axis", "paytm", "gpay", "google pay", "phonepe", "phone pe", "cred", "upi", "neft", "bhim", "amazon pay", "banking"]):
         from commands_daily import open_banking
-        return True, open_banking(raw)
+        return _respond(True, open_banking(raw))
 
     # ── File / Folder opener ───────────────────────────────────────────────────
-    if any(k in raw for k in ["open my", "open downloads", "open documents",
-                               "open desktop", "open pictures", "open photos",
-                               "open videos", "open music", "open folder",
-                               "file explorer", "my files", "my folders"]):
+    if any(k in raw for k in ["open my", "open downloads", "open documents", "open desktop", "open pictures", "open photos", "open videos", "open music", "open folder", "file explorer", "my files", "my folders"]):
         from commands_daily import open_folder
-        return True, open_folder(raw)
+        return _respond(True, open_folder(raw))
 
     # ── Weather ────────────────────────────────────────────────────────────────
     if "weather" in raw or "temperature" in raw or "rain today" in raw or "forecast" in raw:
         from commands_daily import open_weather
         loc = re.sub(r"(weather|temperature|forecast|today|in|for)", "", raw).strip()
-        return True, open_weather(loc)
+        return _respond(True, open_weather(loc))
 
     # ── Alarm / Timer ─────────────────────────────────────────────────────────
     if "set alarm" in raw or "wake me" in raw:
         from commands_daily import set_alarm
         t = re.sub(r"(set\s+alarm|wake\s+me\s+(up\s+)?at)", "", raw).strip()
-        return True, set_alarm(t)
+        return _respond(True, set_alarm(t))
 
     if "set timer" in raw or "start timer" in raw or "timer for" in raw:
         from commands_daily import set_timer
         t = re.sub(r"(set|start|timer|for)", "", raw).strip()
-        return True, set_timer(t)
+        return _respond(True, set_timer(t))
 
-    # ── Food / Delivery ────────────────────────────────────────────────────────
-    if "swiggy" in raw:
-        from commands_daily import open_swiggy
-        return True, open_swiggy()
-
-    if "zomato" in raw:
-        from commands_daily import open_zomato
-        return True, open_zomato()
-
-    # ── Cab ────────────────────────────────────────────────────────────────────
-    if "ola" in raw and "cab" in raw or "book ola" in raw:
-        from commands_daily import open_ola
-        return True, open_ola()
-
-    if "uber" in raw:
-        from commands_daily import open_uber
-        return True, open_uber()
-
-    # ── Travel ────────────────────────────────────────────────────────────────
-    if "irctc" in raw or "train ticket" in raw or "book train" in raw:
-        from commands_daily import open_irctc
-        return True, open_irctc()
-
-    # ── Maps ──────────────────────────────────────────────────────────────────
-    if "maps" in raw or "navigate to" in raw or "directions to" in raw or "how to reach" in raw:
-        from commands_daily import open_maps
-        dest = re.sub(r"(maps|navigate\s+to|directions\s+to|how\s+to\s+reach|open)", "", raw).strip()
-        return True, open_maps(dest)
-
-    # ── Shopping ──────────────────────────────────────────────────────────────
-    if "amazon" in raw:
-        from commands_daily import open_amazon
-        return True, open_amazon()
-
-    if "flipkart" in raw:
-        from commands_daily import open_flipkart
-        return True, open_flipkart()
-
-    # ── Streaming ─────────────────────────────────────────────────────────────
-    if "hotstar" in raw or "disney" in raw:
-        from commands_daily import open_hotstar
-        return True, open_hotstar()
-
-    if "netflix" in raw:
-        from commands_daily import open_netflix
-        return True, open_netflix()
-
-    # ── Social & Instagram ───────────────────────────────────────────────────
-    if any(k in raw for k in ["content preference", "content preferences", "reset preference", "reset preferences", "reset my content"]):
-        from commands_daily import reset_instagram_preferences
-        return True, reset_instagram_preferences()
-
-    if "instagram" in raw and any(k in raw for k in ["reset", "preference", "content", "feed"]):
-        from commands_daily import reset_instagram_preferences
-        return True, reset_instagram_preferences()
-
-    if "instagram" in raw:
-        from commands_daily import open_instagram
-        return True, open_instagram()
-
-
-
-    if "twitter" in raw or "x.com" in raw:
-        from commands_daily import open_twitter
-        return True, open_twitter()
-
-    if "linkedin" in raw:
-        from commands_daily import open_linkedin
-        return True, open_linkedin()
-
-    if "gmail" in raw or "email" in raw or "mail" in raw:
-        from commands_daily import open_email
-        return True, open_email()
-
-    # ── Training / Updates ────────────────────────────────────────────────────
-    if "train model" in raw or "train ultron" in raw:
-        from modules.memory.trainer import train_local_model
-        success, msg = train_local_model()
-        if success:
-            return True, "Local model training done, Harsha! Running on custom weights now."
-        return True, f"Training note: {msg}"
-
-    if "update ultron" in raw or "check update" in raw or "upgrade yourself" in raw or "update yourself" in raw:
-        from modules.updater import check_and_apply_safe_updates
-        success, msg = check_and_apply_safe_updates()
-        return True, msg
-
-    # ── Phone & Wireless ADB Controls ──────────────────────────────────────────
-    # Normalize phonetic Whisper mishearings of ADB ("a, d, b", "a-d-b", "a, b, b", "a, d, d", "a d b") -> "adb"
-    raw_adb_norm = re.sub(r"a[\s,\.-]*[db][\s,\.-]*[db]", "adb", raw, flags=re.IGNORECASE)
-
-
-    if "adb" in raw_adb_norm or "wireless debugging" in raw_adb_norm:
-        from modules.adb_bridge import adb_bridge
-        ip_match = re.search(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", raw)
-        phone_ip = ip_match.group(0) if ip_match else None
-        success, msg = adb_bridge.connect_phone(phone_ip)
-        return True, msg
-
-
-    if any(k in raw for k in ["phone connected", "is my phone", "is phone connected", "check phone status", "phone status"]):
-        from modules.adb_bridge import adb_bridge
-        devs, is_unauth = adb_bridge.get_connected_devices()
-        if adb_bridge.connected_ip or devs:
-            dev = adb_bridge.connected_ip or devs[0]
-            return True, f"Yes Harsha! Your smartphone ({dev}) is actively connected to ULTRON!"
-        return True, "Your phone is currently disconnected. Say 'connect ADB' to connect your phone."
-
-    if any(k in raw for k in ["in my phone", "on my phone", "on phone", "in phone", "on my mobile", "in my mobile"]):
-        from modules.adb_bridge import adb_bridge
-        for app in ["youtube", "instagram", "whatsapp", "chrome", "spotify", "camera", "settings"]:
-            if app in raw:
-                return True, adb_bridge.open_app(app)
-        return True, "Triggered action on your phone, Harsha!"
-
-    if "connect phone" in raw or "mobile link" in raw or "phone link" in raw:
-        return True, "Phone portal is ready, Harsha! Your connection link is displayed on screen."
-
-
-
-
-    # ── YouTube / Play ─────────────────────────────────────────────────────────────
-
+    # ── YouTube Fallback ───────────────────────────────────────────────────────
     if "youtube" in raw or raw.startswith("play "):
-        execute(raw)
         search = re.sub(r"(play|youtube|open|on|and|for me|please)", "", raw).strip()
+        play_youtube(search)
         if search:
-            return True, f"Playing {search} on YouTube for you, bro!"
-        return True, "Opening YouTube for you, Harsha!"
-
+            return _respond(True, f"Playing {search} on YouTube for you!")
+        return _respond(True, "Opening YouTube for you!")
 
     # ── Standard commands: YouTube / Google / Apps / AI ───────────────────────
     corrected = correct(raw)
@@ -581,12 +464,12 @@ def process(command: str) -> tuple:
         intent = detect_intent(task)
 
         if intent == "EXIT":
-            return False, "Always here for you, Harsha. Catch you later, bro."
+            return _respond(False, "Always here for you. Catch you later!")
 
         if intent in ("OPEN_APP", "GOOGLE", "YOUTUBE", "PLAY_MUSIC"):
             executed = execute(task)
             if executed:
-                replies.append("On it, Harsha.")
+                replies.append("On it!")
             continue
 
         # Agentic Execution with Semantic Memory & Multi-Step Reasoning
@@ -599,9 +482,9 @@ def process(command: str) -> tuple:
             print(f"[ROUTER] Agent fallback: {ag_err}")
 
     if replies:
-        return True, " ".join(replies)
+        return _respond(True, " ".join(replies))
 
     # Universal Task Execution Engine fallback
     from modules.universal_executor import execute_universal_task
     univ_reply = execute_universal_task(command)
-    return True, univ_reply
+    return _respond(True, univ_reply)

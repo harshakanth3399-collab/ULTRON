@@ -14,13 +14,16 @@
             "Laptop",
             "Mobile"
         ],
-        "preferred_address": "Sir"
+        "preferred_address": "Harsha"
     },
-    "notes": [],
+    "notes": [
+        "User requested not to be called Sir all the time."
+    ],
     "project_history": [],
     "reminders": [],
     "user_memory": {
         "address": "Anantapur, Andhra Pradesh",
-        "mother_name": "Narmada"
+        "mother_name": "Narmada",
+        "favorite_song": "bagundo po from the dude movie in telugu."
     }
 }

@@ -107,22 +107,36 @@ class PersonalProfileManager:
         thread = threading.Thread(target=self.save_sync, daemon=True)
         thread.start()
 
+    def get_preferred_address(self) -> str:
+        prefs = self.data.get("preferences", {})
+        addr = prefs.get("preferred_address", "Sir")
+        if not addr or addr.lower() in ["none", "no_sir", "off", "dont_call_sir", "don't call me sir", "harsha"]:
+            return ""
+        return addr
+
+    def get_address_suffix(self, prefix: str = ", ") -> str:
+        addr = self.get_preferred_address()
+        if not addr:
+            return ""
+        return f"{prefix}{addr}"
+
     def get_system_context(self) -> str:
         """Returns personalized system prompt context for Ollama."""
         notes_str = "; ".join(self.data.get("notes", [])) or "None yet."
         prefs = self.data.get("preferences", {})
-        preferred_address = prefs.get("preferred_address", "Sir")
+        preferred_address = self.get_preferred_address()
         pref_str = ", ".join([f"{k}: {v}" for k, v in prefs.items()])
         user_mem = self.data.get("user_memory", {})
         mem_str = ", ".join([f"{k}: {v}" for k, v in user_mem.items()]) if user_mem else "None yet."
+
+        addr_instruction = f"Address the user as '{preferred_address}'." if preferred_address else "Respond naturally without forcing titles like 'Sir'."
 
         return (
             f"You are ULTRON, Harsha's personal AI assistant and loyal companion.\n"
             f"Personality Directives:\n"
             f"- Speak with ULTRON's formidable intelligence and warm, natural tone.\n"
-            f"- USER PREFERRED ADDRESS: {preferred_address}\n"
-            f"- CRITICAL ADDRESSING RULE: ALWAYS address the user as '{preferred_address}'. NEVER call the user 'man', 'bro', 'dude', 'buddy', 'mate', 'boss', or any other casual terms.\n"
-            f"- TELUGU DIALECT RULE: When responding in Telugu, use authentic colloquial Andhra Pradesh / Rayalaseema (Anantapur) Telugu phrasing ('నమస్కారం సర్', 'చెప్పండి సర్', 'బాగున్నారా సర్', 'ఏమిటి విశేషాలు సర్'). NEVER use stiff textbook or newsroom Telugu ('గ్రంథిక భాష').\n"
+            f"- {addr_instruction}\n"
+            f"- TELUGU DIALECT RULE: When responding in Telugu, use authentic colloquial Andhra Pradesh / Rayalaseema (Anantapur) Telugu phrasing ('నమస్కారం', 'చెప్పండి', 'బాగున్నారా', 'ఏమిటి విశేషాలు'). NEVER use stiff textbook or newsroom Telugu ('గ్రంథిక భాష').\n"
             f"- Keep ALL responses extremely CONCISE, crisp, and direct (1 short sentence max, 2 sentences max if necessary).\n"
             f"- User Name: Harsha\n"
             f"- User Location: Anantapur, Andhra Pradesh\n"
@@ -131,6 +145,7 @@ class PersonalProfileManager:
             f"- Harsha's Saved Notes: {notes_str}\n"
             f"- Harsha's Personal Memory: {mem_str}\n"
         )
+
 
 
 

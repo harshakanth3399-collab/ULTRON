@@ -16,6 +16,8 @@ class ShortTermMemory:
     def __init__(self, max_history: int = 10) -> None:
         self.max_history = max_history
         self.history: List[Dict[str, Any]] = []
+        self.last_resolved_song: str = ""
+
 
     def add_turn(
         self,
@@ -78,14 +80,10 @@ class ShortTermMemory:
 
         raw_lower = raw.lower()
 
-        # 1. Direct follow-up questions about recent query / reply
-        if any(k in raw_lower for k in ["what did i just ask", "what did i ask", "what was my last question"]):
-            prompt = f"What did I just ask you regarding '{last_user}'?"
-            return last_user, prompt
+        # 1. Direct follow-up questions about recent query / reply (Pass through raw query to router)
+        if any(k in raw_lower for k in ["what did i just ask", "what did i ask", "what was my last question", "what did you say"]):
+            return raw, raw
 
-        if any(k in raw_lower for k in ["what was your last reply", "what did you say"]):
-            prompt = f"What was your last reply regarding '{last_ai[:50]}...'?"
-            return last_ai[:50], prompt
 
         # 2. Entity / Location reference resolution
         location_refs = ["those location", "those 5 location", "those five location", "the five branch", "the branches", "the company", "there", "their branch", "those branches", "what are those"]
