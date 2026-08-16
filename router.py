@@ -169,13 +169,15 @@ def process(command: str) -> tuple:
             addr_suffix = pm.get_address_suffix(", ")
             prompt = (
                 f"User Question: '{command}' ({resolved_prompt})\n"
-                f"Web Evidence (from {sources_str}):\n{evidence}\n\n"
-                f"INSTRUCTIONS: Answer Harsha directly in 1-3 clear sentences based ONLY on the verified web evidence above. "
-                f"Prefer official/primary sources. Compare multiple snippets if present. "
-                f"If reliable sources disagree, explicitly state that they disagree. "
-                f"If sufficient evidence is unavailable to verify the answer, state 'I couldn't verify that'. "
-                f"NEVER invent, guess, or use stale pre-training memory for live factual data."
+                f"Web Research Evidence (from {sources_str}):\n{evidence}\n\n"
+                f"INSTRUCTIONS FOR ULTRON:\n"
+                f"1. Answer Harsha directly by providing a complete, comprehensive response based on the web evidence above.\n"
+                f"2. For location, branch, or area list questions, list EVERY SINGLE area name, branch name, or location mentioned in the web text above (e.g. BTM Layout, Rajaji Nagar / Rajajinagar, Marathahalli, Hebbal, Basavanagudi, Indira Nagar, OMR, etc.). Do NOT summarize or leave out any branch names.\n"
+                f"3. Do NOT say 'I couldn't verify' when branch details are present in the evidence.\n"
+                f"4. Cite the source site names."
             )
+
+
             ai_reply = ask_ai(prompt)
             print(f"[WEB] Final answer generated: {ai_reply}")
             return _respond(True, ai_reply, search_results=res.get("results"))
