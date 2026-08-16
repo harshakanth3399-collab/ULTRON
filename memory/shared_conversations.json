@@ -1,0 +1,32 @@
+[
+  {
+    "conversation_id": "690991c0-87a4-8320-9b5e-72fc34713c0f",
+    "id": "690992cf-0200-8003-a4e5-f8caefdc1e93",
+    "is_anonymous": true,
+    "title": "JNTUA R23 regulations"
+  },
+  {
+    "conversation_id": "69365b9f-cb3c-8320-b66b-0c25ac1c3f80",
+    "id": "69365bb6-4ca0-8003-a80f-c86429e8e47c",
+    "is_anonymous": true,
+    "title": "New chat"
+  },
+  {
+    "conversation_id": "69365b9f-cb3c-8320-b66b-0c25ac1c3f80",
+    "id": "69365bce-fed0-8003-b746-2e1928a97cf4",
+    "is_anonymous": true,
+    "title": "Test paper topics explained"
+  },
+  {
+    "conversation_id": "6971bfbe-db78-8324-93a7-ba8bfb74d9ec",
+    "id": "6971c0f3-9e78-8003-add8-24e22e5dd74b",
+    "is_anonymous": true,
+    "title": "Predictive Analytics in Business"
+  },
+  {
+    "conversation_id": "69d6001d-32a0-83a2-9e8e-7bf814539c90",
+    "id": "69d6024c-5598-8322-bef9-4769b56923b3",
+    "is_anonymous": true,
+    "title": "Financial Data in AI"
+  }
+]

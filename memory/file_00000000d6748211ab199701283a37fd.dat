@@ -1,0 +1,31 @@
+from difflib import get_close_matches
+
+WORDS = [
+    "spotify",
+    "youtube",
+    "google",
+    "calculator",
+    "chrome",
+    "notepad",
+    "interview",
+    "ultron",
+    "ramayana"
+]
+
+
+def correct(text):
+
+    words = text.lower().split()
+
+    corrected = []
+
+    for word in words:
+
+        match = get_close_matches(word, WORDS, n=1, cutoff=0.75)
+
+        if match:
+            corrected.append(match[0])
+        else:
+            corrected.append(word)
+
+    return " ".join(corrected)

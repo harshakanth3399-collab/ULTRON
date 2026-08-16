@@ -1,0 +1,75 @@
+import asyncio
+import threading
+import edge_tts
+import pygame
+import os
+
+VOICE = "en-US-AndrewNeural"
+
+pygame.mixer.init()
+
+_current_thread = None
+_is_speaking = False
+
+
+async def _generate(text):
+
+    communicate = edge_tts.Communicate(
+        text=text,
+        voice=VOICE,
+        rate="-10%",
+        pitch="-2Hz"
+    )
+
+    await communicate.save("voice.mp3")
+
+
+def _play(text):
+
+    global _is_speaking
+
+    _is_speaking = True
+
+    asyncio.run(_generate(text))
+
+    pygame.mixer.music.load("voice.mp3")
+    pygame.mixer.music.play()
+
+    while pygame.mixer.music.get_busy():
+
+        pygame.time.Clock().tick(30)
+
+    _is_speaking = False
+
+    if os.path.exists("voice.mp3"):
+        os.remove("voice.mp3")
+
+
+def speak(text):
+
+    global _current_thread
+
+    stop()
+
+    _current_thread = threading.Thread(
+        target=_play,
+        args=(text,),
+        daemon=True
+    )
+
+    _current_thread.start()
+
+
+def stop():
+
+    global _is_speaking
+
+    if pygame.mixer.music.get_busy():
+        pygame.mixer.music.stop()
+
+    _is_speaking = False
+
+
+def speaking():
+
+    return _is_speaking

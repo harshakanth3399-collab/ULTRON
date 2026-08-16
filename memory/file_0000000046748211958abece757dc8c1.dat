@@ -1,0 +1,135 @@
+"""Electric arc generator for holographic energy discharge effects."""
+
+from __future__ import annotations
+
+import numpy as np
+
+from graphics.constants import (
+    ARC_COUNT,
+    ARC_MAX_LENGTH,
+    ARC_SEGMENTS,
+    SPHERE_RADIUS,
+    STATE_CONFIG,
+)
+from graphics.noise import simplex3
+from graphics.state import UltronState
+
+
+class ArcSystem:
+    """Generates animated electric arcs across the particle sphere surface."""
+
+    __slots__ = (
+        "arc_count",
+        "_life",
+        "_max_life",
+        "_start_idx",
+        "_end_idx",
+        "_seed",
+        "_vertices",
+        "_vertex_count",
+    )
+
+    def __init__(self, arc_count: int = ARC_COUNT) -> None:
+        self.arc_count = arc_count
+        self._life = np.zeros(arc_count, dtype=np.float32)
+        self._max_life = np.random.uniform(0.4, 1.2, arc_count).astype(np.float32)
+        self._start_idx = np.zeros(arc_count, dtype=np.int32)
+        self._end_idx = np.zeros(arc_count, dtype=np.int32)
+        self._seed = np.random.uniform(0.0, 100.0, arc_count).astype(np.float32)
+        segments = ARC_SEGMENTS
+        self._vertex_count = arc_count * segments * 2
+        self._vertices = np.zeros((self._vertex_count, 5), dtype=np.float32)
+
+    def _respawn(self, i: int, sphere_points: np.ndarray) -> None:
+        count = len(sphere_points)
+        start = np.random.randint(0, count)
+        offset = np.random.randint(count // 4, count // 2)
+        end = (start + offset) % count
+        self._start_idx[i] = start
+        self._end_idx[i] = end
+        self._life[i] = 0.0
+        self._max_life[i] = np.random.uniform(0.35, 1.4)
+        self._seed[i] = np.random.uniform(0.0, 200.0)
+
+    def update(
+        self,
+        dt: float,
+        time: float,
+        state: UltronState,
+        audio_level: float,
+        activation: float,
+        sphere_points: np.ndarray,
+    ) -> None:
+        cfg = STATE_CONFIG[state.name.lower()]
+        activity = cfg["arc_activity"] * activation * (0.4 + audio_level * 0.8)
+
+        for i in range(self.arc_count):
+            self._life[i] += dt
+
+            if self._life[i] >= self._max_life[i]:
+                if np.random.random() < activity:
+                    self._respawn(i, sphere_points)
+                else:
+                    self._life[i] = self._max_life[i]
+
+            life_frac = self._life[i] / max(self._max_life[i], 1e-4)
+            if life_frac >= 1.0:
+                continue
+
+            p0 = sphere_points[self._start_idx[i]]
+            p1 = sphere_points[self._end_idx[i]]
+            dist = np.linalg.norm(p1 - p0)
+            if dist > ARC_MAX_LENGTH:
+                mid = (p0 + p1) * 0.5
+                mid *= SPHERE_RADIUS / max(np.linalg.norm(mid), 1e-4)
+                p1 = mid + (p1 - p0) * 0.5
+
+            fade_in = min(life_frac * 4.0, 1.0)
+            fade_out = min((1.0 - life_frac) * 3.0, 1.0)
+            intensity = fade_in * fade_out * (0.5 + audio_level * 0.5) * activity
+
+            base_idx = i * ARC_SEGMENTS * 2
+            for s in range(ARC_SEGMENTS):
+                t0 = s / ARC_SEGMENTS
+                t1 = (s + 1) / ARC_SEGMENTS
+
+                a = p0 * (1.0 - t0) + p1 * t0
+                b = p0 * (1.0 - t1) + p1 * t1
+
+                jitter_a = simplex3(
+                    np.array([a[0] * 8.0 + self._seed[i]]),
+                    np.array([a[1] * 8.0 + time * 3.0]),
+                    np.array([a[2] * 8.0]),
+                )[0]
+                jitter_b = simplex3(
+                    np.array([b[0] * 8.0 + self._seed[i] + 1.0]),
+                    np.array([b[1] * 8.0 + time * 3.0]),
+                    np.array([b[2] * 8.0]),
+                )[0]
+
+                normal_a = a / max(np.linalg.norm(a), 1e-4)
+                normal_b = b / max(np.linalg.norm(b), 1e-4)
+                offset = 0.035 * (1.0 + audio_level * 0.5)
+
+                a = a + normal_a * jitter_a * offset
+                b = b + normal_b * jitter_b * offset
+
+                width = (0.004 + 0.006 * intensity) * (1.0 + np.sin(time * 30.0 + s + self._seed[i]) * 0.2)
+                seg_intensity = intensity * (0.7 + 0.3 * np.sin(time * 20.0 + s * 0.8))
+
+                vi = base_idx + s * 2
+                self._vertices[vi, 0:3] = a
+                self._vertices[vi, 3] = width
+                self._vertices[vi, 4] = max(seg_intensity, 0.0)
+
+                self._vertices[vi + 1, 0:3] = b
+                self._vertices[vi + 1, 3] = width
+                self._vertices[vi + 1, 4] = max(seg_intensity * 0.85, 0.0)
+
+    @property
+    def vertices(self) -> np.ndarray:
+        return self._vertices
+
+    @property
+    def active_mask(self) -> np.ndarray:
+        return self._life < self._max_life

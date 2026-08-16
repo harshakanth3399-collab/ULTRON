@@ -1,0 +1,42 @@
+[
+  {
+    "announcements": {
+      "oai/apps/hasSeenAdvancedVoice/2024-09-24": "2025-10-20T15:02:31.754841+00:00",
+      "oai/apps/hasSeenAdvancedVoiceOnMobile/2024-09-26": "2025-03-05T04:35:51.708466+00:00",
+      "oai/apps/hasSeenArtifactsLearnMoreModal": "2026-06-21T16:43:45.937552+00:00",
+      "oai/apps/hasSeenAutoSwitchNux": "2026-01-18T13:09:05.149230+00:00",
+      "oai/apps/hasSeenBigPasteCoachmark": "2026-08-02T04:17:59.287969+00:00",
+      "oai/apps/hasSeenCodexAppHomeBanner": "2026-07-14T03:56:50.652039+00:00",
+      "oai/apps/hasSeenComposerSearchButtonTooltip": "2025-02-13T08:03:46.992603+00:00",
+      "oai/apps/hasSeenComposerSystemHintButtonTooltip": "2025-04-06T10:45:19.480521+00:00",
+      "oai/apps/hasSeenCustomizeChatGPTAnnouncement": "2025-03-05T04:35:54.106159+00:00",
+      "oai/apps/hasSeenDalleEditingOnboarding": "2025-10-27T02:08:44.264728+00:00",
+      "oai/apps/hasSeenExistingUserPersonalityOnboarding": "2025-12-18T13:59:20.209583+00:00",
+      "oai/apps/hasSeenGoTwelveMonthFreeTrial": "2025-11-17T02:00:46.663652+00:00",
+      "oai/apps/hasSeenMemoryUpdatedTooltip": "2025-10-27T04:18:29.236977+00:00",
+      "oai/apps/hasSeenMoonshineNuxV2": "2025-09-04T04:07:36.622889+00:00",
+      "oai/apps/hasSeenOnboarding": "2025-02-13T08:03:46.956938+00:00",
+      "oai/apps/hasSeenTatertotNux": "2026-03-28T09:07:23.918789+00:00",
+      "oai/apps/hasSeenTemporaryChatOnboarding": "2026-07-07T11:54:35.806710+00:00",
+      "oai/apps/hasSeenThinkInComposer": "2025-03-05T04:34:56.576496+00:00",
+      "oai/apps/hasSeenWhamCodexAppAnnouncement": "2026-07-14T03:56:50.705382+00:00",
+      "oai/apps/hasSeenWhamCodexAppFirstHero": 1,
+      "oai/apps/hasSeenWindowsAppOnboarding": "2026-07-08T06:21:48.909814+00:00"
+    },
+    "beta_settings": {},
+    "habitat_object_version": 31412056,
+    "settings": {
+      "first_party_project_pins_unmigrated": true,
+      "moonshine": true,
+      "potion_enabled": true,
+      "project_pins_backfilled": true,
+      "show_expanded_code_view": false,
+      "study_mode_project_pins_unmigrated": true,
+      "sunshine": true,
+      "training_allowed": true,
+      "voice_name": "fathom",
+      "voice_training_allowed": false
+    },
+    "user_id": "user-kQoHBdmaGwW1pu67rdeF3hZC"
+  }
+]
