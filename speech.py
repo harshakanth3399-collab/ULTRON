@@ -58,10 +58,12 @@ WAKE_WORDS = {
     "eltron", "oltron", "aultron", "haltron", "alteron", "outeron", "alltron",
     "hey assistant", "hey ul", "hail tron", "hailtron", "hail", "hay tron", "haytron",
     "hell tron", "hail-tron", "heil tron", "heiltron", "hey hail tron",
+    "i'll run", "i'll draw", "ill run", "ill draw", "ultra on", "old run", "all run",
     "here ill turn", "okay and drawn", "call a mark", "ill turn", "and drawn",
     "here i'll turn", "okay, and drawn.", "ay and drawn", "call a ma",
     "i will try to call a ma", "call a ma", "call a mark", "i'll turn", "drawn"
 }
+
 
 
 
@@ -262,6 +264,17 @@ def _normalize_wav(wav_bytes: bytes) -> bytes:
 
 # ── Phonetic Overrides for Regional & Technical Words ──────────────────────────
 PHONETIC_OVERRIDES = {
+    "i'll run": "ULTRON",
+    "i'll draw": "ULTRON",
+    "ill run": "ULTRON",
+    "ill draw": "ULTRON",
+    "ultra on": "ULTRON",
+    "all tron": "ULTRON",
+    "all-tron": "ULTRON",
+    "altron": "ULTRON",
+    "ultran": "ULTRON",
+    "old run": "ULTRON",
+    "all run": "ULTRON",
     "i draw them": "",
     "i draw then": "",
     "i draw": "",
@@ -291,6 +304,7 @@ PHONETIC_OVERRIDES = {
 
     "a, d, b": "adb",
     "a-d-b": "adb",
+
     "a d b": "adb",
     "a, b, b": "adb",
 }

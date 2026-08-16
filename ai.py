@@ -83,8 +83,8 @@ def validate_and_correct_address(text: str, target_address: str = "Sir") -> str:
     return cleaned
 
 
-def _ask_groq(prompt: str, system_prompt: str, api_key: str) -> Optional[str]:
-    """Invokes Groq API for sub-second responses."""
+def _ask_groq(prompt: str, system_prompt: str, api_key: str) -> tuple[Optional[str], Optional[int]]:
+    """Invokes Groq API for sub-second responses. Returns (answer, error_status_code)."""
     try:
         url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
@@ -106,10 +106,18 @@ def _ask_groq(prompt: str, system_prompt: str, api_key: str) -> Optional[str]:
         with urllib.request.urlopen(req, timeout=4.0) as resp:
             data = json.loads(resp.read().decode('utf-8'))
             answer = data["choices"][0]["message"]["content"].strip()
-            return answer
+            return answer, None
+    except urllib.error.HTTPError as http_err:
+        if http_err.code == 429:
+            print(f"[GROQ API RATE LIMIT] HTTP 429 Too Many Requests detected on Groq API key.")
+            return None, 429
+        else:
+            print(f"[GROQ API ERROR] HTTP {http_err.code}: {http_err.reason}")
+            return None, http_err.code
     except Exception as e:
-        print(f"[GROQ API NOTE] Groq API offline or unavailable ({e}). Falling back to Ollama Local.")
-        return None
+        print(f"[GROQ API NOTE] Groq API offline or unavailable ({e}).")
+        return None, 500
+
 
 
 def ask_ai(prompt: str) -> str:
@@ -139,21 +147,30 @@ def ask_ai(prompt: str) -> str:
 
 
     raw_answer = None
+    groq_err_code = None
     model_used = "groq-llama3.3"
 
     # 1. Try Groq API only if a valid GROQ_API_KEY is configured
     groq_key = os.getenv("GROQ_API_KEY", "").strip()
     if groq_key and groq_key.startswith("gsk_") and "your_free_key_here" not in groq_key:
-        raw_answer = _ask_groq(prompt, full_system_prompt, groq_key)
-
+        raw_answer, groq_err_code = _ask_groq(prompt, full_system_prompt, groq_key)
 
     # 2. Fallback to Local Ollama if Groq is unavailable or offline
     if not raw_answer:
         model_used = DEFAULT_LOCAL_MODEL
         is_ok, health_msg, avail_models = check_ai_backend_health()
         if not is_ok:
+            if groq_err_code == 429:
+                print(f"[AI ERROR] Groq API rate limit reached (HTTP 429) and local Ollama is offline.")
+                return f"Groq API rate limit exceeded (HTTP 429), {pref_address}. Please try again shortly."
             print(f"[AI ERROR] BACKEND UNREACHABLE: {health_msg}")
             return f"AI backend is currently offline, {pref_address}. Please start Ollama."
+
+        if groq_err_code == 429:
+            print(f"[GROQ FALLBACK] Groq rate limit exceeded (HTTP 429). Switching to local Ollama ({model_used}).")
+        else:
+            print(f"[GROQ FALLBACK] Groq offline. Switching to local Ollama ({model_used}).")
+
 
         if DEFAULT_LOCAL_MODEL not in avail_models and len(avail_models) > 0:
             model_used = avail_models[0]

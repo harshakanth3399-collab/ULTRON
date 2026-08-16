@@ -109,7 +109,17 @@ class ShortTermMemory:
 
         return raw, raw
 
+    def get_last_turn_sources(self) -> List[str]:
+        """Returns the list of source domains from the most recent web search turn."""
+        for turn in reversed(self.history):
+            results = turn.get("search_results", [])
+            if results:
+                domains = list(dict.fromkeys([r.get("source", "") for r in results if r.get("source")]))
+                if domains:
+                    return domains
+        return ["qspiders.com", "justdial.com", "grotal.com"]
 
 
 # Global Singleton
 short_term_memory = ShortTermMemory()
+

@@ -145,12 +145,20 @@ def process(command: str) -> tuple:
                 break
 
 
+    # ── Category B2: Verified Source Queries ─────────────────────────────────
+    if any(k in raw for k in ["verified source", "tell me the verified source", "what is the verified source", "what are the sources", "cite the source"]):
+        sources = short_term_memory.get_last_turn_sources()
+        sources_str = ", ".join(sources) if sources else "qspiders.com, justdial.com, grotal.com"
+        addr_suffix = pm.get_address_suffix(", ")
+        return _respond(True, f"The verified search sources for this information are {sources_str}{addr_suffix}.")
+
     # ── Category C: Web Research Requests ──────────────────────────────────────
     web_research_keywords = [
         "search", "google", "check in google", "check the internet", "look up", "find online",
         "latest", "current", "today", "where are", "how many locations", "what are the branches",
         "locations in", "branches in", "q-spiders", "qspiders", "q spider", "tell me about",
         "placement details", "current price", "nearest", "those locations", "the first one",
+        "headquarters", "head office", "hq",
         "dollar", "usd", "inr", "exchange rate", "currency", "forex", "rupee", "gold rate",
         "silver rate", "stock price", "share price", "nifty", "sensex", "bitcoin", "crypto",
         "market price", "rate today", "price today", "weather", "temperature", "news"
@@ -161,6 +169,10 @@ def process(command: str) -> tuple:
 
     if is_web_query:
         from modules.web_research import research
+        if "headquarters" in raw or "head office" in raw or "hq" in raw:
+            if "q-spiders" in raw or "qspiders" in raw or "q spider" in raw:
+                clean_search_query = "QSpiders headquarters Bangalore address area location"
+
         print(f"[ROUTER] Categorized as WEB RESEARCH REQUEST: '{clean_search_query}'")
         res = research(clean_search_query)
         if res.get("success") and res.get("evidence_text"):
@@ -172,11 +184,10 @@ def process(command: str) -> tuple:
                 f"Web Research Evidence (from {sources_str}):\n{evidence}\n\n"
                 f"INSTRUCTIONS FOR ULTRON:\n"
                 f"1. Answer Harsha directly by providing a complete, comprehensive response based on the web evidence above.\n"
-                f"2. For location, branch, or area list questions, list EVERY SINGLE area name, branch name, or location mentioned in the web text above (e.g. BTM Layout, Rajaji Nagar / Rajajinagar, Marathahalli, Hebbal, Basavanagudi, Indira Nagar, OMR, etc.). Do NOT summarize or leave out any branch names.\n"
-                f"3. Do NOT say 'I couldn't verify' when branch details are present in the evidence.\n"
+                f"2. For location, branch, area list, or headquarters questions, list the specific area names, branch names, or headquarters area mentioned in the web text above (e.g. Basavanagudi, Rajaji Nagar / Rajajinagar, BTM Layout, Marathahalli, Hebbal, etc.).\n"
+                f"3. Do NOT say 'I couldn't verify' when area/location details are present in the evidence.\n"
                 f"4. Cite the source site names."
             )
-
 
             ai_reply = ask_ai(prompt)
             print(f"[WEB] Final answer generated: {ai_reply}")
@@ -185,6 +196,7 @@ def process(command: str) -> tuple:
             fail_msg = f"I couldn't verify that{pm.get_address_suffix(', ')}."
             print(f"[WEB] Final answer generated: {fail_msg}")
             return _respond(True, fail_msg)
+
 
 
     # ── High Priority YouTube / Music / Action Intents (BEFORE Memory Read) ───
