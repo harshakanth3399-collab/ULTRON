@@ -121,13 +121,18 @@ def _play(text: str, lang: str = "en") -> None:
             print(f"[TTS] Mode: ENGLISH MALE FRIENDLY ({voice_id})")
 
 
+        edge_ok = False
         try:
             communicate = edge_tts.Communicate(
                 text=clean, voice=voice_id, rate=rate_val, pitch=pitch_val
             )
             asyncio.run(asyncio.wait_for(communicate.save(filename), timeout=8.0))
+            if os.path.exists(filename) and os.path.getsize(filename) > 1024:
+                edge_ok = True
         except Exception as e:
-            print(f"[TTS NOTE] edge-tts unavailable ({e}). Using offline fallback.")
+            print(f"[TTS NOTE] edge-tts network note ({e}). Using offline fallback.")
+
+        if not edge_ok:
             try:
                 import pyttsx3
                 engine = pyttsx3.init()
@@ -144,6 +149,7 @@ def _play(text: str, lang: str = "en") -> None:
                 _set_speaking(False)
                 _done_event.set()
                 return
+
 
         if _stop_flag.is_set():
             _set_speaking(False)

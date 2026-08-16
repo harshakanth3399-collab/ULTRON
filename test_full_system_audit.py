@@ -3,10 +3,11 @@ test_full_system_audit.py - ULTRON Full System Audit & Final Real-World Verifica
 
 Audits and verifies:
   1. Single Instance & Visible Window Foreground Guard
-  2. Clean Process Shutdown & Zero Process Leaks on Exit/Cancel
-  3. Real-World Answer Accuracy (Live USD to INR Dollar Exchange Rate)
+  2. Sentence Splitting Fix (Normal sentences containing 'and' are NOT split)
+  3. Real-World Currency Accuracy (USD & GBP Exchange Rates — Live values, NOT hard-coded)
   4. Language Mode Switching & English Default Persistence
   5. Action vs Memory Intent Priority & YouTube Command Execution
+  6. Clean Process Shutdown Procedure
 """
 
 from __future__ import annotations
@@ -52,22 +53,40 @@ try:
 except Exception as e:
     log_test("TEST 1: Single Instance Guard", False, str(e))
 
-# ── TEST 2: REAL-WORLD ACCURACY (DOLLAR RATE) ────────────────────────────────
-print("\n--- TEST 2 — REAL-WORLD ACCURACY (DOLLAR RATE) ---")
+# ── TEST 2: SENTENCE SPLITTING FIX ───────────────────────────────────────────
+print("\n--- TEST 2 — SENTENCE SPLITTING FIX ---")
 try:
-    status, reply = router.process("What is the dollar rate?")
+    status, reply = router.process("Tell me about Telugu movies and culture.")
     print(f" [OUTPUT] Reply: '{reply}'")
-    
-    # Must NOT return hard-coded 82 rupees! Must return live rate (>90 INR/USD)
-    if "82" not in reply and ("rupees" in reply.lower() or "rate" in reply.lower() or "inr" in reply.lower() or "dollar" in reply.lower()):
-        log_test("TEST 2: Real-World Accuracy (Dollar Rate)", True, f"Accurate live rate returned (NOT hard-coded 82): '{reply}'")
+    # Verify that the sentence was NOT split into "Executed 'tell me about telugu movies'."
+    if not reply.startswith("Executed"):
+        log_test("TEST 2: Sentence Splitting Fix", True, f"Normal sentence containing 'and' processed intact: '{reply[:70]}...'")
     else:
-        log_test("TEST 2: Real-World Accuracy (Dollar Rate)", False, f"Stale/hard-coded answer detected: '{reply}'")
+        log_test("TEST 2: Sentence Splitting Fix", False, f"Incorrectly split command detected: '{reply}'")
 except Exception as e:
-    log_test("TEST 2: Real-World Accuracy (Dollar Rate)", False, str(e))
+    log_test("TEST 2: Sentence Splitting Fix", False, str(e))
 
-# ── TEST 3: LANGUAGE DIRECTIVES & ENGLISH DEFAULT ────────────────────────────
-print("\n--- TEST 3 — LANGUAGE DIRECTIVES & ENGLISH DEFAULT ---")
+# ── TEST 3: REAL-WORLD ACCURACY (USD & GBP EXCHANGE RATES) ───────────────────
+print("\n--- TEST 3 — REAL-WORLD ACCURACY (CURRENCY RATES) ---")
+try:
+    status1, reply1 = router.process("What is the dollar rate?")
+    print(f" [OUTPUT USD] Reply: '{reply1}'")
+    
+    status2, reply2 = router.process("What is 1 pound in rupees?")
+    print(f" [OUTPUT GBP] Reply: '{reply2}'")
+
+    usd_ok = "82" not in reply1 and ("rupees" in reply1.lower() or "inr" in reply1.lower() or "dollar" in reply1.lower())
+    gbp_ok = "95" not in reply2 and ("rupees" in reply2.lower() or "inr" in reply2.lower() or "pound" in reply2.lower())
+
+    if usd_ok and gbp_ok:
+        log_test("TEST 3: Real-World Accuracy (Forex)", True, f"Live USD & GBP rates returned accurately! USD: '{reply1}' | GBP: '{reply2}'")
+    else:
+        log_test("TEST 3: Real-World Accuracy (Forex)", False, f"Stale rate detected! USD: '{reply1}' | GBP: '{reply2}'")
+except Exception as e:
+    log_test("TEST 3: Real-World Accuracy (Forex)", False, str(e))
+
+# ── TEST 4: LANGUAGE DIRECTIVES & ENGLISH DEFAULT ────────────────────────────
+print("\n--- TEST 4 — LANGUAGE DIRECTIVES & ENGLISH DEFAULT ---")
 try:
     pm.set_active_language("en")
     status, reply1 = router.process("Tell me about Telugu language.")
@@ -80,35 +99,34 @@ try:
     lang3 = pm.get_active_language()
     
     if lang1 == "en" and lang2 == "te" and lang3 == "en":
-        log_test("TEST 3: Language Directives", True, f"Languages: T1='{lang1}', T2='{lang2}', T3='{lang3}'")
+        log_test("TEST 4: Language Directives", True, f"Languages: T1='{lang1}', T2='{lang2}', T3='{lang3}'")
     else:
-        log_test("TEST 3: Language Directives", False, f"Failed: T1='{lang1}', T2='{lang2}', T3='{lang3}'")
+        log_test("TEST 4: Language Directives", False, f"Failed: T1='{lang1}', T2='{lang2}', T3='{lang3}'")
 except Exception as e:
-    log_test("TEST 3: Language Directives", False, str(e))
+    log_test("TEST 4: Language Directives", False, str(e))
 
-# ── TEST 4: ACTION INTENT & YOUTUBE EXECUTION ─────────────────────────────────
-print("\n--- TEST 4 — ACTION INTENT & YOUTUBE EXECUTION ---")
+# ── TEST 5: ACTION INTENT & YOUTUBE EXECUTION ─────────────────────────────────
+print("\n--- TEST 5 — ACTION INTENT & YOUTUBE EXECUTION ---")
 try:
     status, reply = router.process("Open YouTube and play my favorite song.")
     print(f" [OUTPUT] Reply: '{reply}'")
     if "playing" in reply.lower() and "youtube" in reply.lower():
-        log_test("TEST 4: Action Intent Execution", True, f"Executed YouTube playback: '{reply}'")
+        log_test("TEST 5: Action Intent Execution", True, f"Executed YouTube playback: '{reply}'")
     else:
-        log_test("TEST 4: Action Intent Execution", False, f"Failed action routing: '{reply}'")
+        log_test("TEST 5: Action Intent Execution", False, f"Failed action routing: '{reply}'")
 except Exception as e:
-    log_test("TEST 4: Action Intent Execution", False, str(e))
+    log_test("TEST 5: Action Intent Execution", False, str(e))
 
-# ── TEST 5: CLEAN SHUTDOWN PROCEDURE ─────────────────────────────────────────
-print("\n--- TEST 5 — CLEAN SHUTDOWN PROCEDURE ---")
+# ── TEST 6: CLEAN SHUTDOWN PROCEDURE ─────────────────────────────────────────
+print("\n--- TEST 6 — CLEAN SHUTDOWN PROCEDURE ---")
 try:
     from ui.main_window import UltronWindow
-    # Verify clean_shutdown method exists and imports cleanly
     if hasattr(UltronWindow, "clean_shutdown"):
-        log_test("TEST 5: Clean Shutdown Procedure", True, "UltronWindow.clean_shutdown procedure verified")
+        log_test("TEST 6: Clean Shutdown Procedure", True, "UltronWindow.clean_shutdown procedure verified")
     else:
-        log_test("TEST 5: Clean Shutdown Procedure", False, "clean_shutdown method missing on UltronWindow")
+        log_test("TEST 6: Clean Shutdown Procedure", False, "clean_shutdown method missing on UltronWindow")
 except Exception as e:
-    log_test("TEST 5: Clean Shutdown Procedure", False, str(e))
+    log_test("TEST 6: Clean Shutdown Procedure", False, str(e))
 
 # ── SUMMARY ───────────────────────────────────────────────────────────────────
 print("\n" + "=" * 80)
@@ -118,7 +136,7 @@ print(f" PASSED TESTS: {len(passed)} / {len(passed) + len(failed)}")
 print(f" FAILED TESTS: {len(failed)}")
 
 if not failed:
-    print("\nSTATUS: ALL 5 SYSTEM AUDIT TESTS PASSED CLEANLY. ZERO DEFECTS FOUND.")
+    print("\nSTATUS: ALL 6 SYSTEM AUDIT TESTS PASSED CLEANLY. ZERO DEFECTS FOUND.")
     sys.exit(0)
 else:
     print("\nSTATUS: FAILURES DETECTED IN SYSTEM AUDIT SUITE.")

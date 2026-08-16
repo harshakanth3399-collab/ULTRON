@@ -64,15 +64,14 @@ class UltronAgent:
             return True, f"Saved to my long-term semantic memory: '{note_content}', Harsha!"
 
         # ── Tool 5: Multi-Step Task Execution ─────────────────────────────────
-        # Check if prompt contains multiple instructions ("and", "then")
-        if " and " in raw_lower or " then " in raw_lower:
-            parts = re.split(r"\s+(?:and|then)\s+", prompt_raw, flags=re.I)
+        # Only split if explicitly requested via "and then" or multiple separate action commands
+        if " and then " in raw_lower or " then open " in raw_lower or " then play " in raw_lower:
+            parts = re.split(r"\s+(?:and then|then)\s+", prompt_raw, flags=re.I)
             responses = []
             for part in parts:
                 p_clean = part.strip()
                 if not p_clean:
                     continue
-                # Try app execution
                 exec_ok = execute(p_clean)
                 if exec_ok:
                     responses.append(f"Executed '{p_clean}'.")
@@ -83,6 +82,7 @@ class UltronAgent:
 
             if responses:
                 return True, " ".join(responses)
+
 
         # Fallback to AI with semantic memory context
         ai_reply = ask_ai(context_str + prompt_raw)

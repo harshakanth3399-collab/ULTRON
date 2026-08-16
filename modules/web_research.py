@@ -22,18 +22,32 @@ def _log_web(msg: str) -> None:
     print(f"[WEB] {msg}")
 
 
+def _normalize_search_query(raw_query: str) -> str:
+    """Extracts essential search terms from conversational questions."""
+    q = raw_query.lower().strip()
+    fillers = [
+        "could you please tell me", "can you please tell me", "tell me about", "can you check",
+        "find out", "check in google", "search in google", "search online", "what is the current",
+        "what is the latest", "what is the", "where are", "how many", "please find"
+    ]
+    for f in fillers:
+        q = q.replace(f, "")
+    q = re.sub(r'[^\w\s]', ' ', q)
+    extracted = " ".join(q.split()).strip()
+    return extracted if len(extracted) >= 3 else raw_query.strip()
+
+
 def web_search(query: str, max_results: int = 5) -> Dict[str, Any]:
     """
     Executes a real internet search using API key if available,
     otherwise falling back to DuckDuckGo HTML/JSON and open web endpoints.
     """
     raw_query = query.strip()
-    # Normalize query string for search engines (remove hyphens and special punctuation)
-    clean_query = re.sub(r'[^\w\s]', ' ', raw_query)
-    clean_query = " ".join(clean_query.split()).strip()
+    clean_query = _normalize_search_query(raw_query)
 
     _log_web(f"Query: '{raw_query}' (Normalized: '{clean_query}')")
     _log_web(f"Search started: Query='{clean_query}'")
+
 
     results: List[Dict[str, str]] = []
 

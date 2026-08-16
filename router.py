@@ -109,20 +109,41 @@ def process(command: str) -> tuple:
         curr_addr = pm.get_preferred_address() or "Harsha"
         return _respond(True, f"{curr_addr}.")
 
-    # ── Live Currency / Forex Helper (Instant Real-World Accuracy) ────────────
-    if any(k in raw for k in ["dollar rate", "dollar price", "dollar value", "usd to inr", "usd/inr", "exchange rate", "dollar in rupees", "1 dollar"]):
-        try:
-            import urllib.request, json
-            req = urllib.request.Request("https://open.er-api.com/v6/latest/USD", headers={"User-Agent": "ULTRON/1.0"})
-            with urllib.request.urlopen(req, timeout=3.0) as resp:
-                data = json.loads(resp.read().decode('utf-8'))
-                inr_rate = data.get("rates", {}).get("INR")
-                if inr_rate:
-                    rounded_rate = round(float(inr_rate), 2)
-                    addr_suffix = pm.get_address_suffix(", ")
-                    return _respond(True, f"The live exchange rate today is {rounded_rate} Indian Rupees per US Dollar{addr_suffix}.")
-        except Exception as e:
-            print(f"[ROUTER FOREX NOTE] Live API fallback: {e}")
+    # ── Universal Live Forex & Currency Engine (Instant Real-World Accuracy) ──
+    _CURRENCY_MAP = {
+        "dollar": ("USD", "US Dollar"),
+        "usd": ("USD", "US Dollar"),
+        "pound": ("GBP", "British Pound"),
+        "gbp": ("GBP", "British Pound"),
+        "euro": ("EUR", "Euro"),
+        "eur": ("EUR", "Euro"),
+        "yen": ("JPY", "Japanese Yen"),
+        "jpy": ("JPY", "Japanese Yen"),
+        "dirham": ("AED", "UAE Dirham"),
+        "aed": ("AED", "UAE Dirham"),
+        "riyal": ("SAR", "Saudi Riyal"),
+        "sar": ("SAR", "Saudi Riyal"),
+        "cad": ("CAD", "Canadian Dollar"),
+        "aud": ("AUD", "Australian Dollar"),
+    }
+    is_forex_query = any(k in raw for k in ["rate", "price", "value", "exchange", "rupees", "inr", "convert", "how much is"]) and any(c in raw for c in _CURRENCY_MAP)
+    if is_forex_query or any(k in raw for k in ["dollar rate", "pound rate", "euro rate", "usd to inr", "gbp to inr", "eur to inr"]):
+        for curr_key, (code, name) in _CURRENCY_MAP.items():
+            if curr_key in raw:
+                try:
+                    import urllib.request, json
+                    req = urllib.request.Request(f"https://open.er-api.com/v6/latest/{code}", headers={"User-Agent": "ULTRON/1.0"})
+                    with urllib.request.urlopen(req, timeout=3.0) as resp:
+                        data = json.loads(resp.read().decode('utf-8'))
+                        inr_rate = data.get("rates", {}).get("INR")
+                        if inr_rate:
+                            rounded_rate = round(float(inr_rate), 2)
+                            addr_suffix = pm.get_address_suffix(", ")
+                            return _respond(True, f"The live exchange rate today is {rounded_rate} Indian Rupees per 1 {name}{addr_suffix}.")
+                except Exception as e:
+                    print(f"[ROUTER FOREX NOTE] Live API fallback: {e}")
+                break
+
 
     # ── Category C: Web Research Requests ──────────────────────────────────────
     web_research_keywords = [

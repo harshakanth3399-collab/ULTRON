@@ -505,17 +505,20 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
         else:
             # Accumulating active speech
             speech_frames.append(data)
-            if rms_val <= _energy_threshold:
-                silence_counter += 1
-                if silence_counter > silence_limit_chunks:
-                    print("[VOICE] Speech offset detected (silence threshold met).")
-                    break
-            else:
-                silence_counter = 0
+            min_speech_chunks = int(_MIC_RATE / 1024 * 1.2)  # Require at least 1.2s of audio before allowing silence offset
+            if len(speech_frames) >= min_speech_chunks:
+                if rms_val <= _energy_threshold:
+                    silence_counter += 1
+                    if silence_counter > silence_limit_chunks:
+                        print("[VOICE] Speech offset detected (silence threshold met).")
+                        break
+                else:
+                    silence_counter = 0
 
             if len(speech_frames) > max_chunks:
                 print("[VOICE] Phrase time limit exceeded.")
                 break
+
 
     if not speech_frames or max_rms_seen < 35 or max_peak_seen < 120:
         print(f"[VOICE] Low-energy audio discarded (Max RMS={max_rms_seen}, Max Peak={max_peak_seen}).")
