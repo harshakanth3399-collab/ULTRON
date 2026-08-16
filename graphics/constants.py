@@ -1,20 +1,20 @@
 """Graphics pipeline constants and tunables."""
 
 # ── Particles ────────────────────────────────────────────────────────────
-# 25,000 particles — visually rich, verified safe for Intel Iris Xe
-PARTICLE_COUNT = 25_000
-SPHERE_RADIUS  = 0.42
-PARTICLE_MIN_SIZE = 2.5
-PARTICLE_MAX_SIZE = 6.0
+# 8,000 crisp, laser-like holographic particles (compact, elegant density — NO solid white blob)
+PARTICLE_COUNT = 8_000
+SPHERE_RADIUS  = 0.24
+PARTICLE_MIN_SIZE = 1.0
+PARTICLE_MAX_SIZE = 2.4
 
 # ── Electric arcs ──────────────────────────────────────────────────────────
-ARC_COUNT = 14
-ARC_SEGMENTS = 32
-ARC_MAX_LENGTH = 0.55
+ARC_COUNT = 10
+ARC_SEGMENTS = 24
+ARC_MAX_LENGTH = 0.35
 
 # ── Framebuffer / bloom ─────────────────────────────────────────────────────
-BLOOM_THRESHOLD = 0.75
-BLOOM_INTENSITY = 0.35
+BLOOM_THRESHOLD = 0.80
+BLOOM_INTENSITY = 0.25
 BLOOM_BLUR_PASSES = 2
 BLOOM_DOWNSAMPLE = 2
 
@@ -23,11 +23,12 @@ AUDIO_ATTACK = 0.42
 AUDIO_RELEASE = 0.08
 AUDIO_GAIN = 2.8
 
-# ── Palette (linear RGB - ULTRON Red Holographic & Cyan Energy Matrix) ───
-COLOR_CORE = (1.0, 0.0, 0.20)     # Electric Crimson Red (#FF0033) Core
-COLOR_GLOW = (0.0, 0.90, 1.00)     # Radiant Holographic Cyan (#00E5FF) Glow
-COLOR_ARC  = (1.0, 0.15, 0.05)     # High-Intensity Crimson Arc Filaments
-COLOR_DEEP = (0.15, 0.0, 0.05)     # Deep Quantum Crimson Void Shadow
+# ── Palette (ULTRON Warm Amber / Cyber Cyan Holographic HUD) ───────────────
+COLOR_CORE = (0.91, 0.39, 0.04)     # Warm Amber Core (#E8630A)
+COLOR_GLOW = (0.00, 0.80, 1.00)     # Cyber Cyan Glow (#00C8FF)
+COLOR_ARC  = (1.00, 0.55, 0.10)     # Golden Arc Filaments (#FF8C1A)
+COLOR_DEEP = (0.12, 0.04, 0.01)     # Quantum Void Shadow
+
 
 
 

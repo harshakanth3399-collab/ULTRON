@@ -31,11 +31,11 @@ void main() {
     vec4 clip = u_mvp * vec4(in_pos, 1.0);
     gl_Position = clip;
 
-    // Perspective attenuation: sharp 3D point scaling for crisp holographic stars (no pixel boxes!)
-    float atten = 1.0 / max(clip.w, 0.08);
-    gl_PointSize = clamp(in_size * atten * 4.5 * (1.0 + u_glow * 0.35), 1.5, 20.0);
+    // Perspective attenuation: crisp point scaling for futuristic holographic particle core
+    float atten = 1.0 / max(clip.w, 0.12);
+    gl_PointSize = clamp(in_size * atten * 2.2 * (1.0 + u_glow * 0.25), 1.0, 5.0);
 
-    v_brightness = in_brightness * (0.85 + u_glow * 0.4);
+    v_brightness = in_brightness * (0.80 + u_glow * 0.35);
     v_depth = clip.z;
     v_phase = fract(sin(dot(in_pos, vec3(12.9898, 78.233, 45.5432))) * 43758.5453);
 }
@@ -58,26 +58,23 @@ void main() {
     vec2 uv = gl_PointCoord - 0.5;
     float dist = length(uv);
 
-    // CRITICAL FIX: Cut off square quad corners so particles are 100% perfectly round glowing spheres, NOT pixel boxes!
     if (dist > 0.5) {
         discard;
     }
 
-    // High-frequency stroboscopic scintillation twinkling
-    float blink = 0.75 + 0.35 * sin(u_time * 24.0 + v_phase * 62.83);
+    // High-frequency subtle scintillation
+    float blink = 0.85 + 0.15 * sin(u_time * 18.0 + v_phase * 62.83);
+    float core = exp(-dist * dist * 18.0);
+    float halo = max(0.0, 0.5 - dist) * 1.2;
+    float intensity = (core * 1.5 + halo) * v_brightness * blink;
 
-    // Smooth radial gaussian energy core
-    float core = exp(-dist * dist * 24.0);
-    float halo = max(0.0, 0.5 - dist) * 1.8;
-    float intensity = (core * 2.2 + halo) * v_brightness * blink;
-
-    vec3 col = mix(u_color_glow, u_color_core, core);
-    col *= (1.2 + intensity * 0.8);
-    float alpha = clamp((0.5 - dist) * 2.0 * intensity, 0.0, 1.0);
+    vec3 col = mix(u_color_core, u_color_glow, dist * 1.4);
+    float alpha = clamp((0.5 - dist) * 1.8 * v_brightness, 0.0, 0.80);
 
     frag_color = vec4(col * intensity, alpha);
 }
 """
+
 
 
 ARC_VERT = """
