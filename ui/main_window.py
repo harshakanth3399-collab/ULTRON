@@ -156,7 +156,30 @@ class UltronWindow(QMainWindow):
         self._badge = QLabel("● ONLINE", self._ov)
         self._badge.setStyleSheet(self._badge_style("rgba(232,99,10,0.9)"))
 
+        # ── Cancel / Exit Button ─────────────────────────────────────────
+        self._close_btn = QPushButton("✕ EXIT", self._ov)
+        self._close_btn.setCursor(Qt.PointingHandCursor)
+        self._close_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(220, 30, 20, 0.2);
+                border: 1px solid rgba(255, 60, 40, 0.6);
+                border-radius: 12px;
+                color: rgba(255, 120, 100, 0.95);
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 2px;
+                padding: 4px 12px;
+            }
+            QPushButton:hover {
+                background: rgba(255, 40, 30, 0.4);
+                border: 1px solid rgba(255, 80, 60, 0.9);
+                color: #FFFFFF;
+            }
+        """)
+        self._close_btn.clicked.connect(self.clean_shutdown)
+
         # ── State label ───────────────────────────────────────────────────
+
         self._state = QLabel("Say  'Hey Ultron'  to begin", self._ov)
         self._state.setAlignment(Qt.AlignCenter)
         self._state.setStyleSheet(
@@ -235,9 +258,11 @@ class UltronWindow(QMainWindow):
         self._wm.adjustSize()
         self._wm.move(P, P)
 
-        # Badge — top-right
+        # Exit button & Badge — top-right
+        self._close_btn.adjustSize()
         self._badge.adjustSize()
-        self._badge.move(W - self._badge.width() - P, P + 6)
+        self._close_btn.move(W - self._close_btn.width() - P, P + 6)
+        self._badge.move(W - self._close_btn.width() - self._badge.width() - P - 10, P + 6)
 
         # Mic button — bottom-right
         mb = self._mic.SIZE
@@ -257,112 +282,33 @@ class UltronWindow(QMainWindow):
         self._conv_you.move(P, H - conv_h - P - 8)
         self._conv_ai.move(P, H - self._conv_ai.height() - P - 8)
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
+    # ── Clean Shutdown ────────────────────────────────────────────────────────
 
-    def _badge_style(self, color: str) -> str:
-        dim = color.replace("0.9)", "0.35)")
-        return (
-            f"background:rgba(232,99,10,0.09);"
-            f"border:1px solid {dim};"
-            f"border-radius:14px;"
-            f"color:{color};"
-            f"font-size:11px;font-weight:700;letter-spacing:2px;padding:4px 14px;"
-        )
-
-    def _is_speaking(self) -> bool:
+    def clean_shutdown(self) -> None:
+        print("[SHUTDOWN] Terminating ULTRON cleanly...", flush=True)
         try:
-            from speech_engine import speaking
-            return speaking()
+            from core.voice_pipeline import voice_pipeline
+            voice_pipeline.stop()
         except Exception:
-            return False
-
-    # ── Voice state callbacks ─────────────────────────────────────────────────
-
-    def _on_voice_state(self, state: VoiceState, message: str) -> None:
-        QTimer.singleShot(0, lambda: self._apply_state(state))
-
-    def _apply_state(self, state: VoiceState) -> None:
-        AMBER = "rgba(232,99,10,0.9)"
-        DIM   = "rgba(232,99,10,0.45)"
-        RED   = "rgba(255,55,25,0.9)"
-        CYAN  = "rgba(0,200,255,0.9)"
-        WHITE = "rgba(240,240,240,0.88)"
-        GOLD  = "rgba(255,200,45,0.9)"
-
-        mic_active = False
-
-        if state == VoiceState.IDLE:
-            self._set_badge("● ONLINE",    AMBER)
-            self._set_state("Say  'Hey Ultron'  to begin", DIM)
-            self._renderer.set_state(UltronState.IDLE)
-
-        elif state == VoiceState.WAKE_DETECTED:
-            self._set_badge("⚡ WAKE",     GOLD)
-            self._set_state("Wake detected...", GOLD)
-
-        elif state == VoiceState.GREETING:
-            self._set_badge("◎ GREETING",  AMBER)
-            self._set_state("", AMBER)
-            self._renderer.set_state(UltronState.SPEAKING)
-
-        elif state in (VoiceState.LISTENING, VoiceState.RECORDING):
-            self._set_badge("● LISTENING", RED)
-            self._set_state("Listening...", RED)
-            self._renderer.set_state(UltronState.LISTENING)
-            mic_active = True
-
-        elif state == VoiceState.TRANSCRIBING:
-            self._set_badge("◌ UNDERSTANDING", WHITE)
-            self._set_state("Understanding...", WHITE)
-
-        elif state == VoiceState.PROCESSING:
-            self._set_badge("◌ THINKING",  GOLD)
-            self._set_state("Thinking...", GOLD)
-
-        elif state == VoiceState.SPEAKING:
-            self._set_badge("◎ SPEAKING",  CYAN)
-            self._set_state("", CYAN)
-            self._renderer.set_state(UltronState.SPEAKING)
-
-        elif state == VoiceState.ERROR:
-            self._set_badge("⚠ ERROR",     RED)
-            self._set_state("Recovering...", RED)
-            self._renderer.set_state(UltronState.IDLE)
-
-        self._mic.set_active(mic_active)
-        self._layout_widgets()
-
-    def _set_badge(self, text: str, color: str) -> None:
-        self._badge.setText(text)
-        self._badge.setStyleSheet(self._badge_style(color))
-
-    def _set_state(self, text: str, color: str) -> None:
-        self._state.setText(text)
-        self._state.setStyleSheet(
-            f"color:{color};font-size:13px;font-weight:700;"
-            f"letter-spacing:4px;background:transparent;"
-        )
-
-    # ── Chat callback ─────────────────────────────────────────────────────────
-
-    def _on_chat(self, speaker: str, text: str) -> None:
-        QTimer.singleShot(0, lambda: self._update_chat(speaker, text))
-
-    def _update_chat(self, speaker: str, text: str) -> None:
-        short = text[:120] + ("..." if len(text) > 120 else "")
-        if speaker == "USER":
-            self._conv_you.setText(f"YOU    {short}")
-        elif speaker == "ULTRON":
-            self._conv_ai.setText(f"ULTRON   {short}")
-        self._layout_widgets()
-
-    # ── Tick ──────────────────────────────────────────────────────────────────
-
-    def _tick(self) -> None:
-        self._pulse_t += FRAME_MS / 1000.0
-        self._mic.set_pulse(self._pulse_t)
-        self._renderer.update()  # Force 60 FPS repaints on the OpenGL particle canvas
-
+            pass
+        try:
+            from speech_engine import stop as stop_tts
+            stop_tts()
+        except Exception:
+            pass
+        try:
+            self._timer.stop()
+            self._heartbeat.stop()
+            self._renderer.shutdown()
+        except Exception:
+            pass
+        try:
+            from PySide6.QtWidgets import QApplication
+            QApplication.quit()
+        except Exception:
+            pass
+        import os
+        os._exit(0)
 
     # ── Mic button handler ────────────────────────────────────────────────────
 
@@ -375,21 +321,16 @@ class UltronWindow(QMainWindow):
         if voice_pipeline._running:
             voice_state_manager.transition_to(VoiceState.LISTENING, "Manual activation")
 
-
-    # ── Keys ──────────────────────────────────────────────────────────────────
+    # ── Keys & Close ──────────────────────────────────────────────────────────
 
     def keyPressEvent(self, event) -> None:
         if event.key() == Qt.Key_Escape:
-            voice_pipeline.stop()
-            self.close()
+            self.clean_shutdown()
         elif event.key() in (Qt.Key_Return, Qt.Key_Space):
             self._on_mic()
         super().keyPressEvent(event)
 
     def closeEvent(self, event) -> None:
-        voice_pipeline.stop()
-        try:
-            self._renderer.shutdown()
-        except Exception:
-            pass
+        self.clean_shutdown()
         super().closeEvent(event)
+

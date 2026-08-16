@@ -109,13 +109,32 @@ def process(command: str) -> tuple:
         curr_addr = pm.get_preferred_address() or "Harsha"
         return _respond(True, f"{curr_addr}.")
 
+    # ── Live Currency / Forex Helper (Instant Real-World Accuracy) ────────────
+    if any(k in raw for k in ["dollar rate", "dollar price", "dollar value", "usd to inr", "usd/inr", "exchange rate", "dollar in rupees", "1 dollar"]):
+        try:
+            import urllib.request, json
+            req = urllib.request.Request("https://open.er-api.com/v6/latest/USD", headers={"User-Agent": "ULTRON/1.0"})
+            with urllib.request.urlopen(req, timeout=3.0) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                inr_rate = data.get("rates", {}).get("INR")
+                if inr_rate:
+                    rounded_rate = round(float(inr_rate), 2)
+                    addr_suffix = pm.get_address_suffix(", ")
+                    return _respond(True, f"The live exchange rate today is {rounded_rate} Indian Rupees per US Dollar{addr_suffix}.")
+        except Exception as e:
+            print(f"[ROUTER FOREX NOTE] Live API fallback: {e}")
+
     # ── Category C: Web Research Requests ──────────────────────────────────────
     web_research_keywords = [
         "search", "google", "check in google", "check the internet", "look up", "find online",
         "latest", "current", "today", "where are", "how many locations", "what are the branches",
         "locations in", "branches in", "q-spiders", "qspiders", "q spider", "tell me about",
-        "placement details", "current price", "nearest", "those locations", "the first one"
+        "placement details", "current price", "nearest", "those locations", "the first one",
+        "dollar", "usd", "inr", "exchange rate", "currency", "forex", "rupee", "gold rate",
+        "silver rate", "stock price", "share price", "nifty", "sensex", "bitcoin", "crypto",
+        "market price", "rate today", "price today", "weather", "temperature", "news"
     ]
+
     is_history_query = any(k in command.lower() for k in ["what did i just ask", "what did i ask", "what was my last question", "what did you say", "what was your reply"])
     is_web_query = any(k in raw or k in command.lower() for k in web_research_keywords) and not is_history_query and not any(k in raw for k in ["open google", "open chrome", "open youtube", "play my favorite song", "play this song"])
 

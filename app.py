@@ -2,7 +2,54 @@
 ULTRON desktop holographic interface.
 app.py only defines functions — it does NOT run any code at import time.
 """
+from __future__ import annotations
+
+import os
+import socket
 import sys
+import threading
+
+_SINGLE_INSTANCE_PORT = 9899
+
+
+def _check_single_instance(window_holder: list) -> socket.socket | None:
+    """
+    Ensures single instance behavior.
+    If ULTRON is already running, brings the existing window to front and exits this new process.
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        s.bind(('127.0.0.1', _SINGLE_INSTANCE_PORT))
+        s.listen(1)
+
+        def _listen_loop():
+            while True:
+                try:
+                    conn, _ = s.accept()
+                    data = conn.recv(1024).decode('utf-8', errors='ignore')
+                    if "FOREGROUND" in data and window_holder and window_holder[0]:
+                        w = window_holder[0]
+                        w.showNormal()
+                        w.raise_()
+                        w.activateWindow()
+                    conn.close()
+                except Exception:
+                    break
+
+        t = threading.Thread(target=_listen_loop, daemon=True, name="SingleInstanceListener")
+        t.start()
+        return s
+    except (OSError, socket.error):
+        print("[SINGLE INSTANCE] ULTRON is already running! Bringing existing window to foreground...", flush=True)
+        try:
+            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client.connect(('127.0.0.1', _SINGLE_INSTANCE_PORT))
+            client.sendall(b"FOREGROUND")
+            client.close()
+        except Exception:
+            pass
+        sys.exit(0)
 
 
 def _configure_gl() -> None:
@@ -20,13 +67,15 @@ def main() -> int:
     from PySide6.QtWidgets import QApplication
     from PySide6.QtCore import QTimer, Qt
 
+    window_holder = [None]
+    _check_single_instance(window_holder)
+
     print("[BOOT] launch_app entered", flush=True)
     _configure_gl()
 
     app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("ULTRON")
-    # Do NOT quit when last window closes — we control lifecycle
-    app.setQuitOnLastWindowClosed(False)
+    app.setQuitOnLastWindowClosed(True)
 
     print("[BOOT] QApplication created", flush=True)
 
@@ -34,10 +83,9 @@ def main() -> int:
     try:
         from web_server import start_server_in_background
         ip, port = start_server_in_background()
-        
+
         # Auto-index personal project data & memory in background
         try:
-            import threading
             from modules.memory.vector_memory import vector_memory
             threading.Thread(target=vector_memory.index_workspace, args=(".",), daemon=True).start()
             print("[BOOT] Long-Term Semantic Vector Memory active & indexing workspace.", flush=True)
@@ -53,25 +101,25 @@ def main() -> int:
     except Exception as e:
         print(f"[WEB SERVER] Server startup note: {e}", flush=True)
 
-
     from ui.main_window import UltronWindow
 
     window = UltronWindow()
+    window_holder[0] = window
     print("[BOOT] main window created", flush=True)
 
-    # Step 1: Show as a NORMAL window first so Qt registers it
-    # (showFullScreen directly from hidden state causes exit code 1 on some Intel drivers)
-    window.show()
-    print("[BOOT] window shown (normal)", flush=True)
+    # Bring UI visibly to foreground
+    window.showNormal()
+    window.raise_()
+    window.activateWindow()
+    print("[BOOT] window shown (visible foreground)", flush=True)
 
-    # Step 2: Go fullscreen 200ms later, after event loop starts and first paint completes
     def _go_fullscreen():
         print("[BOOT] switching to fullscreen", flush=True)
         window.showFullScreen()
+        window.raise_()
+        window.activateWindow()
 
     QTimer.singleShot(200, _go_fullscreen)
-
-    # Step 3: Start voice pipeline 1.5s after event loop starts
     QTimer.singleShot(1500, window._start_pipeline)
     print("[BOOT] voice pipeline scheduled", flush=True)
 
