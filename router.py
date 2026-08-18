@@ -294,7 +294,41 @@ def process(command: str) -> tuple:
         addr_suffix = pm.get_address_suffix(", ")
         return _respond(True, f"{msg}{addr_suffix}")
 
+    # ── Screen Vision & Screenshot ─────────────────────────────────────────────
+    if any(k in raw for k in ["take screenshot", "take a screenshot", "capture screen", "screenshot"]):
+        from modules.screen_vision import take_screenshot
+        ok, msg = take_screenshot()
+        addr_suffix = pm.get_address_suffix(", ")
+        return _respond(ok, f"{msg}{addr_suffix}")
+
+    # ── Desktop Window Management ──────────────────────────────────────────────
+    if any(k in raw for k in ["minimize all windows", "minimize windows", "show desktop", "hide windows"]):
+        from modules.window_manager import minimize_all_windows
+        msg = minimize_all_windows()
+        addr_suffix = pm.get_address_suffix(", ")
+        return _respond(True, f"{msg}{addr_suffix}")
+
+    if any(k in raw for k in ["minimize window", "minimize active window"]):
+        from modules.window_manager import minimize_active_window
+        msg = minimize_active_window()
+        addr_suffix = pm.get_address_suffix(", ")
+        return _respond(True, f"{msg}{addr_suffix}")
+
+    if any(k in raw for k in ["maximize window", "maximize active window"]):
+        from modules.window_manager import maximize_active_window
+        msg = maximize_active_window()
+        addr_suffix = pm.get_address_suffix(", ")
+        return _respond(True, f"{msg}{addr_suffix}")
+
+    # ── Fast Local File Search ────────────────────────────────────────────────
+    if any(k in raw for k in ["find file", "search file", "find pdf", "where is file", "locate file"]):
+        from modules.file_search import search_local_files
+        ok, msg, files = search_local_files(raw)
+        addr_suffix = pm.get_address_suffix(", ")
+        return _respond(ok, f"{msg}{addr_suffix}")
+
     # ── Security ────────────────────────────────────────────────────────────────
+
 
     if raw == "intruder_detected":
         return _respond(True, "Get lost! This is Harsha's laptop. You are NOT authorised.")
