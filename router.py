@@ -271,7 +271,31 @@ def process(command: str) -> tuple:
             return _respond(success_flag, f"{user_msg}{addr_suffix}")
 
 
+    # ── System Telemetry (RAM & Battery) ──────────────────────────────────────
+    if any(k in raw for k in ["ram usage", "memory usage", "how much ram", "ram percentage", "memory load"]):
+        from modules.system_control import get_memory_status
+        ram_pct, used_mb, total_mb = get_memory_status()
+        addr_suffix = pm.get_address_suffix(", ")
+        return _respond(True, f"Current RAM usage is {ram_pct}% ({used_mb} MB used out of {total_mb} MB){addr_suffix}.")
+
+    if any(k in raw for k in ["battery status", "battery percentage", "battery level", "how much battery", "power status"]):
+        from modules.system_control import get_battery_status
+        pct, plugged = get_battery_status()
+        addr_suffix = pm.get_address_suffix(", ")
+        if pct is not None:
+            plug_str = "plugged in" if plugged else "running on battery power"
+            return _respond(True, f"Battery level is at {pct}%, {plug_str}{addr_suffix}.")
+        return _respond(True, f"Could not retrieve battery telemetry{addr_suffix}.")
+
+    # ── Volume & Hardware Controls ─────────────────────────────────────────────
+    if any(k in raw for k in ["volume up", "increase volume", "louder", "volume down", "decrease volume", "quieter", "mute audio", "unmute audio", "mute sound"]):
+        from modules.system_control import control_volume
+        msg = control_volume(raw)
+        addr_suffix = pm.get_address_suffix(", ")
+        return _respond(True, f"{msg}{addr_suffix}")
+
     # ── Security ────────────────────────────────────────────────────────────────
+
     if raw == "intruder_detected":
         return _respond(True, "Get lost! This is Harsha's laptop. You are NOT authorised.")
 

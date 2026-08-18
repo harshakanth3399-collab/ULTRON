@@ -167,6 +167,13 @@ def execute(command: str) -> Optional[tuple[bool, str]]:
             subprocess.Popen("cmd.exe", shell=True)
             return True, "Command Prompt opened."
 
+    # Dynamic Installed App Discovery Fallback
+    if cmd.startswith(("open ", "launch ", "start ", "go to ", "visit ")) or len(cmd.split()) <= 3:
+        from modules.app_finder import app_finder
+        match = app_finder.find_app(cmd)
+        if match:
+            return app_finder.launch(cmd)
+
     # Universal Web / Search / Action Execution
     if cmd.startswith(("open ", "launch ", "start ", "go to ", "visit ")):
         target = re.sub(r"^(open|launch|start|go to|visit)\s+", "", cmd).strip()
@@ -184,6 +191,7 @@ def execute(command: str) -> Optional[tuple[bool, str]]:
             except Exception:
                 webbrowser.open(url)
                 return True, f"Opened {target_clean}."
+
 
     # Google fallback
     if "google" in cmd or "search" in cmd:
