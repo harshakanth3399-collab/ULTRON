@@ -72,6 +72,7 @@ def process(command: str) -> tuple:
     raw = clean_search_query.lower().strip()
 
     LAST_ACTIVITY = time.time()
+    pref_address = pm.get_preferred_address() or "Harsha"
 
     # Helper function to wrap returns and record short-term memory
     def _respond(status: bool, response_text: str, search_results: Optional[List[Dict[str, str]]] = None) -> tuple:
@@ -88,7 +89,15 @@ def process(command: str) -> tuple:
         pm.set_active_language("en")
         return _respond(True, "Switched back to English.")
 
+    # ── Category A0: Friendly Assistant & System Diagnostics ──────────────────
+    from modules.friendly_assistant import get_friendly_response
+    friendly_reply = get_friendly_response(raw, pref_address)
+    if friendly_reply:
+        return _respond(True, friendly_reply)
+
+
     # ── Preferred Address & Title Management ───────────────────────────────────
+
 
     # Handle: "Don't always call me sir, remember it", "Don't call me sir", "Call me Sir", "What should you call me"
     if any(k in raw for k in ["don't always call me sir", "dont always call me sir", "don't call me sir", "dont call me sir", "stop calling me sir", "no need to call me sir"]):

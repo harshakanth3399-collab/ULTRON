@@ -133,9 +133,11 @@ class VoicePipeline:
         router_process = _router()
 
         print("[BOOT] startup greeting starting", flush=True)
-        # Play startup greeting using the approved voice
-        self._say("Hey Harsha, what can I help you with?")
+        from modules.friendly_assistant import get_dynamic_greeting
+        # Play dynamic time-aware startup greeting using the approved voice
+        self._say(get_dynamic_greeting("Harsha"))
         print("[BOOT] startup greeting finished", flush=True)
+
 
         voice_state_manager.transition_to(VoiceState.IDLE)
         print("[BOOT] wake listener active. Say 'Hey' or 'Hey, [command]'.", flush=True)
