@@ -248,34 +248,10 @@ def process(command: str) -> tuple:
             addr_suffix = pm.get_address_suffix(", ")
             return _respond(True, f"Playing {clean_title} on YouTube for you{addr_suffix}.")
 
-    # ── High Priority WhatsApp & Messaging Intents ──────────────────────────────
-    if "whatsapp" in raw or "message" in raw:
-        from modules.adb_bridge import adb_bridge
-        m_msg = re.search(r"message\s+(.*?)\s+to\s+(.*)", raw, re.IGNORECASE) or re.search(r"message\s+(.*)", raw, re.IGNORECASE)
-        contact = "contact"
-        if m_msg:
-            contact = m_msg.group(2).strip() if len(m_msg.groups()) > 1 else m_msg.group(1).strip()
-        adb_bridge.open_app("whatsapp")
-        addr_suffix = pm.get_address_suffix(", ")
-        return _respond(True, f"Opening WhatsApp to message {contact.capitalize()}{addr_suffix}.")
-
-    # ── Multi-Command Decomposition ─────────────────────────────────────────
-    if any(sep in raw for sep in [" and ", " then ", " and then "]) and not ("favorite" in raw or "remember" in raw):
-        tasks = plan(raw)
-        if len(tasks) > 1:
-            print(f"[ROUTER] Multi-command detected ({len(tasks)} tasks): {tasks}")
-            responses = []
-            for t in tasks:
-                flag, resp = process(t)
-                if resp and resp not in responses:
-                    responses.append(resp)
-            combined = " ".join(responses) if responses else "Executed all commands for you, Harsha!"
-            return _respond(True, combined)
-
     # ── High Priority Phone Target Actions ────────────────────────────────────
     if any(k in raw for k in ["in my phone", "on my phone", "on phone", "in phone", "in my mobile", "on my mobile", "in mobile", "on mobile"]):
         from modules.adb_bridge import adb_bridge
-        raw_phone = raw.replace("what's up", "whatsapp").replace("whats up", "whatsapp").replace("whatup", "whatsapp")
+        raw_phone = raw.replace("what's up", "whatsapp").replace("whats up", "whatsapp").replace("whatup", "whatsapp").replace("watch up", "whatsapp")
         app_map = {
             "whatsapp": "whatsapp", "youtube": "youtube", "instagram": "instagram",
             "chrome": "chrome", "spotify": "spotify", "camera": "camera",
@@ -285,6 +261,15 @@ def process(command: str) -> tuple:
             if kw in raw_phone:
                 return _respond(True, adb_bridge.open_app(app_name))
         return _respond(True, "Triggered action on your smartphone, Harsha!")
+
+    # ── High Priority Native Desktop Apps Execution (WhatsApp, Browser, VS Code, Explorer) ──
+    if any(k in raw for k in ["whatsapp", "whats app", "what's up", "watch up", "watchapp", "open browser", "chrome", "vs code", "vscode", "explorer", "notepad", "calculator"]):
+        res = execute(raw)
+        if res:
+            success_flag, user_msg = res
+            addr_suffix = pm.get_address_suffix(", ")
+            return _respond(success_flag, f"{user_msg}{addr_suffix}")
+
 
     # ── Security ────────────────────────────────────────────────────────────────
     if raw == "intruder_detected":

@@ -22,7 +22,8 @@ OLLAMA_HOST = "127.0.0.1"
 OLLAMA_PORT = 11434
 OLLAMA_URL = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"
 DEFAULT_LOCAL_MODEL = "qwen2.5:3b"
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODELS = ["groq/compound", "groq/compound-mini", "qwen/qwen3.6-27b", "llama-3.3-70b-versatile"]
+GROQ_MODEL = "groq/compound"
 
 def _load_env_file() -> None:
     env_path = os.path.join(os.path.dirname(__file__), ".env")
@@ -85,38 +86,43 @@ def validate_and_correct_address(text: str, target_address: str = "Sir") -> str:
 
 def _ask_groq(prompt: str, system_prompt: str, api_key: str) -> tuple[Optional[str], Optional[int]]:
     """Invokes Groq API for sub-second responses. Returns (answer, error_status_code)."""
-    try:
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
 
-        payload = {
-            "model": GROQ_MODEL,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ],
-            "max_tokens": 100,
-            "temperature": 0.5
-        }
-        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=4.0) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-            answer = data["choices"][0]["message"]["content"].strip()
-            return answer, None
-    except urllib.error.HTTPError as http_err:
-        if http_err.code == 429:
-            print(f"[GROQ API RATE LIMIT] HTTP 429 Too Many Requests detected on Groq API key.")
-            return None, 429
-        else:
-            print(f"[GROQ API ERROR] HTTP {http_err.code}: {http_err.reason}")
-            return None, http_err.code
-    except Exception as e:
-        print(f"[GROQ API NOTE] Groq API offline or unavailable ({e}).")
-        return None, 500
+    for model_name in GROQ_MODELS:
+        try:
+            payload = {
+                "model": model_name,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                "max_tokens": 120,
+                "temperature": 0.5
+            }
+            req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=4.0) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                answer = data["choices"][0]["message"]["content"].strip()
+                print(f"[GROQ SUCCESS] Model '{model_name}' generated response.")
+                return answer, None
+        except urllib.error.HTTPError as http_err:
+            if http_err.code == 429:
+                print(f"[GROQ API RATE LIMIT] HTTP 429 Too Many Requests on model '{model_name}'.")
+                return None, 429
+            elif http_err.code == 404:
+                continue
+            else:
+                print(f"[GROQ API ERROR] Model '{model_name}' HTTP {http_err.code}: {http_err.reason}")
+        except Exception as e:
+            print(f"[GROQ API NOTE] Model '{model_name}' offline or unavailable ({e}).")
+
+    return None, 500
+
 
 
 

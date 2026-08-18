@@ -136,9 +136,10 @@ def _measure_ambient_rms(device_idx: Optional[int], rate: int, channels: int) ->
 
 _MIC_IDX, _MIC_RATE, _MIC_CHANNELS = _probe_mic()
 _AMBIENT_RMS = _measure_ambient_rms(_MIC_IDX, _MIC_RATE, _MIC_CHANNELS)
-# Dynamic threshold set relative to ambient floor: robust 45 RMS floor to prevent ambient noise triggers
-_energy_threshold = max(45, int(_AMBIENT_RMS * 3.5 + 25.0))
+# Dynamic threshold set relative to ambient floor: robust range (35..120 RMS) to ensure natural speech always triggers
+_energy_threshold = min(120, max(35, int(_AMBIENT_RMS * 2.0 + 15.0)))
 print(f"[VOICE] Optimal energy threshold locked to {_energy_threshold} (Ambient={_AMBIENT_RMS:.1f})")
+
 
 
 
@@ -504,12 +505,13 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
             # Maintain rolling ring buffer of quiet pre-speech audio (6 chunks = ~150ms)
             pre_buffer.append(data)
 
-            # Listening for genuine human speech onset (both RMS and Peak thresholds must be met)
-            if rms_val > _energy_threshold and peak_val > int(_AMBIENT_RMS * 4.0 + 50.0):
+            # Listening for genuine human speech onset
+            if rms_val > _energy_threshold:
                 t_onset = int((time.time() - t_start) * 1000)
                 print(f"[VOICE] Speech onset detected (RMS={rms_val} > threshold={_energy_threshold}, PEAK={peak_val}) after {t_onset}ms wait")
                 speaking_started = True
                 speech_frames.extend(pre_buffer)
+
             else:
                 chunk_counter += 1
                 if chunk_counter > timeout_chunks:
