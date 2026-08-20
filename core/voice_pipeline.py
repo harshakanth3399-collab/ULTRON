@@ -104,28 +104,65 @@ class VoicePipeline:
     def _is_wake(self, text: str) -> tuple[bool, str]:
         """
         Returns (is_wake_word, inline_command_if_any).
-        Triggered by "hey", "hi", "hello", "ok", "okay", or "ultron".
+        Detects wake target ("ultron", "ultra", "low iron", etc.) case-insensitively with fuzzy normalization.
+        Extracts remaining sentence command cleanly.
         """
         clean = text.lower().strip()
         if not clean:
             return False, ""
 
-        clean_norm = re.sub(r'[^\w\s]', '', clean)
+        # Normalize known Whisper phonetic mishearings
+        phonetics = {
+            "low iron": "ultron",
+            "lowiron": "ultron",
+            "iron hey": "hey ultron",
+            "hey iron": "hey ultron",
+            "i'll run": "ultron",
+            "ill run": "ultron",
+            "i'll draw": "ultron",
+            "ill draw": "ultron",
+            "ultra on": "ultron",
+            "old run": "ultron",
+            "all run": "ultron",
+            "will turn": "ultron",
+            "i will turn": "ultron",
+            "go ahead name": "ultron",
+            "go ahead, name": "ultron",
+            "all tron": "ultron",
+            "all-tron": "ultron",
+            "altron": "ultron",
+            "hail tron": "ultron"
+        }
+        for k, v in phonetics.items():
+            if k in clean:
+                clean = clean.replace(k, v)
 
-        # Wake prefix triggers: "hey", "hi", "hello", "ok", "okay", "ultron", "altron", "tron"
-        wake_prefixes = [
-            r"^\s*(?:hey|hi|hello|ok|okay)\s+ultron\b",
-            r"^\s*(?:hey|hi|hello|ok|okay)\b",
-            r"^\s*(?:ultron|ultra|ultram|altron|alltron|outron|autron|eltron|oltron|hailtron|tron)\b",
+        clean_norm = re.sub(r'[^\w\s]', '', clean).strip()
+
+        # Target wake patterns with inline command extraction
+        patterns = [
+            # 1. 'hey ultron [command]' or 'hi ultron [command]'
+            r"^\s*(?:hey|hi|hello|ok|okay|yo|bro)\s+(?:ultron|ultra|altron|alltron|iron)\b\s*(.*)",
+            # 2. 'ultron [command]' or 'ultra [command]' at beginning of transcript
+            r"^\s*(?:ultron|ultra|altron|alltron|iron)\b\s*(.*)",
+            # 3. '[command] hey ultron' or 'ultron hey [command]'
+            r"(?:ultron|ultra|altron|iron)\s+(?:hey|hi|hello)\b\s*(.*)",
+            # 4. Standard 'hey' / 'hi' / 'hello' prefix
+            r"^\s*(?:hey|hi|hello|ok|okay)\b\s*(.*)",
+            # 5. Embedded 'ultron' / 'ultra' anywhere in transcript (e.g. "I don't know, ULTRON")
+            r".*?\b(?:ultron|ultra|altron|alltron)\b\s*(.*)"
         ]
 
-        for pat in wake_prefixes:
-            if re.search(pat, clean_norm):
-                # Extract inline command after wake prefix
-                cmd = re.sub(pat, '', clean_norm).strip()
+
+        for pat in patterns:
+            m = re.search(pat, clean_norm, re.IGNORECASE)
+            if m:
+                cmd = m.group(1).strip() if m.groups() else ""
+                print(f"[WAKE DETECTOR] Trigger matched: '{text}' → inline_cmd='{cmd}'")
                 return True, cmd
 
         return False, ""
+
 
     # ── Main loop ──────────────────────────────────────────────────────────────
 

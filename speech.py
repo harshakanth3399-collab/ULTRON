@@ -283,10 +283,17 @@ PHONETIC_OVERRIDES = {
     "will turn it": "ULTRON",
     "will turn in a way": "ULTRON",
     "i will turn it in a way": "ULTRON",
+    "low iron": "ULTRON",
+    "lowiron": "ULTRON",
+    "iron hey": "hey ULTRON",
+    "hey iron": "hey ULTRON",
+    "go ahead name": "ULTRON",
+    "go ahead, name": "ULTRON",
     "i draw them": "",
     "i draw then": "",
     "i draw": "",
     "draw them": "",
+
 
     "reproduce": "Andhra Pradesh",
     "and reproduce": "Andhra Pradesh",
