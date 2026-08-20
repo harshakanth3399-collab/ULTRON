@@ -136,9 +136,10 @@ def _measure_ambient_rms(device_idx: Optional[int], rate: int, channels: int) ->
 
 _MIC_IDX, _MIC_RATE, _MIC_CHANNELS = _probe_mic()
 _AMBIENT_RMS = _measure_ambient_rms(_MIC_IDX, _MIC_RATE, _MIC_CHANNELS)
-# Dynamic threshold set relative to ambient floor: robust range (35..120 RMS) to ensure natural speech always triggers
-_energy_threshold = min(120, max(35, int(_AMBIENT_RMS * 2.0 + 15.0)))
+# Dynamic threshold set relative to ambient floor: robust 180..450 RMS range to filter out fan/ambient noise
+_energy_threshold = min(450, max(180, int(_AMBIENT_RMS * 2.5 + 40.0)))
 print(f"[VOICE] Optimal energy threshold locked to {_energy_threshold} (Ambient={_AMBIENT_RMS:.1f})")
+
 
 
 
@@ -276,10 +277,17 @@ PHONETIC_OVERRIDES = {
     "ultran": "ULTRON",
     "old run": "ULTRON",
     "all run": "ULTRON",
+    "will turn": "ULTRON",
+    "i will turn": "ULTRON",
+    "i will turn it": "ULTRON",
+    "will turn it": "ULTRON",
+    "will turn in a way": "ULTRON",
+    "i will turn it in a way": "ULTRON",
     "i draw them": "",
     "i draw then": "",
     "i draw": "",
     "draw them": "",
+
     "reproduce": "Andhra Pradesh",
     "and reproduce": "Andhra Pradesh",
     "under produce": "Andhra Pradesh",
@@ -356,10 +364,10 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> tuple[str, str]:
 
         raw_corrected = raw
         raw_check = raw.lower()
-        for mishearing, correction in _PHONETIC_OVERRIDES.items():
+        for mishearing, correction in PHONETIC_OVERRIDES.items():
             if mishearing in raw_check:
-
                 raw_corrected = raw_check.replace(mishearing, correction)
+
                 raw_check = raw_corrected
                 print(f"[VOICE] [PHONETIC] Override: '{mishearing}' → '{correction}'")
 
@@ -425,9 +433,20 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> tuple[str, str]:
             ]
             if any(h in raw_lower for h in _HALLUCINATIONS):
                 print(f"[VOICE] [WHISPER] Hallucination detected, ignoring: '{raw[:60]}'")
+                return "", "en"
+
+        # Repetitive hallucination loop suppression (e.g. "yes i will. yes i will...")
+        words_check = [w.strip(".,!?\"'") for w in raw_lower.split() if w.strip(".,!?\"'")]
+        if len(words_check) >= 6:
+            unique_ratio = len(set(words_check)) / len(words_check)
+            if unique_ratio < 0.35:
+                print(f"[VOICE] [WHISPER] Repetitive hallucination loop detected ({unique_ratio:.2f} unique ratio), ignoring: '{raw[:60]}...'")
+                return "", "en"
+
         final = correct(raw)
         print(f"[FINAL TRANSCRIPTION] '{final}' (Language={detected_lang})")
         return final, detected_lang
+
     except Exception as e:
         print(f"[VOICE] [WHISPER] ERROR: Transcription failed: {e}")
         return "", "en"
