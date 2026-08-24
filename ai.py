@@ -93,7 +93,7 @@ def _ask_groq(prompt: str, system_prompt: str, api_key: str) -> tuple[Optional[s
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
 
-    for model_name in GROQ_MODELS:
+    for idx, model_name in enumerate(GROQ_MODELS):
         try:
             payload = {
                 "model": model_name,
@@ -111,17 +111,19 @@ def _ask_groq(prompt: str, system_prompt: str, api_key: str) -> tuple[Optional[s
                 print(f"[GROQ SUCCESS] Model '{model_name}' generated response.")
                 return answer, None
         except urllib.error.HTTPError as http_err:
+            next_provider = GROQ_MODELS[idx + 1] if idx + 1 < len(GROQ_MODELS) else f"Ollama {DEFAULT_LOCAL_MODEL}"
             if http_err.code == 429:
-                print(f"[GROQ API RATE LIMIT] HTTP 429 Too Many Requests on model '{model_name}'.")
-                return None, 429
+                print(f"[AI PROVIDER] PRIMARY ({model_name}) → HTTP 429 Rate Limit → FALLBACK PROVIDER ({next_provider})")
+                continue
             elif http_err.code == 404:
                 continue
             else:
-                print(f"[GROQ API ERROR] Model '{model_name}' HTTP {http_err.code}: {http_err.reason}")
+                print(f"[AI PROVIDER] PRIMARY ({model_name}) → HTTP {http_err.code} ({http_err.reason}) → FALLBACK PROVIDER ({next_provider})")
         except Exception as e:
-            print(f"[GROQ API NOTE] Model '{model_name}' offline or unavailable ({e}).")
+            next_provider = GROQ_MODELS[idx + 1] if idx + 1 < len(GROQ_MODELS) else f"Ollama {DEFAULT_LOCAL_MODEL}"
+            print(f"[AI PROVIDER] PRIMARY ({model_name}) → Offline/Unavailable ({e}) → FALLBACK PROVIDER ({next_provider})")
 
-    return None, 500
+    return None, 429
 
 
 
@@ -150,8 +152,6 @@ def ask_ai(prompt: str) -> str:
         f"Do NOT give long explanations. {addr_prompt_line} {lang_line}"
     )
 
-
-
     raw_answer = None
     groq_err_code = None
     model_used = "groq-llama3.3"
@@ -167,15 +167,16 @@ def ask_ai(prompt: str) -> str:
         is_ok, health_msg, avail_models = check_ai_backend_health()
         if not is_ok:
             if groq_err_code == 429:
-                print(f"[AI ERROR] Groq API rate limit reached (HTTP 429) and local Ollama is offline.")
+                print(f"[AI ERROR] PRIMARY (Groq API) → HTTP 429 Rate Limit → Ollama local fallback is offline.")
                 return f"Groq API rate limit exceeded (HTTP 429), {pref_address}. Please try again shortly."
             print(f"[AI ERROR] BACKEND UNREACHABLE: {health_msg}")
             return f"AI backend is currently offline, {pref_address}. Please start Ollama."
 
         if groq_err_code == 429:
-            print(f"[GROQ FALLBACK] Groq rate limit exceeded (HTTP 429). Switching to local Ollama ({model_used}).")
+            print(f"[AI PROVIDER] PRIMARY (Groq API) → HTTP 429 Rate Limit (All Groq models exhausted) → FALLBACK PROVIDER (Ollama {model_used})")
         else:
-            print(f"[GROQ FALLBACK] Groq offline. Switching to local Ollama ({model_used}).")
+            print(f"[AI PROVIDER] PRIMARY (Groq API) → Offline/Unavailable → FALLBACK PROVIDER (Ollama {model_used})")
+
 
 
         if DEFAULT_LOCAL_MODEL not in avail_models and len(avail_models) > 0:

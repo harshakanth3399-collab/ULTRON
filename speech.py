@@ -443,12 +443,15 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> tuple[str, str]:
                 return "", "en"
 
         # Repetitive hallucination loop suppression (e.g. "yes i will. yes i will...")
-        words_check = [w.strip(".,!?\"'") for w in raw_lower.split() if w.strip(".,!?\"'")]
-        if len(words_check) >= 6:
-            unique_ratio = len(set(words_check)) / len(words_check)
-            if unique_ratio < 0.35:
-                print(f"[VOICE] [WHISPER] Repetitive hallucination loop detected ({unique_ratio:.2f} unique ratio), ignoring: '{raw[:60]}...'")
-                return "", "en"
+        # CRITICAL FIX: A valid wake-word match containing ULTRON must NOT be rejected!
+        if not any(wk in raw_lower for wk in ["ultron", "ultra", "altron", "alltron"]):
+            words_check = [w.strip(".,!?\"'") for w in raw_lower.split() if w.strip(".,!?\"'")]
+            if len(words_check) >= 6:
+                unique_ratio = len(set(words_check)) / len(words_check)
+                if unique_ratio < 0.35:
+                    print(f"[VOICE] [WHISPER] Repetitive hallucination loop detected ({unique_ratio:.2f} unique ratio), ignoring: '{raw[:60]}...'")
+                    return "", "en"
+
 
         final = correct(raw)
         print(f"[FINAL TRANSCRIPTION] '{final}' (Language={detected_lang})")

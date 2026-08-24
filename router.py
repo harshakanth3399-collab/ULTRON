@@ -52,6 +52,9 @@ def process(command: str) -> tuple:
 
     pm = get_profile_manager()
 
+    # Clean conversational filler prefixes
+    raw = re.sub(r"^\s*(?:okay,?\s*now|okay|now|please|can\s+you|could\s+you|i\s+want\s+you\s+to|ultron|hey\s+ultron)\b\s*", "", raw, flags=re.IGNORECASE).strip()
+
     # Clean Whisper artifacts/prefixes
     _NOISE_PREFIXES = [
         "i draw them", "i draw then", "i draw", "draw them",
@@ -64,8 +67,9 @@ def process(command: str) -> tuple:
 
     # Clean phonetic mishearings & resolve short-term references
     raw = raw.replace("watch up", "whatsapp").replace("watchapp", "whatsapp").replace("watch app", "whatsapp")
-    if raw.startswith("okay open "):
-        raw = raw[10:].strip()
+    if raw.startswith("open "):
+        # Keep open command intact
+        pass
 
     from modules.short_term_memory import short_term_memory
     clean_search_query, resolved_prompt = short_term_memory.resolve_references(raw)
@@ -73,6 +77,7 @@ def process(command: str) -> tuple:
 
     LAST_ACTIVITY = time.time()
     pref_address = pm.get_preferred_address() or "Harsha"
+
 
     # Helper function to wrap returns and record short-term memory
     def _respond(status: bool, response_text: str, search_results: Optional[List[Dict[str, str]]] = None) -> tuple:
@@ -232,19 +237,20 @@ def process(command: str) -> tuple:
         # 3. Explicit song target in prompt
         if not target_song:
             clean_target = raw
-            fillers = [
+            fillers = sorted([
                 "open youtube and play", "play on youtube", "play in youtube",
                 "in the youtube tab you have opened", "i want you to play",
                 "now play this song in youtube", "now play", "open youtube",
                 "search youtube for", "play youtube", "play for me",
-                "play", "youtube", "please", "on youtube", "in youtube"
-            ]
+                "play", "youtube", "please", "on youtube", "in youtube", "and", "a"
+            ], key=len, reverse=True)
             for f in fillers:
-                clean_target = clean_target.replace(f, "")
-            clean_target = clean_target.strip().strip(".!")
+                clean_target = re.sub(r"\b" + re.escape(f) + r"\b", "", clean_target, flags=re.IGNORECASE)
+            clean_target = " ".join(clean_target.split()).strip().strip(".!")
 
             if clean_target and clean_target not in ["this song", "that song", "the song", "it", "that", "song"]:
                 target_song = clean_target
+
 
         if target_song:
             short_term_memory.last_resolved_song = target_song
