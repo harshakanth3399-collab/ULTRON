@@ -75,13 +75,18 @@ def validate_and_correct_address(text: str, target_address: str = "Sir") -> str:
     if not text:
         return ""
 
-    cleaned = text
+    # Strip internal reasoning tags (<think>...</think>) from reasoning models like qwen3.6-27b
+    cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+    if not cleaned and "<think>" in text:
+        cleaned = re.sub(r"<think>.*", "", text, flags=re.DOTALL).strip()
+
     for pattern, replacement in FORBIDDEN_ADDRESS_PATTERNS:
         cleaned = re.sub(pattern, replacement.replace("Sir", target_address), cleaned, flags=re.IGNORECASE)
 
     cleaned = re.sub(r",\s*,", ",", cleaned)
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
     return cleaned
+
 
 
 def _ask_groq(prompt: str, system_prompt: str, api_key: str) -> tuple[Optional[str], Optional[int]]:
