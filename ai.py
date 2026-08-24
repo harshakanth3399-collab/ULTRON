@@ -179,37 +179,34 @@ def ask_ai(prompt: str) -> str:
 
     raw_answer = None
     groq_err_code = None
-    model_used = "groq-llama3.3"
+    model_used = "google-gemini-1.5-flash"
 
-    # 1. Try Groq API first if configured
-    groq_key = os.getenv("GROQ_API_KEY", "").strip()
-    if groq_key and groq_key.startswith("gsk_") and "your_free_key_here" not in groq_key:
-        raw_answer, groq_err_code = _ask_groq(prompt, full_system_prompt, groq_key)
+    # 1. PRIMARY: Try Google Gemini Free API first if configured
+    gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+    if gemini_key and "your_free_key_here" not in gemini_key:
+        raw_answer, gemini_err = _ask_gemini(prompt, full_system_prompt, gemini_key)
+        if raw_answer:
+            model_used = "google-gemini-1.5-flash"
 
-    # 2. Try Google Gemini API if Groq is rate-limited or offline
+    # 2. SECONDARY: Fallback to Groq Cloud API if Google Gemini is unavailable or rate-limited
     if not raw_answer:
-        gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
-        if gemini_key and "your_free_key_here" not in gemini_key:
-            print(f"[AI PROVIDER] PRIMARY (Groq API) → Rate Limit/Offline → FALLBACK PROVIDER (Google Gemini Free API)")
-            raw_answer, gemini_err = _ask_gemini(prompt, full_system_prompt, gemini_key)
+        groq_key = os.getenv("GROQ_API_KEY", "").strip()
+        if groq_key and groq_key.startswith("gsk_") and "your_free_key_here" not in groq_key:
+            print(f"[AI PROVIDER] PRIMARY (Google Gemini Free API) → Unavailable/Rate Limit → FALLBACK PROVIDER (Groq Cloud API)")
+            raw_answer, groq_err_code = _ask_groq(prompt, full_system_prompt, groq_key)
             if raw_answer:
-                model_used = "google-gemini-1.5-flash"
+                model_used = "groq-llama3.3"
 
-    # 3. Fallback to Local Ollama if all cloud APIs are unavailable or offline
+    # 3. TERTIARY: Fallback to Local Ollama if all cloud APIs are unavailable or offline
     if not raw_answer:
         model_used = DEFAULT_LOCAL_MODEL
         is_ok, health_msg, avail_models = check_ai_backend_health()
         if not is_ok:
-            if groq_err_code == 429:
-                print(f"[AI ERROR] PRIMARY (Groq/Gemini API) → HTTP 429 Rate Limit → Ollama local fallback is offline.")
-                return f"Groq API rate limit exceeded (HTTP 429), {pref_address}. Please try again shortly."
-            print(f"[AI ERROR] BACKEND UNREACHABLE: {health_msg}")
-            return f"AI backend is currently offline, {pref_address}. Please start Ollama."
+            print(f"[AI ERROR] PRIMARY (Google Gemini & Groq Cloud API) → Rate Limit/Offline → Ollama local fallback is offline.")
+            return f"AI cloud APIs rate limit exceeded, {pref_address}. Please try again shortly."
 
-        if groq_err_code == 429:
-            print(f"[AI PROVIDER] PRIMARY (Groq/Gemini API) → HTTP 429 Rate Limit (All Cloud models exhausted) → FALLBACK PROVIDER (Ollama {model_used})")
-        else:
-            print(f"[AI PROVIDER] PRIMARY (Groq/Gemini API) → Offline/Unavailable → FALLBACK PROVIDER (Ollama {model_used})")
+        print(f"[AI PROVIDER] PRIMARY (Google Gemini & Groq Cloud API) → Offline/Rate Limit → FALLBACK PROVIDER (Ollama {model_used})")
+
 
 
 
