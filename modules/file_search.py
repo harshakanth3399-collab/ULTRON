@@ -33,18 +33,22 @@ def search_local_files(query: str, max_results: int = 5) -> Tuple[bool, str, Lis
     for d in search_dirs:
         if not os.path.exists(d):
             continue
-        for root, dirs, files in os.walk(d):
-            # Skip hidden and cache folders
-            dirs[:] = [sub for sub in dirs if not sub.startswith((".", "__")) and sub not in ["node_modules", ".venv", "site-packages"]]
-            for f in files:
-                if clean_query in f.lower():
-                    matches.append(os.path.join(root, f))
-                    if len(matches) >= max_results:
-                        break
-            if len(matches) >= max_results:
-                break
+        try:
+            for root, dirs, files in os.walk(d, onerror=lambda e: None):
+                # Skip hidden and cache folders
+                dirs[:] = [sub for sub in dirs if not sub.startswith((".", "__")) and sub not in ["node_modules", ".venv", "site-packages"]]
+                for f in files:
+                    if clean_query in f.lower():
+                        matches.append(os.path.join(root, f))
+                        if len(matches) >= max_results:
+                            break
+                if len(matches) >= max_results:
+                    break
+        except Exception:
+            pass
         if len(matches) >= max_results:
             break
+
 
     if matches:
         basenames = [os.path.basename(m) for m in matches]

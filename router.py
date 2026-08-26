@@ -200,8 +200,10 @@ def process(command: str) -> tuple:
                 f"1. Answer Harsha directly by providing a complete, comprehensive response based on the web evidence above.\n"
                 f"2. For location, branch, area list, or headquarters questions, list the specific area names, branch names, or headquarters area mentioned in the web text above (e.g. Basavanagudi, Rajaji Nagar / Rajajinagar, BTM Layout, Marathahalli, Hebbal, etc.).\n"
                 f"3. Do NOT say 'I couldn't verify' when area/location details are present in the evidence.\n"
-                f"4. Cite the source site names."
+                f"4. Cite the source site names.\n"
+                f"5. STRICT RULE: Output ONLY your final response. Do NOT output internal thinking process or <think> tags."
             )
+
 
             ai_reply = ask_ai(prompt)
             print(f"[WEB] Final answer generated: {ai_reply}")

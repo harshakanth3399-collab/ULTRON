@@ -97,18 +97,32 @@ def setup_adb_forwarding(port: int = PORT) -> bool:
 
 
 def start_server_in_background():
-    """Starts the web server locked to host '0.0.0.0' and port 8000."""
+    """Starts the web server locked to host '0.0.0.0' with fallback port selection."""
     ip = get_local_ip()
     handler = CustomHTTPRequestHandler
-    
-    httpd = ThreadingServer((HOST, PORT), handler)
+
+    active_port = PORT
+    httpd = None
+
+    for candidate_port in [PORT, 8001, 8080, 8888]:
+        try:
+            httpd = ThreadingServer((HOST, candidate_port), handler)
+            active_port = candidate_port
+            break
+        except Exception:
+            continue
+
+    if httpd is None:
+        print("[SERVER ERROR] Could not bind web server to any available port.")
+        return ip, PORT
 
     server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     server_thread.start()
 
-    setup_adb_forwarding(PORT)
-    print(f"[SERVER] Mobile Access Link -> http://{ip}:{PORT}")
-    return ip, PORT
+    setup_adb_forwarding(active_port)
+    print(f"[SERVER] Mobile Access Link -> http://{ip}:{active_port}")
+    return ip, active_port
+
 
 
 if __name__ == "__main__":

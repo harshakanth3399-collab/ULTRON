@@ -146,12 +146,14 @@ def _play(text: str, lang: str = "en") -> None:
                 engine.runAndWait()
             except Exception as pyttsx_err:
                 print(f"[TTS ERROR] Offline pyttsx3 fallback failed: {pyttsx_err}")
+                _ready_event.set()
                 _set_speaking(False)
                 _done_event.set()
                 return
 
 
         if _stop_flag.is_set():
+            _ready_event.set()
             _set_speaking(False)
             _done_event.set()
             return
@@ -164,6 +166,7 @@ def _play(text: str, lang: str = "en") -> None:
                 print(f"[TTS] Playing ({voice_id}): '{spoken_text[:60]}...'")
             except Exception as e:
                 print(f"[TTS ERROR] Pygame play error: {e}")
+                _ready_event.set()
                 _set_speaking(False)
                 _done_event.set()
                 return
@@ -185,6 +188,7 @@ def _play(text: str, lang: str = "en") -> None:
     except Exception as e:
         print(f"[TTS ERROR] Unexpected error: {e}")
     finally:
+        _ready_event.set()
         _set_speaking(False)
         _done_event.set()
         if filename:
@@ -196,6 +200,7 @@ def _play(text: str, lang: str = "en") -> None:
                 os.remove(filename)
             except Exception:
                 pass
+
 
 
 def speak(text: str, lang: str = "en") -> None:
