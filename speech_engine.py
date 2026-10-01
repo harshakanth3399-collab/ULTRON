@@ -27,13 +27,14 @@ import edge_tts
 import pygame
 
 # ── Dual Voice Configuration ──────────────────────────────────────────────────
-VOICE_EN = "en-GB-RyanNeural"
-RATE_EN  = "-3%"     # Natural human speed — friendly & conversational
-PITCH_EN = "-4Hz"    # Warm & natural tone
+VOICE_EN = "en-US-ChristopherNeural"
+RATE_EN  = "-2%"     # Authoritative J.A.R.V.I.S. style speed
+PITCH_EN = "-3Hz"    # Deep commanding tone
 
 VOICE_TE = "te-IN-ShrutiNeural"
 RATE_TE  = "+0%"
 PITCH_TE = "+0Hz"
+
 
 
 # Backward compatibility alias

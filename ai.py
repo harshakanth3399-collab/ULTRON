@@ -42,10 +42,11 @@ _load_env_file()
 
 
 FORBIDDEN_ADDRESS_PATTERNS = [
-    (r"\b(yeah|yes|sure|okay|thanks)\s+(man|bro|dude|buddy|mate|boss)\b", r"\1, Sir"),
-    (r",\s*(man|bro|dude|buddy|mate|boss)\b", r", Sir"),
-    (r"\b(man|bro|dude|buddy|mate|boss)\b", r"Sir"),
+    (r"\b(yeah|yes|sure|okay|thanks|hello|hi|hey)\s+(man|bro|dude|buddy|mate|boss)\b", r"\1, Sir"),
+    (r",\s*(man|bro|dude|buddy|mate|boss)\s*([.!?]|$)", r", Sir\2"),
+    (r"\s+(man|bro|dude|buddy|mate|boss)\s*([.!?]|$)", r", Sir\2"),
 ]
+
 
 
 def check_ai_backend_health() -> tuple[bool, str, list[str]]:
