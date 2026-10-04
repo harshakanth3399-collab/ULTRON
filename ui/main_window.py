@@ -216,6 +216,7 @@ class UltronWindow(QMainWindow):
         # ── Tick timer ────────────────────────────────────────────────────
         self._pulse_t = 0.0
         self._timer = QTimer(self)
+        self._timer.setTimerType(Qt.PreciseTimer)
         self._timer.timeout.connect(self._tick)
         self._timer.start(FRAME_MS)
 

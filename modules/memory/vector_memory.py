@@ -40,22 +40,26 @@ class VectorMemory:
         self.entries = []
 
     def _save(self):
-        try:
-            self.memory_file.parent.mkdir(parents=True, exist_ok=True)
-            tmp_path = self.memory_file.with_suffix(".tmp")
-            with open(tmp_path, "w", encoding="utf-8") as f:
-                json.dump(self.entries, f, indent=2)
-            
-            # Retry loop to prevent PermissionError (WinError 32) when file is locked by OneDrive/threading
-            for attempt in range(5):
-                try:
-                    os.replace(str(tmp_path), str(self.memory_file))
-                    break
-                except (PermissionError, OSError):
-                    import time
-                    time.sleep(0.5)
-        except Exception as e:
-            print(f"[VECTOR MEMORY ERROR] Save failed: {e}")
+        import threading
+        def _write_worker():
+            try:
+                self.memory_file.parent.mkdir(parents=True, exist_ok=True)
+                tmp_path = self.memory_file.with_suffix(".tmp")
+                with open(tmp_path, "w", encoding="utf-8") as f:
+                    json.dump(self.entries, f, indent=2)
+                
+                # Retry loop to prevent PermissionError (WinError 32) when file is locked by OneDrive/threading
+                for attempt in range(5):
+                    try:
+                        os.replace(str(tmp_path), str(self.memory_file))
+                        break
+                    except (PermissionError, OSError):
+                        import time
+                        time.sleep(0.5)
+            except Exception as e:
+                print(f"[VECTOR MEMORY ERROR] Save failed: {e}")
+
+        threading.Thread(target=_write_worker, daemon=True, name="VectorMemorySave").start()
 
     @staticmethod
     def _vectorize(text: str) -> dict[str, float]:

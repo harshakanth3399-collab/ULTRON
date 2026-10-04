@@ -7,8 +7,9 @@ def plan(command: str) -> list[str]:
     if not command or not command.strip():
         return []
 
-    # Split on conjunctions: 'and then', 'then', 'and', ',', ';'
-    raw_parts = re.split(r"\s+(?:and then|then|and|,|;)\s+", command.strip(), flags=re.IGNORECASE)
+    # ONLY split on explicit sequential multi-action conjunctions ('and then', 'then open', 'then play')
+    # NEVER split regular conversational clauses on 'and' or commas!
+    raw_parts = re.split(r"\s+(?:and then|then open|then play|then search)\s+", command.strip(), flags=re.IGNORECASE)
     tasks = []
     for p in raw_parts:
         clean = p.strip()

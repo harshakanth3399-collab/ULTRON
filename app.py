@@ -59,7 +59,7 @@ def _configure_gl() -> None:
     fmt.setProfile(QSurfaceFormat.CoreProfile)
     fmt.setDepthBufferSize(24)
     fmt.setStencilBufferSize(8)
-    fmt.setSwapInterval(1)
+    fmt.setSwapInterval(0)
     QSurfaceFormat.setDefaultFormat(fmt)
 
 

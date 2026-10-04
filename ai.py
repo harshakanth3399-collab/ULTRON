@@ -21,8 +21,9 @@ from modules.memory.profile_manager import get_profile_manager
 OLLAMA_HOST = "127.0.0.1"
 OLLAMA_PORT = 11434
 OLLAMA_URL = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"
-GROQ_MODELS = ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b"]
-GROQ_MODEL = "qwen/qwen3.8-27b"
+# Priority order: fast sub-200ms models first, fallback to heavier ones
+GROQ_MODELS = ["llama-3.1-8b-instant", "llama3-8b-8192", "qwen/qwen3.8-27b"]
+GROQ_MODEL = "llama-3.1-8b-instant"
 
 def _load_env_file() -> None:
     env_path = os.path.join(os.path.dirname(__file__), ".env")

@@ -197,6 +197,7 @@ class UltronRenderer(QOpenGLWidget):
         self._speaking_fn = lambda: False
 
         self._timer = QTimer(self)
+        self._timer.setTimerType(Qt.PreciseTimer)
         self._timer.timeout.connect(self.update)
         self._timer.start(FRAME_MS)
 
@@ -364,12 +365,15 @@ class UltronRenderer(QOpenGLWidget):
         if hasattr(self, "_bloom") and self._bloom is not None:
             self._bloom.resize(self._width, self._height)
 
-    def _compute_mvp(self) -> np.ndarray:
+    def _compute_mvp(self, model: Optional[np.ndarray] = None) -> np.ndarray:
         aspect = self._width / self._height
-        proj = _perspective(45.0, aspect, 0.05, 8.0)
-        eye = np.array([0.0, 0.0, 1.8], dtype=np.float32)
+        proj = _perspective(45.0, aspect, 0.1, 100.0)
+        eye = np.array([0.0, 0.0, 4.2], dtype=np.float32)
         view = _look_at(eye, np.zeros(3, dtype=np.float32), np.array([0.0, 1.0, 0.0], dtype=np.float32))
-        return (proj @ view).astype(np.float32)
+        vp = proj @ view
+        if model is not None:
+            return (vp @ model).astype(np.float32)
+        return vp.astype(np.float32)
 
     def paintGL(self) -> None:
         if not self._ready or self._ctx is None:
@@ -387,16 +391,17 @@ class UltronRenderer(QOpenGLWidget):
             audio_level = self._audio.update(dt, state, self._speaking_fn)
             activation = self._state_manager.activation()
 
+            # 60 FPS real-time organic wave update (0.2ms)
             self._engine.update(dt, self._time, state, audio_level, activation)
-            self._arcs.update(dt, self._time, state, audio_level, activation, self._engine.positions)
-            self._jarvis.update(dt, self._time, state, audio_level)
 
             # Audit check on first frame
             if not self._audit_done:
                 self._verify_renderer()
                 self._audit_done = True
 
-            mvp = self._compute_mvp()
+            # Hardware accelerated 3D sphere revolution & tilt
+            model_matrix = self._engine.model_matrix(self._time, state, audio_level)
+            mvp = self._compute_mvp(model_matrix)
 
             # 1. Render Scene to Offscreen Framebuffer
             self._scene_fbo.use()

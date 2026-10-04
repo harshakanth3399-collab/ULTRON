@@ -575,8 +575,8 @@ def listen_for_audio(timeout: float = 7.0, phrase_time_limit: float = 12.0) -> b
     # Ring buffer to preserve 8 chunks (~200ms) before onset detection
     pre_buffer = collections.deque(maxlen=8)
 
-    # VAD limits: 0.95s of silence marks phrase end (allows natural sentence pauses without cutoff)
-    silence_limit_chunks = int(_MIC_RATE / 1024 * 0.95)
+    # VAD limits: 0.58s of silence marks phrase end (snappy response without cutting off words)
+    silence_limit_chunks = int(_MIC_RATE / 1024 * 0.58)
     silence_counter = 0
 
 
