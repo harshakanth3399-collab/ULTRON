@@ -74,7 +74,7 @@ def get_live_weather(location_query: str = "") -> Tuple[bool, str]:
             w_code = cw.get("weathercode", 0)
             condition = WEATHER_CODES.get(w_code, "Clear")
             
-            msg = f"The weather in {city_name} is currently {temp}°C with {condition.lower()} and wind speed of {wind} km/h."
+            msg = f"The weather in {city_name} is currently {temp} degrees Celsius with {condition.lower()} and wind speed of {wind} km/h."
             print(f"[WEATHER SERVICE] {msg}")
             return True, msg
     except Exception as e:

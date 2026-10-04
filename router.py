@@ -108,6 +108,38 @@ def process(command: str) -> tuple:
     if friendly_reply:
         return _respond(True, friendly_reply)
 
+    # ── Category A1: J.A.R.V.I.S. Briefing & Status Overview ─────────────────
+    if any(k in raw for k in ["brief me", "give me a briefing", "status report", "morning briefing", "what's my update", "full briefing", "system briefing", "give me update", "give me an update"]):
+        from modules.notification_hub import get_jarvis_briefing
+        return _respond(True, get_jarvis_briefing())
+
+    # ── Category A2: WhatsApp Messages & Communication Hub ──────────────────
+    if any(k in raw for k in ["check my whatsapp", "check whatsapp", "read whatsapp", "any whatsapp", "whatsapp message", "whatsapp messages", "who messaged me on whatsapp", "who texted me", "unread whatsapp"]):
+        from modules.notification_hub import get_whatsapp_messages
+        return _respond(True, get_whatsapp_messages())
+
+    # ── Category A3: Phone & Laptop Notifications Reader ─────────────────────
+    if any(k in raw for k in ["check my messages", "check messages", "read messages", "read my messages", "check notifications", "read notifications", "what notifications", "any notifications", "phone notifications", "laptop notifications", "what messages"]):
+        from modules.notification_hub import get_all_notifications_summary
+        return _respond(True, get_all_notifications_summary())
+
+    # ── Category A4: Gmail & Job Selection Communication Engine ──────────────
+    if any(k in raw for k in ["read latest email", "read the email", "read last email", "read my email", "read email", "read my last email"]):
+        from modules.email_engine import read_latest_email
+        return _respond(True, read_latest_email())
+
+    if any(k in raw for k in ["check my emails", "check emails", "check email", "check my mail", "check mail", "read my emails", "any new emails", "any emails", "who emailed me", "check inbox"]):
+        from modules.email_engine import get_inbox_summary
+        return _respond(True, get_inbox_summary())
+
+    if any(k in raw for k in ["check job applications", "check job emails", "check job mail"]):
+        from modules.email_engine import check_job_emails
+        return _respond(True, check_job_emails())
+
+    if any(k in raw for k in ["send reply", "send email reply", "reply to email", "send the email", "send email"]):
+        from modules.email_engine import send_pending_reply
+        return _respond(True, send_pending_reply())
+
 
 
     # ── Preferred Address & Title Management ───────────────────────────────────
@@ -188,7 +220,8 @@ def process(command: str) -> tuple:
     ]
 
     is_history_query = any(k in command.lower() for k in ["what did i just ask", "what did i ask", "what was my last question", "what did you say", "what was your reply"])
-    is_web_query = any(k in raw or k in command.lower() for k in web_research_keywords) and not is_history_query and not any(k in raw for k in ["open google", "open chrome", "open youtube", "play my favorite song", "play this song"])
+    is_comm_query = any(k in raw for k in ["email", "mail", "whatsapp", "message", "notification", "brief me", "briefing"])
+    is_web_query = any(k in raw or k in command.lower() for k in web_research_keywords) and not is_history_query and not is_comm_query and not any(k in raw for k in ["open google", "open chrome", "open youtube", "play my favorite song", "play this song"])
 
     if is_web_query:
         from modules.web_research import research
@@ -411,14 +444,6 @@ def process(command: str) -> tuple:
         from modules.shortcuts import launch_coding_workspace
         return _respond(True, launch_coding_workspace())
 
-    # ── Gmail & Job Selection Assistant ─────────────────────────────────────────
-    if any(k in raw for k in ["check my emails", "check job applications", "check email", "check mail", "check job email"]):
-        from modules.email_engine import check_job_emails
-        return _respond(True, check_job_emails())
-
-    if any(k in raw for k in ["send reply", "send email reply", "reply to email", "send the email", "send email"]):
-        from modules.email_engine import send_pending_reply
-        return _respond(True, send_pending_reply())
 
     # ── Document & File Auto-Trainer ──────────────────────────────────────────
     if any(k in raw for k in ["train from documents", "scan my documents", "train my files", "read my documents"]):
