@@ -422,6 +422,60 @@ def process(command: str) -> tuple:
         rep = self_optimizer.run_maintenance_cycle()
         return _respond(True, rep)
 
+    # ── Category H17: Shoulder-Surfing Privacy Shield ────────────────────────
+    if any(k in raw for k in ["start privacy shield", "enable privacy shield", "turn on privacy shield"]):
+        from modules.privacy_shield import privacy_shield
+        ok, msg = privacy_shield.start()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["stop privacy shield", "disable privacy shield", "turn off privacy shield"]):
+        from modules.privacy_shield import privacy_shield
+        ok, msg = privacy_shield.stop()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["privacy shield status", "is privacy shield active", "privacy status"]):
+        from modules.privacy_shield import privacy_shield
+        return _respond(True, privacy_shield.status())
+
+    # ── Category H18: Contextual Workspace Profiles ──────────────────────────
+    if any(k in raw for k in [
+        "study mode", "coding mode", "developer mode",
+        "work mode", "office mode", "productivity mode",
+        "chill mode", "relax mode", "movie mode",
+        "gaming mode", "game mode", "turbo mode"
+    ]):
+        from modules.workspace_profiles import dispatch_profile
+        ok, msg = dispatch_profile(raw)
+        if ok:
+            return _respond(ok, msg)
+
+    # ── Category H19: Autonomous End-of-Day Productivity Recap ───────────────
+    if any(k in raw for k in [
+        "daily recap", "productivity recap", "how productive was i today",
+        "end of day recap", "recap my day", "summary of my day"
+    ]):
+        from modules.daily_recap import daily_recap
+        ok, msg = daily_recap.generate_recap()
+        return _respond(ok, msg)
+
+    # ── Category H20: Selective Window Snip & Voice Explainer ────────────────
+    if any(k in raw for k in [
+        "snip this window", "snip active window", "explain selected window",
+        "diagnose active window", "explain active window", "snip window"
+    ]):
+        from modules.region_snipper import snip_and_explain_active_window
+        ok, msg = snip_and_explain_active_window(raw)
+        return _respond(ok, msg)
+
+    # ── Category H21: Zero-Internet Local Offline Voice Core ─────────────────
+    if any(k in raw for k in [
+        "offline status", "test offline mode", "connectivity status", "offline voice status"
+    ]):
+        from modules.offline_core import get_offline_status
+        ok, msg = get_offline_status()
+        return _respond(ok, msg)
+
+
 
 
     # ── Instant Free Weather Handler ──────────────────────────────────────────
