@@ -31,11 +31,11 @@ void main() {
     vec4 clip = u_mvp * vec4(in_pos, 1.0);
     gl_Position = clip;
 
-    // Delicate holographic stardust sparks orbiting the fluid core
+    // Dense compact neural matrix specks — NOT giant glowing stars
     float atten = 1.0 / max(clip.w, 0.15);
-    gl_PointSize = clamp(in_size * atten * 1.8 * (1.0 + u_glow * 0.25), 1.5, 6.0);
+    gl_PointSize = clamp(in_size * atten * 1.4 * (1.0 + u_glow * 0.15), 1.0, 3.5);
 
-    v_brightness = in_brightness * (0.80 + u_glow * 0.35);
+    v_brightness = in_brightness * (0.85 + u_glow * 0.25);
     v_depth = clip.z;
     v_phase = fract(sin(dot(in_pos, vec3(12.9898, 78.233, 45.5432))) * 43758.5453);
 }

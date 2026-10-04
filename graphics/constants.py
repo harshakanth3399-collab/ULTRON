@@ -1,11 +1,11 @@
 """Graphics pipeline constants and tunables."""
 
 # ── Particles ────────────────────────────────────────────────────────────
-# 6,500 MCU J.A.R.V.I.S. neural matrix particles undulating in real time
+# 6,500 MCU J.A.R.V.I.S. neural matrix particles — compact dense golden sphere
 PARTICLE_COUNT = 6500
-SPHERE_RADIUS  = 0.75
-PARTICLE_MIN_SIZE = 2.0
-PARTICLE_MAX_SIZE = 4.8
+SPHERE_RADIUS  = 0.38      # tight enough to form a compact ball matching phone
+PARTICLE_MIN_SIZE = 1.0    # smaller pixel dots for dense look, not giant stars
+PARTICLE_MAX_SIZE = 2.2    # small enough that 6500 form a sphere, not a starfield
 
 # ── Electric arcs / Halos ──────────────────────────────────────────────────
 ARC_COUNT = 6
@@ -14,8 +14,8 @@ ARC_MAX_LENGTH = 0.38
 
 # ── Framebuffer / bloom ─────────────────────────────────────────────────────
 BLOOM_THRESHOLD = 0.70
-BLOOM_INTENSITY = 0.40
-BLOOM_BLUR_PASSES = 3
+BLOOM_INTENSITY = 0.25     # reduced — was over-blooming particles into huge blobs
+BLOOM_BLUR_PASSES = 2      # fewer passes = tighter bloom radius
 BLOOM_DOWNSAMPLE = 2
 
 # ── Audio smoothing ─────────────────────────────────────────────────────────
