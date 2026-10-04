@@ -1,21 +1,21 @@
 """Graphics pipeline constants and tunables."""
 
 # ── Particles ────────────────────────────────────────────────────────────
-# 16,000 crisp, high-density holographic stardust particles (cinematic J.A.R.V.I.S. neural matrix)
-PARTICLE_COUNT = 16_000
-SPHERE_RADIUS  = 0.24
-PARTICLE_MIN_SIZE = 0.9
-PARTICLE_MAX_SIZE = 2.2
+# Volumetric Google Gemini Aurora Liquid Orb (soft fluid light blobs that merge seamlessly)
+PARTICLE_COUNT = 3_200
+SPHERE_RADIUS  = 0.28
+PARTICLE_MIN_SIZE = 14.0
+PARTICLE_MAX_SIZE = 36.0
 
-# ── Electric arcs ──────────────────────────────────────────────────────────
-ARC_COUNT = 10
-ARC_SEGMENTS = 24
-ARC_MAX_LENGTH = 0.35
+# ── Electric arcs / Halos ──────────────────────────────────────────────────
+ARC_COUNT = 6
+ARC_SEGMENTS = 32
+ARC_MAX_LENGTH = 0.38
 
 # ── Framebuffer / bloom ─────────────────────────────────────────────────────
-BLOOM_THRESHOLD = 0.80
-BLOOM_INTENSITY = 0.25
-BLOOM_BLUR_PASSES = 2
+BLOOM_THRESHOLD = 0.70
+BLOOM_INTENSITY = 0.40
+BLOOM_BLUR_PASSES = 3
 BLOOM_DOWNSAMPLE = 2
 
 # ── Audio smoothing ─────────────────────────────────────────────────────────
@@ -23,28 +23,28 @@ AUDIO_ATTACK = 0.42
 AUDIO_RELEASE = 0.08
 AUDIO_GAIN = 2.8
 
-# ── Palette (ULTRON Warm Amber / Cyber Cyan Holographic HUD) ───────────────
-COLOR_CORE = (0.91, 0.39, 0.04)     # Warm Amber Core (#E8630A)
-COLOR_GLOW = (0.00, 0.80, 1.00)     # Cyber Cyan Glow (#00C8FF)
-COLOR_ARC  = (1.00, 0.55, 0.10)     # Golden Arc Filaments (#FF8C1A)
-COLOR_DEEP = (0.12, 0.04, 0.01)     # Quantum Void Shadow
+# ── Palette (Google Gemini Signature Holographic Colors) ───────────────────
+COLOR_CORE = (0.00, 0.88, 1.00)     # Luminous Electric Cyan (#00E0FF)
+COLOR_GLOW = (0.58, 0.20, 0.98)     # Celestial Gemini Violet (#9433FA)
+COLOR_ARC  = (0.20, 0.70, 1.00)     # Ethereal Azure Stream
+COLOR_DEEP = (0.04, 0.02, 0.12)     # Deep Celestial Void
 
-# ── Dynamic Cinema Hologram State Palettes (J.A.R.V.I.S. Cyan <-> Ultron Crimson) ──
+# ── Dynamic Cinema Hologram State Palettes (Google Gemini AI Aesthetic) ──
 STATE_PALETTES = {
     "idle": {
-        "core": (0.05, 0.62, 0.98),   # Arc Reactor Cyan
-        "glow": (0.00, 0.85, 1.00),   # Neon Azure Halo
-        "arc":  (0.25, 0.80, 1.00),   # Electric Blue Arcs
+        "core": (0.00, 0.88, 1.00),   # Vibrant Electric Cyan (#00E0FF)
+        "glow": (0.58, 0.20, 0.98),   # Celestial Gemini Violet (#9433FA)
+        "arc":  (0.20, 0.70, 1.00),   # Ethereal Azure Stream
     },
     "listening": {
-        "core": (0.08, 0.88, 0.82),   # Radiant Turquoise Core
-        "glow": (0.20, 1.00, 0.95),   # Hyper-Bright Cyan Halo
-        "arc":  (0.00, 1.00, 0.70),   # Emerald-Cyan Lightning
+        "core": (0.00, 1.00, 0.82),   # Turquoise Luminous Cyan
+        "glow": (0.15, 0.75, 1.00),   # Deep Sky Blue Aura
+        "arc":  (0.40, 1.00, 0.85),   # Radiant Cyan Halo
     },
     "speaking": {
-        "core": (1.00, 0.44, 0.05),   # Ultron Golden Amber Core
-        "glow": (1.00, 0.20, 0.02),   # Crimson Energy Halo
-        "arc":  (1.00, 0.72, 0.12),   # Golden Arcs
+        "core": (1.00, 0.18, 0.65),   # Glowing Magenta / Fuchsia
+        "glow": (1.00, 0.62, 0.10),   # Luminous Golden Amber
+        "arc":  (0.75, 0.25, 0.95),   # Violet Harmonic Waves
     },
 }
 

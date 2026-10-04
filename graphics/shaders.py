@@ -26,16 +26,18 @@ uniform float u_glow;
 out float v_brightness;
 out float v_depth;
 out float v_phase;
+out vec3 v_world_pos;
 
 void main() {
+    v_world_pos = in_pos;
     vec4 clip = u_mvp * vec4(in_pos, 1.0);
     gl_Position = clip;
 
-    // Perspective attenuation: crisp point scaling for futuristic holographic particle core
-    float atten = 1.0 / max(clip.w, 0.12);
-    gl_PointSize = clamp(in_size * atten * 2.2 * (1.0 + u_glow * 0.25), 1.0, 5.0);
+    // Perspective point attenuation: smooth volumetric liquid blobs (Google Gemini Orb)
+    float atten = 1.0 / max(clip.w, 0.15);
+    gl_PointSize = clamp(in_size * atten * (1.1 + u_glow * 0.4), 8.0, 72.0);
 
-    v_brightness = in_brightness * (0.80 + u_glow * 0.35);
+    v_brightness = in_brightness * (0.85 + u_glow * 0.45);
     v_depth = clip.z;
     v_phase = fract(sin(dot(in_pos, vec3(12.9898, 78.233, 45.5432))) * 43758.5453);
 }
@@ -47,6 +49,7 @@ PARTICLE_FRAG = """
 in float v_brightness;
 in float v_depth;
 in float v_phase;
+in vec3 v_world_pos;
 
 uniform vec3 u_color_core;
 uniform vec3 u_color_glow;
@@ -62,15 +65,19 @@ void main() {
         discard;
     }
 
-    // High-frequency subtle scintillation
-    float blink = 0.85 + 0.15 * sin(u_time * 18.0 + v_phase * 62.83);
-    float core = exp(-dist * dist * 18.0);
-    float halo = max(0.0, 0.5 - dist) * 1.2;
-    float intensity = (core * 1.5 + halo) * v_brightness * blink;
+    // Ultra-smooth Gaussian liquid falloff (Google Gemini aurora orb look)
+    float core = exp(-dist * dist * 8.5);
+    float halo = exp(-dist * 3.2) * 0.7;
+    float intensity = (core * 1.8 + halo) * v_brightness;
 
-    vec3 col = mix(u_color_core, u_color_glow, dist * 1.4);
-    float alpha = clamp((0.5 - dist) * 1.8 * v_brightness, 0.0, 0.80);
+    // Organic color shifting across depth and space
+    float color_mix = clamp(dist * 1.4 + v_world_pos.y * 1.5 + sin(u_time * 2.0 + v_phase * 6.28) * 0.25, 0.0, 1.0);
+    vec3 col = mix(u_color_core, u_color_glow, color_mix);
 
+    // Ethereal chromatic inner luminescence
+    col += vec3(0.12, 0.06, 0.22) * core * (1.0 + sin(u_time * 3.0 + v_phase * 3.14));
+
+    float alpha = clamp(intensity * 0.75, 0.0, 0.85);
     frag_color = vec4(col * intensity, alpha);
 }
 """
@@ -113,9 +120,17 @@ void main() {
     vec4 p0 = gl_in[0].gl_Position;
     vec4 p1 = gl_in[1].gl_Position;
 
-    vec2 dir = p1.xy / p1.w - p0.xy / p0.w;
+    // Protect against camera near-plane division artifacts
+    if (p0.w <= 0.05 || p1.w <= 0.05) {
+        return;
+    }
+
+    vec2 ndc0 = p0.xy / p0.w;
+    vec2 ndc1 = p1.xy / p1.w;
+
+    vec2 dir = ndc1 - ndc0;
     float len = length(dir);
-    if (len < 1e-6) {
+    if (len < 1e-5) {
         return;
     }
     dir /= len;
@@ -127,16 +142,16 @@ void main() {
     float intensity = (v_intensity[0] + v_intensity[1]) * 0.5;
     g_intensity = intensity;
 
-    gl_Position = vec4(p0.xy / p0.w + offset * p0.w, p0.z / p0.w, p0.w);
+    gl_Position = vec4((ndc0 + offset) * p0.w, p0.z, p0.w);
     EmitVertex();
 
-    gl_Position = vec4(p0.xy / p0.w - offset * p0.w, p0.z / p0.w, p0.w);
+    gl_Position = vec4((ndc0 - offset) * p0.w, p0.z, p0.w);
     EmitVertex();
 
-    gl_Position = vec4(p1.xy / p1.w + offset * p1.w, p1.z / p1.w, p1.w);
+    gl_Position = vec4((ndc1 + offset) * p1.w, p1.z, p1.w);
     EmitVertex();
 
-    gl_Position = vec4(p1.xy / p1.w - offset * p1.w, p1.z / p1.w, p1.w);
+    gl_Position = vec4((ndc1 - offset) * p1.w, p1.z, p1.w);
     EmitVertex();
 
     EndPrimitive();
@@ -262,13 +277,16 @@ uniform float u_time;
 out vec4 frag_color;
 
 void main() {
-    float dist = length(v_uv - 0.5) * 2.0;
+    float dist = length(v_uv);
+    if (dist > 1.0) {
+        discard;
+    }
     float core = exp(-dist * dist * 3.5);
-    float outer = exp(-dist * 1.8) * 0.35;
+    float outer = exp(-dist * 1.5) * 0.40;
     float pulse = 0.85 + 0.15 * sin(u_time * 2.2);
-    float alpha = (core * 0.55 + outer) * v_intensity * pulse;
-    vec3 col = u_color_deep * (core * 2.0 + outer);
-    frag_color = vec4(col, alpha);
+    float alpha = (core * 0.45 + outer * 0.25) * v_intensity * pulse;
+    vec3 col = u_color_deep * (core * 2.5 + outer * 1.2);
+    frag_color = vec4(col, clamp(alpha, 0.0, 0.7));
 }
 """
 

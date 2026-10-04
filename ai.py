@@ -21,9 +21,8 @@ from modules.memory.profile_manager import get_profile_manager
 OLLAMA_HOST = "127.0.0.1"
 OLLAMA_PORT = 11434
 OLLAMA_URL = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"
-DEFAULT_LOCAL_MODEL = "qwen2.5:3b"
-GROQ_MODELS = ["groq/compound", "groq/compound-mini", "qwen/qwen3.6-27b", "llama-3.3-70b-versatile"]
-GROQ_MODEL = "groq/compound"
+GROQ_MODELS = ["qwen/qwen3.8-27b", "openai/gpt-oss-120b", "openai/gpt-oss-20b"]
+GROQ_MODEL = "qwen/qwen3.8-27b"
 
 def _load_env_file() -> None:
     env_path = os.path.join(os.path.dirname(__file__), ".env")
@@ -114,9 +113,13 @@ def _ask_groq(prompt: str, system_prompt: str, api_key: str) -> tuple[Optional[s
             req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers=headers, method="POST")
             with urllib.request.urlopen(req, timeout=4.0) as resp:
                 data = json.loads(resp.read().decode('utf-8'))
-                answer = data["choices"][0]["message"]["content"].strip()
-                print(f"[GROQ SUCCESS] Model '{model_name}' generated response.")
-                return answer, None
+                msg = data["choices"][0]["message"]
+                answer = (msg.get("content") or "").strip()
+                if not answer and msg.get("reasoning"):
+                    answer = msg.get("reasoning", "").strip()
+                if answer:
+                    print(f"[GROQ SUCCESS] Model '{model_name}' generated response.")
+                    return answer, None
         except urllib.error.HTTPError as http_err:
             next_provider = GROQ_MODELS[idx + 1] if idx + 1 < len(GROQ_MODELS) else f"Ollama {DEFAULT_LOCAL_MODEL}"
             if http_err.code == 429:
@@ -187,23 +190,22 @@ def ask_ai(prompt: str) -> str:
 
     raw_answer = None
     groq_err_code = None
-    model_used = "google-gemini-1.5-flash"
-
-    # 1. PRIMARY: Try Google Gemini Free API first if configured
-    gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
-    if gemini_key and "your_free_key_here" not in gemini_key:
-        raw_answer, gemini_err = _ask_gemini(prompt, full_system_prompt, gemini_key)
+    # 1. PRIMARY: Try Groq Cloud API first for 0.3s sub-second responses
+    groq_key = os.getenv("GROQ_API_KEY", "").strip()
+    if groq_key and groq_key.startswith("gsk_") and "your_free_key_here" not in groq_key:
+        raw_answer, groq_err_code = _ask_groq(prompt, full_system_prompt, groq_key)
         if raw_answer:
-            model_used = "google-gemini-1.5-flash"
+            model_used = "groq-cloud"
 
-    # 2. SECONDARY: Fallback to Groq Cloud API if Google Gemini is unavailable or rate-limited
+    # 2. SECONDARY: Try Google Gemini Free API if configured with valid key
     if not raw_answer:
-        groq_key = os.getenv("GROQ_API_KEY", "").strip()
-        if groq_key and groq_key.startswith("gsk_") and "your_free_key_here" not in groq_key:
-            print(f"[AI PROVIDER] PRIMARY (Google Gemini Free API) -> Unavailable/Rate Limit -> FALLBACK PROVIDER (Groq Cloud API)")
-            raw_answer, groq_err_code = _ask_groq(prompt, full_system_prompt, groq_key)
+        gemini_key = os.getenv("GEMINI_API_KEY", "").strip()
+        if gemini_key and gemini_key.startswith("AIzaSy"):
+            raw_answer, gemini_err = _ask_gemini(prompt, full_system_prompt, gemini_key)
             if raw_answer:
-                model_used = "groq-llama3.3"
+                model_used = "google-gemini-1.5-flash"
+        elif gemini_key and not gemini_key.startswith("AIzaSy"):
+            print(f"[AI NOTE] GEMINI_API_KEY in .env must begin with 'AIzaSy' from https://aistudio.google.com. Skipping invalid key format.")
 
     # 3. TERTIARY: Fallback to Local Ollama if all cloud APIs are unavailable or offline
     if not raw_answer:

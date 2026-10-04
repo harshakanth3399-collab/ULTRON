@@ -406,8 +406,23 @@ class UltronRenderer(QOpenGLWidget):
             self._scene_fbo.use()
             self._ctx.clear(0.0, 0.0, 0.0, 1.0, depth=1.0)
 
-            # 1a. Core Glow (Disabled to keep background pitch black for crisp MCU details)
-            pass
+            # 1a. Volumetric Core Glow (Smooth Google Gemini Aura)
+            try:
+                self._ctx.disable(moderngl.DEPTH_TEST)
+                self._ctx.enable(moderngl.BLEND)
+                if "u_mvp" in self._glow_prog:
+                    self._glow_prog["u_mvp"].write(mvp.tobytes())
+                if "u_radius" in self._glow_prog:
+                    self._glow_prog["u_radius"].value = SPHERE_RADIUS * 1.5
+                if "u_time" in self._glow_prog:
+                    self._glow_prog["u_time"].value = self._time
+                if "u_intensity" in self._glow_prog:
+                    self._glow_prog["u_intensity"].value = 0.65 + audio_level * 0.45
+                if "u_color_deep" in self._glow_prog:
+                    self._glow_prog["u_color_deep"].value = tuple(self._curr_glow)
+                self._glow_vao.render(moderngl.TRIANGLES)
+            except Exception:
+                pass
 
             # Dynamic cinema hologram color interpolation
             target_pal = STATE_PALETTES.get(state.name.lower(), STATE_PALETTES["idle"])

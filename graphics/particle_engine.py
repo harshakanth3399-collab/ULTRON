@@ -72,33 +72,25 @@ def _torus_ring(count: int, major_r: float, minor_r: float,
 
 def _generate_ai_core(count: int) -> np.ndarray:
     """
-    Structured volumetric AI energy core:
-      25% — Dense golden nucleus (Gaussian cluster)
-      45% — Turbulent plasma shell (Fibonacci sphere)
-      30% — Counter-rotating inclined HUD orbital tracks (3 torus rings)
+    Volumetric Google Gemini Aurora Liquid Orb:
+      40% — Radiant inner liquid nucleus (smooth Gaussian cluster)
+      45% — Flowing organic plasma mantle (smooth Fibonacci distribution)
+      15% — Ethereal coronal fluid halo
     """
     pts = np.zeros((count, 3), dtype=np.float32)
-    n_core   = int(count * 0.25)
-    n_shell  = int(count * 0.45)
-    n_tracks = count - n_core - n_shell
+    n_core   = int(count * 0.40)
+    n_mantle = int(count * 0.45)
+    n_corona = count - n_core - n_mantle
     r = SPHERE_RADIUS
 
-    # 1. Nucleus: tight Gaussian cluster
-    pts[:n_core] = np.random.normal(0.0, r * 0.18, (n_core, 3)).astype(np.float32)
+    # 1. Inner core: soft volumetric Gaussian cluster
+    pts[:n_core] = np.random.normal(0.0, r * 0.45, (n_core, 3)).astype(np.float32)
 
-    # 2. Plasma shell
-    pts[n_core:n_core + n_shell] = _fibonacci_sphere(n_shell, r, jitter=0.014)
+    # 2. Plasma mantle: fluid spherical shell
+    pts[n_core:n_core + n_mantle] = _fibonacci_sphere(n_mantle, r, jitter=0.032)
 
-    # 3. Three inclined orbital rings
-    n_per = n_tracks // 3
-    cursor = n_core + n_shell
-    for i in range(3):
-        n_this = n_per if i < 2 else (count - cursor)
-        maj = r * (1.12 + i * 0.18)
-        tx  = (i * math.pi / 4.0) + 0.3
-        tz  = (i * -math.pi / 6.0) - 0.15
-        pts[cursor:cursor + n_this] = _torus_ring(n_this, maj, 0.006, tx, tz)
-        cursor += n_this
+    # 3. Coronal fluid halo: outer glowing ethereal aura
+    pts[n_core + n_mantle:] = _fibonacci_sphere(n_corona, r * 1.22, jitter=0.045)
 
     return pts.astype(np.float32)
 

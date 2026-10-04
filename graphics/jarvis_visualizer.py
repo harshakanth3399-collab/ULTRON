@@ -12,34 +12,32 @@ from graphics.state import UltronState
 class JarvisVisualizer:
     """Renders 3D concentric holographic rings, orbital nodes, and real-time audio waveform bars."""
 
-    def __init__(self, ring_count: int = 4, segments_per_ring: int = 96, wave_bars: int = 64) -> None:
+    def __init__(self, ring_count: int = 3, segments_per_ring: int = 96, wave_bars: int = 0) -> None:
         self.ring_count = ring_count
         self.segments = segments_per_ring
         self.wave_bars = wave_bars
 
         # Vertices for rings: ring_count * segments * 2
-        # Vertices for wave bars: wave_bars * 2
+        # Vertices for wave bars: wave_bars * 2 (0 disables bottom bar artifacts)
         self.ring_vert_count = ring_count * segments_per_ring * 2
         self.wave_vert_count = wave_bars * 2
         self.total_vertices = self.ring_vert_count + self.wave_vert_count
 
         self._vertices = np.zeros((self.total_vertices, 5), dtype=np.float32)
 
-        # Concentric Radii (Hollow J.A.R.V.I.S. structure)
+        # Concentric Celestial Halo Rings surrounding Gemini Orb
         self.radii = [
-            SPHERE_RADIUS * 1.15,
-            SPHERE_RADIUS * 1.45,
-            SPHERE_RADIUS * 1.75,
-            SPHERE_RADIUS * 2.05,
+            SPHERE_RADIUS * 1.25,
+            SPHERE_RADIUS * 1.55,
+            SPHERE_RADIUS * 1.85,
         ]
 
         self.tilts = [
             (0.35, 0.4, 0.1),
             (-0.45, 0.25, 0.75),
             (0.55, -0.65, 0.25),
-            (-0.25, -0.35, -0.55),
         ]
-        self.speeds = [0.35, -0.5, 0.65, -0.28]
+        self.speeds = [0.30, -0.42, 0.55]
 
     def update(self, dt: float, time: float, state: UltronState, audio_level: float) -> None:
         v_idx = 0
