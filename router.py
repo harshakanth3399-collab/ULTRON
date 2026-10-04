@@ -12,6 +12,7 @@ Routes English transcript to the appropriate handler:
 """
 from __future__ import annotations
 
+import os
 import re
 import time
 from typing import Optional, List, Dict, Any
@@ -234,6 +235,35 @@ def process(command: str) -> tuple:
     ]):
         return _respond(True, "I have live, unrestricted access to the global internet and real-time search engines. What would you like me to look up?")
 
+    # ── Meta-Inquiry on Hard Drive & Local Filesystem Access ──────────────────
+    if any(k in raw for k in [
+        "access to my computer", "access of my computer", "access my computer",
+        "hard drive access", "access of my local hard drive", "access to my hard drive",
+        "access my local hard drive", "access my files", "access to my files",
+        "why can't you touch my code", "why can't you change the code",
+        "can't you touch my code", "can you touch my code", "why can't you explore",
+        "why can't you have access", "security concerns", "security concern if i give access",
+        "security concerns with you", "why can't you open local folder", "why can't you explore my local"
+    ]):
+        addr_suffix = pm.get_address_suffix(", ")
+        return _respond(True, f"I already run directly on your laptop with full native access to your hard drive and files{addr_suffix}. There are zero external security risks because all your data remains 100% private on your machine.")
+
+    # ── Open Local ULTRON Project Folder or Workspace ─────────────────────────
+    if any(k in raw for k in [
+        "open ultron folder", "open the ultron folder", "open ultron directory",
+        "show ultron folder", "show ultron code", "open project folder",
+        "search for the ultron file", "search for the ultron folder",
+        "search through it you will find all the code", "find all the code that's been written",
+        "all the code that's been written for you", "search for the ultron"
+    ]):
+        project_dir = os.path.dirname(os.path.abspath(__file__))
+        try:
+            os.startfile(project_dir)
+            addr_suffix = pm.get_address_suffix(", ")
+            return _respond(True, f"Opened your ULTRON folder in File Explorer{addr_suffix}. All your code and system files are right here.")
+        except Exception as e:
+            return _respond(False, f"Failed to open folder: {e}")
+
     # ── Category C: Web Research Requests ──────────────────────────────────────
     web_research_keywords = [
         "search", "google", "check in google", "check the internet", "look up", "find online",
@@ -249,7 +279,14 @@ def process(command: str) -> tuple:
 
     is_history_query = any(k in command.lower() for k in ["what did i just ask", "what did i ask", "what was my last question", "what did you say", "what was your reply"])
     is_comm_query = any(k in raw for k in ["email", "mail", "whatsapp", "message", "notification", "brief me", "briefing", "ai news", "ai updates", "resume", "ats score", "career"])
-    is_web_query = any(k in raw or k in command.lower() for k in web_research_keywords) and not is_history_query and not is_comm_query and not any(k in raw for k in ["open google", "open chrome", "open youtube", "play my favorite song", "play this song"])
+    is_local_file_query = any(k in raw for k in [
+        "local file", "local folder", "ultron folder", "ultron file", "ultron code",
+        "my files", "my code", "touch my code", "change the code", "in my laptop",
+        "on my laptop", "hard drive", "soil explorer", "file explorer", "open folder",
+        "find file", "search file", "search local", "locate file", "access to my computer",
+        "code that's been written"
+    ])
+    is_web_query = any(k in raw or k in command.lower() for k in web_research_keywords) and not is_history_query and not is_comm_query and not is_local_file_query and not any(k in raw for k in ["open google", "open chrome", "open youtube", "play my favorite song", "play this song"])
 
     if is_web_query:
         from modules.web_research import research
