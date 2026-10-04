@@ -1,11 +1,11 @@
 """Graphics pipeline constants and tunables."""
 
 # ── Particles ────────────────────────────────────────────────────────────
-# Volumetric Google Gemini Aurora Liquid Orb (soft fluid light blobs that merge seamlessly)
-PARTICLE_COUNT = 3_200
-SPHERE_RADIUS  = 0.28
-PARTICLE_MIN_SIZE = 14.0
-PARTICLE_MAX_SIZE = 36.0
+# Subtle quantum stardust sparks orbiting the continuous liquid plasma orb
+PARTICLE_COUNT = 300
+SPHERE_RADIUS  = 0.35
+PARTICLE_MIN_SIZE = 1.0
+PARTICLE_MAX_SIZE = 2.4
 
 # ── Electric arcs / Halos ──────────────────────────────────────────────────
 ARC_COUNT = 6

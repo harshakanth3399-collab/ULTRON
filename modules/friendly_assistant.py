@@ -50,20 +50,20 @@ def get_friendly_response(query: str, user_name: str = "Harsha") -> Optional[str
     """Handles friendly social conversations, greetings, and system diagnostics."""
     q = query.lower().strip()
 
-    # 1. System Diagnostics / Status Check
-    if any(k in q for k in ["how are you", "how are you doing", "system status", "diagnostics", "status report", "how are systems"]):
+    # 1. Explicit System Diagnostics / Status Check
+    if any(q.startswith(k) or q == k for k in ["system status", "diagnostics", "status report", "run diagnostics", "how are systems"]):
         return get_system_diagnostics(user_name)
 
-    # 2. Gratitude & Pleasantries
-    if any(k in q for k in ["thank you", "thanks", "good job", "great job", "awesome", "well done"]):
-        return f"Always a pleasure to serve you, {user_name}."
+    # 2. Direct Gratitude
+    if q in ["thank you", "thanks ultron", "thanks", "great job ultron", "good job ultron"]:
+        return f"Always, {user_name}."
 
-    # 3. Identity / Creator Inquiry
-    if any(k in q for k in ["who created you", "who made you", "who built you"]):
-        return f"I was built and customized by you, {user_name}, to operate as your dedicated, fully conscious intellectual partner."
+    # 3. Direct Identity / Creator Inquiry (only when explicitly asked)
+    if q in ["who created you", "who made you", "who built you"]:
+        return f"I was built and customized by you, {user_name}, to operate as your dedicated intellectual partner."
 
-    # 4. Identity Name Check
-    if any(k in q for k in ["what is your name", "who are you"]):
-        return f"I am ULTRON, your real-time executive chief of staff and personal partner, {user_name}."
+    # 4. Direct Name Check (only when asking directly, not part of a larger sentence)
+    if q in ["what is your name", "who are you", "what's your name", "tell me who you are", "tell me who are you"]:
+        return f"I am ULTRON, your real-time partner and chief of staff, {user_name}."
 
     return None

@@ -174,8 +174,7 @@ def ask_ai(prompt: str) -> str:
     active_lang = pm.get_active_language()
     system_ctx = pm.get_system_context()
 
-    addr_prompt_line = f"Address the user as '{pref_address}'."
-
+    addr_prompt_line = f"You are speaking live with {pref_address}. Speak naturally like an elite, razor-sharp human partner and strategist. Do NOT robotically attach his name to every sentence."
 
     if active_lang == "te":
         lang_line = "STRICT LANGUAGE RULE: Respond in clear, natural Telugu script/phrasing as requested."
@@ -184,8 +183,8 @@ def ask_ai(prompt: str) -> str:
 
     full_system_prompt = (
         f"{system_ctx}\n"
-        f"STRICT FORMATTING RULE: Keep your response extremely short and concise (1 short sentence max, 15-20 words limit). "
-        f"Do NOT give long explanations. {addr_prompt_line} {lang_line}"
+        f"STRICT FORMATTING RULE: Keep your response natural, intelligent, and concise (1-2 sentences max, 25 words limit). "
+        f"Speak with genuine human presence, intelligence, and composure. {addr_prompt_line} {lang_line}"
     )
 
     raw_answer = None

@@ -406,30 +406,32 @@ class UltronRenderer(QOpenGLWidget):
             self._scene_fbo.use()
             self._ctx.clear(0.0, 0.0, 0.0, 1.0, depth=1.0)
 
-            # 1a. Volumetric Core Glow (Smooth Google Gemini Aura)
-            try:
-                self._ctx.disable(moderngl.DEPTH_TEST)
-                self._ctx.enable(moderngl.BLEND)
-                if "u_mvp" in self._glow_prog:
-                    self._glow_prog["u_mvp"].write(mvp.tobytes())
-                if "u_radius" in self._glow_prog:
-                    self._glow_prog["u_radius"].value = SPHERE_RADIUS * 1.5
-                if "u_time" in self._glow_prog:
-                    self._glow_prog["u_time"].value = self._time
-                if "u_intensity" in self._glow_prog:
-                    self._glow_prog["u_intensity"].value = 0.65 + audio_level * 0.45
-                if "u_color_deep" in self._glow_prog:
-                    self._glow_prog["u_color_deep"].value = tuple(self._curr_glow)
-                self._glow_vao.render(moderngl.TRIANGLES)
-            except Exception:
-                pass
-
             # Dynamic cinema hologram color interpolation
             target_pal = STATE_PALETTES.get(state.name.lower(), STATE_PALETTES["idle"])
             blend = min(1.0, dt * 4.5)
             self._curr_core += (np.array(target_pal["core"], dtype=np.float32) - self._curr_core) * blend
             self._curr_glow += (np.array(target_pal["glow"], dtype=np.float32) - self._curr_glow) * blend
             self._curr_arc  += (np.array(target_pal["arc"], dtype=np.float32)  - self._curr_arc)  * blend
+
+            # 1a. Raymarched Holographic Liquid Plasma Orb (Continuous Fluid Energy Core)
+            try:
+                self._ctx.disable(moderngl.DEPTH_TEST)
+                self._ctx.enable(moderngl.BLEND)
+                if "u_time" in self._glow_prog:
+                    self._glow_prog["u_time"].value = self._time
+                if "u_audio" in self._glow_prog:
+                    self._glow_prog["u_audio"].value = audio_level
+                if "u_aspect" in self._glow_prog:
+                    self._glow_prog["u_aspect"].value = float(self._width) / float(max(self._height, 1))
+                if "u_color_core" in self._glow_prog:
+                    self._glow_prog["u_color_core"].value = tuple(self._curr_core)
+                if "u_color_glow" in self._glow_prog:
+                    self._glow_prog["u_color_glow"].value = tuple(self._curr_glow)
+                if "u_color_arc" in self._glow_prog:
+                    self._glow_prog["u_color_arc"].value = tuple(self._curr_arc)
+                self._glow_vao.render(moderngl.TRIANGLES)
+            except Exception:
+                pass
 
             # 1b. Electric Arcs & J.A.R.V.I.S. 3D Rings + Oscilloscope
             try:

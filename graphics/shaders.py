@@ -26,18 +26,16 @@ uniform float u_glow;
 out float v_brightness;
 out float v_depth;
 out float v_phase;
-out vec3 v_world_pos;
 
 void main() {
-    v_world_pos = in_pos;
     vec4 clip = u_mvp * vec4(in_pos, 1.0);
     gl_Position = clip;
 
-    // Perspective point attenuation: smooth volumetric liquid blobs (Google Gemini Orb)
+    // Delicate holographic stardust sparks orbiting the fluid core
     float atten = 1.0 / max(clip.w, 0.15);
-    gl_PointSize = clamp(in_size * atten * (1.1 + u_glow * 0.4), 8.0, 72.0);
+    gl_PointSize = clamp(in_size * atten * 1.8 * (1.0 + u_glow * 0.25), 1.5, 6.0);
 
-    v_brightness = in_brightness * (0.85 + u_glow * 0.45);
+    v_brightness = in_brightness * (0.80 + u_glow * 0.35);
     v_depth = clip.z;
     v_phase = fract(sin(dot(in_pos, vec3(12.9898, 78.233, 45.5432))) * 43758.5453);
 }
@@ -49,7 +47,6 @@ PARTICLE_FRAG = """
 in float v_brightness;
 in float v_depth;
 in float v_phase;
-in vec3 v_world_pos;
 
 uniform vec3 u_color_core;
 uniform vec3 u_color_glow;
@@ -65,20 +62,13 @@ void main() {
         discard;
     }
 
-    // Ultra-smooth Gaussian liquid falloff (Google Gemini aurora orb look)
-    float core = exp(-dist * dist * 8.5);
-    float halo = exp(-dist * 3.2) * 0.7;
-    float intensity = (core * 1.8 + halo) * v_brightness;
+    float core = exp(-dist * dist * 16.0);
+    float halo = max(0.0, 0.5 - dist) * 1.5;
+    float intensity = (core * 2.0 + halo) * v_brightness;
+    float shimmer = 0.8 + 0.2 * sin(u_time * 12.0 + v_phase * 62.83);
 
-    // Organic color shifting across depth and space
-    float color_mix = clamp(dist * 1.4 + v_world_pos.y * 1.5 + sin(u_time * 2.0 + v_phase * 6.28) * 0.25, 0.0, 1.0);
-    vec3 col = mix(u_color_core, u_color_glow, color_mix);
-
-    // Ethereal chromatic inner luminescence
-    col += vec3(0.12, 0.06, 0.22) * core * (1.0 + sin(u_time * 3.0 + v_phase * 3.14));
-
-    float alpha = clamp(intensity * 0.75, 0.0, 0.85);
-    frag_color = vec4(col * intensity, alpha);
+    vec3 col = mix(u_color_core, u_color_glow, dist * 1.5);
+    frag_color = vec4(col * intensity * shimmer, clamp(intensity * 0.9, 0.0, 1.0));
 }
 """
 
@@ -246,22 +236,11 @@ SPHERE_GLOW_VERT = """
 #version 330 core
 
 layout(location = 0) in vec2 in_uv;
-
-uniform mat4 u_mvp;
-uniform float u_radius;
-uniform float u_time;
-uniform float u_intensity;
-
 out vec2 v_uv;
-out float v_intensity;
 
 void main() {
     v_uv = in_uv;
-    vec3 pos = vec3(in_uv * u_radius * 2.2, 0.0);
-    float pulse = sin(u_time * 1.8) * 0.04 + sin(u_time * 3.7) * 0.02;
-    pos.xy *= 1.0 + pulse * u_intensity;
-    gl_Position = u_mvp * vec4(pos, 1.0);
-    v_intensity = u_intensity;
+    gl_Position = vec4(in_uv, 0.0, 1.0);
 }
 """
 
@@ -269,24 +248,147 @@ SPHERE_GLOW_FRAG = """
 #version 330 core
 
 in vec2 v_uv;
-in float v_intensity;
-
-uniform vec3 u_color_deep;
-uniform float u_time;
-
 out vec4 frag_color;
 
+uniform float u_time;
+uniform float u_audio;
+uniform float u_aspect;
+uniform vec3 u_color_core;
+uniform vec3 u_color_glow;
+uniform vec3 u_color_arc;
+
+// High-speed 3D Simplex noise
+vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+
+float snoise(vec3 v) {
+    const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+    vec3 i  = floor(v + dot(v, C.yyy));
+    vec3 x0 = v - i + dot(i, C.xxx);
+    vec3 g = step(x0.yzx, x0.xyz);
+    vec3 l = 1.0 - g;
+    vec3 i1 = min(g.xyz, l.zxy);
+    vec3 i2 = max(g.xyz, l.zxy);
+    vec3 x1 = x0 - i1 + C.xxx;
+    vec3 x2 = x0 - i2 + C.yyy;
+    vec3 x3 = x0 - D.yyy;
+    i = mod289(i);
+    vec4 p = permute(permute(permute(
+              i.z + vec4(0.0, i1.z, i2.z, 1.0))
+            + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+            + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+    float n_ = 0.142857142857;
+    vec3 ns = n_ * D.wyz - D.xzx;
+    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+    vec4 x_ = floor(j * ns.z);
+    vec4 y_ = floor(j - 7.0 * x_);
+    vec4 x = x_ *ns.x + ns.yyyy;
+    vec4 y = y_ *ns.x + ns.yyyy;
+    vec4 h = 1.0 - abs(x) - abs(y);
+    vec4 b0 = vec4(x.xy, y.xy);
+    vec4 b1 = vec4(x.zw, y.zw);
+    vec4 s0 = floor(b0)*2.0 + 1.0;
+    vec4 s1 = floor(b1)*2.0 + 1.0;
+    vec4 sh = -step(h, vec4(0.0));
+    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+    vec3 p0 = vec3(a0.xy, h.x);
+    vec3 p1 = vec3(a0.zw, h.y);
+    vec3 p2 = vec3(a1.xy, h.z);
+    vec3 p3 = vec3(a1.zw, h.w);
+    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+    p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+    m = m * m;
+    return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+}
+
+float fbm(vec3 p) {
+    float f = 0.0;
+    f += 0.5000 * snoise(p); p *= 2.02;
+    f += 0.2500 * snoise(p); p *= 2.03;
+    f += 0.1250 * snoise(p); p *= 2.01;
+    f += 0.0625 * snoise(p);
+    return f;
+}
+
 void main() {
-    float dist = length(v_uv);
-    if (dist > 1.0) {
+    vec2 p = v_uv;
+    p.x *= u_aspect;
+
+    // Camera ray
+    vec3 ro = vec3(0.0, 0.0, 2.5);
+    vec3 rd = normalize(vec3(p, -1.9));
+
+    // Dynamic radius breathing with voice audio
+    float base_radius = 0.50 + u_audio * 0.10 + sin(u_time * 1.8) * 0.012;
+
+    float b = dot(ro, rd);
+    float c = dot(ro, ro) - base_radius * base_radius;
+    float disc = b * b - c;
+
+    vec3 col = vec3(0.0);
+    float alpha = 0.0;
+
+    // Atmospheric coronal glow around sphere
+    float d_center = length(p);
+    float corona_dist = max(0.0, d_center - base_radius * 0.75);
+    float corona = exp(-corona_dist * corona_dist * 18.0) * (0.45 + u_audio * 0.55);
+    vec3 corona_col = mix(u_color_glow, u_color_core, clamp(corona * 1.5, 0.0, 1.0));
+    col += corona_col * corona;
+    alpha += corona * 0.7;
+
+    if (disc > 0.0) {
+        float t = -b - sqrt(disc);
+        vec3 hit = ro + t * rd;
+        vec3 norm = normalize(hit);
+
+        // Multi-frequency fluid displacement
+        float t_flow = u_time * 0.45;
+        vec3 noise_coord = norm * 2.5 + vec3(0.0, t_flow, t_flow * 0.5);
+        float fluid = fbm(noise_coord);
+        float audio_ripple = sin(norm.y * 14.0 - u_time * 5.0 + fluid * 4.0) * (0.05 + u_audio * 0.15);
+
+        // Modulate normal with fluid turbulence
+        vec3 displaced_norm = normalize(norm + vec3(fluid * 0.35, fluid * 0.25, audio_ripple));
+
+        // High-end Fresnel rim lighting
+        float fresnel = pow(1.0 - max(0.0, dot(norm, -rd)), 2.6);
+        float rim_edge = pow(1.0 - max(0.0, dot(norm, -rd)), 5.0);
+
+        // Core incandescent illumination
+        float core_light = pow(max(0.0, dot(norm, vec3(0.0, 0.0, 1.0))), 1.8);
+
+        // Iridescent multi-layer color blending (Gemini / J.A.R.V.I.S. chromatic flow)
+        float color_t = clamp(fluid * 0.85 + norm.y * 0.3 + fresnel * 0.65, 0.0, 1.0);
+        vec3 surface_col = mix(u_color_core, u_color_glow, color_t);
+        
+        // Chromatic dispersion accent on outer rim
+        surface_col = mix(surface_col, u_color_arc, rim_edge);
+
+        // Internal glowing caustics and audio pulse
+        vec3 core_glow = mix(u_color_core * 1.6, vec3(1.0), core_light * 0.7);
+        surface_col = mix(surface_col, core_glow, core_light * (0.35 + u_audio * 0.65));
+
+        // Smooth specular reflection
+        vec3 light_dir = normalize(vec3(0.4, 0.6, 1.0));
+        vec3 h = normalize(-rd + light_dir);
+        float spec = pow(max(0.0, dot(displaced_norm, h)), 24.0);
+        surface_col += vec3(spec * 0.75);
+
+        float sphere_alpha = clamp(0.85 + fresnel * 0.15 + u_audio * 0.15, 0.0, 1.0);
+        col = mix(col, surface_col, sphere_alpha);
+        alpha = max(alpha, sphere_alpha);
+    }
+
+    if (alpha <= 0.005) {
         discard;
     }
-    float core = exp(-dist * dist * 3.5);
-    float outer = exp(-dist * 1.5) * 0.40;
-    float pulse = 0.85 + 0.15 * sin(u_time * 2.2);
-    float alpha = (core * 0.45 + outer * 0.25) * v_intensity * pulse;
-    vec3 col = u_color_deep * (core * 2.5 + outer * 1.2);
-    frag_color = vec4(col, clamp(alpha, 0.0, 0.7));
+
+    frag_color = vec4(col, clamp(alpha, 0.0, 1.0));
 }
 """
 
