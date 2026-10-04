@@ -3,9 +3,9 @@
 # ── Particles ────────────────────────────────────────────────────────────
 # 6,500 MCU J.A.R.V.I.S. neural matrix particles — compact dense golden sphere
 PARTICLE_COUNT = 6500
-SPHERE_RADIUS  = 1.0       # Exact Three.js world radius
-PARTICLE_MIN_SIZE = 1.5    # Delicate glowing neural specks
-PARTICLE_MAX_SIZE = 3.0    # Tight and dense, not scattered stars
+SPHERE_RADIUS  = 0.38      # Compact sphere shape matching phone
+PARTICLE_MIN_SIZE = 1.0    # Delicate glowing neural specks
+PARTICLE_MAX_SIZE = 2.4    # Compact dense dots, not scattered stars
 
 # ── Electric arcs / Halos ──────────────────────────────────────────────────
 ARC_COUNT = 6
@@ -14,8 +14,8 @@ ARC_MAX_LENGTH = 0.38
 
 # ── Framebuffer / bloom ─────────────────────────────────────────────────────
 BLOOM_THRESHOLD = 0.70
-BLOOM_INTENSITY = 0.22     # Crisp cinematic glow
-BLOOM_BLUR_PASSES = 2      # Fast 2-pass gaussian blur
+BLOOM_INTENSITY = 0.25     # Crisp subtle cinematic glow
+BLOOM_BLUR_PASSES = 2      # Fast 2-pass blur
 BLOOM_DOWNSAMPLE = 2
 
 # ── Audio smoothing ─────────────────────────────────────────────────────────

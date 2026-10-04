@@ -31,9 +31,9 @@ void main() {
     vec4 clip = u_mvp * vec4(in_pos, 1.0);
     gl_Position = clip;
 
-    // Attenuation calibrated for camera at z = 4.2
-    float atten = 4.2 / max(clip.w, 0.15);
-    gl_PointSize = clamp(in_size * atten * 1.0 * (1.0 + u_glow * 0.15), 1.0, 3.8);
+    // Dense compact neural matrix specks — NOT giant glowing stars
+    float atten = 1.0 / max(clip.w, 0.15);
+    gl_PointSize = clamp(in_size * atten * 1.5 * (1.0 + u_glow * 0.15), 1.0, 3.5);
 
     v_brightness = in_brightness * (0.85 + u_glow * 0.25);
     v_depth = clip.z;

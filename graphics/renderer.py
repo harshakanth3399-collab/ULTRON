@@ -365,15 +365,12 @@ class UltronRenderer(QOpenGLWidget):
         if hasattr(self, "_bloom") and self._bloom is not None:
             self._bloom.resize(self._width, self._height)
 
-    def _compute_mvp(self, model: Optional[np.ndarray] = None) -> np.ndarray:
+    def _compute_mvp(self) -> np.ndarray:
         aspect = self._width / self._height
-        proj = _perspective(45.0, aspect, 0.1, 100.0)
-        eye = np.array([0.0, 0.0, 4.2], dtype=np.float32)
+        proj = _perspective(45.0, aspect, 0.05, 8.0)
+        eye = np.array([0.0, 0.0, 1.8], dtype=np.float32)
         view = _look_at(eye, np.zeros(3, dtype=np.float32), np.array([0.0, 1.0, 0.0], dtype=np.float32))
-        vp = proj @ view
-        if model is not None:
-            return (vp @ model).astype(np.float32)
-        return vp.astype(np.float32)
+        return (proj @ view).astype(np.float32)
 
     def paintGL(self) -> None:
         if not self._ready or self._ctx is None:
@@ -399,9 +396,7 @@ class UltronRenderer(QOpenGLWidget):
                 self._verify_renderer()
                 self._audit_done = True
 
-            # Hardware accelerated 3D sphere revolution & tilt
-            model_matrix = self._engine.model_matrix(self._time, state, audio_level)
-            mvp = self._compute_mvp(model_matrix)
+            mvp = self._compute_mvp()
 
             # 1. Render Scene to Offscreen Framebuffer
             self._scene_fbo.use()

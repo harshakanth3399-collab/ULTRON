@@ -79,7 +79,7 @@ def _generate_ai_core(count: int) -> np.ndarray:
     v = np.random.uniform(0.0, 1.0, count).astype(np.float32)
     theta = u * (2.0 * math.pi)
     phi = np.arccos(2.0 * v - 1.0)
-    r = 0.88 + np.random.uniform(0.0, 0.46, count).astype(np.float32)
+    r = (0.88 + np.random.uniform(0.0, 0.46, count).astype(np.float32)) * SPHERE_RADIUS
 
     x = r * np.sin(phi) * np.cos(theta)
     y = r * np.sin(phi) * np.sin(theta)
@@ -123,8 +123,8 @@ class ParticleEngine:
         audio_level: float,
         activation: float,
     ) -> None:
-        cfg          = STATE_CONFIG.get(state.name.lower(), STATE_CONFIG["idle"])
-        audio        = audio_level * cfg["audio_influence"]
+        cfg   = STATE_CONFIG.get(state.name.lower(), STATE_CONFIG["idle"])
+        audio = audio_level * cfg["audio_influence"]
 
         # ── Shockwave on audio spike ──────────────────────────────────────────
         spike = audio_level - self._prev_audio
@@ -133,22 +133,53 @@ class ParticleEngine:
         self._shockwave = max(0.0, self._shockwave - dt * 2.2)   # decay
         self._prev_audio = audio_level
 
+        # ── Continuous visible 3D revolution matching phone ───────────────────
+        speed = 2.0 if state == UltronState.SPEAKING else (1.4 if state == UltronState.LISTENING else 1.0)
+        self._rotation += dt * (1.1 + audio * 1.5) * speed
+
+        rot_y = self._rotation
+        rot_x = math.sin(time * 0.35) * 0.18
+        rot_z = math.cos(time * 0.28) * 0.14
+
         bx = self._base[:, 0]
         by = self._base[:, 1]
         bz = self._base[:, 2]
 
-        # ── Fluid undulating wave ripple across particle grid (matches mobile 1:1) ──
+        # ── Fluid undulating wave ripple across particle grid ────────────────
         wave = (
-            np.sin(time * 2.0 + bx * 3.0 + bz * 2.5) * 0.07
-            + np.cos(time * 1.4 + by * 3.5) * 0.05
+            np.sin(time * 2.8 + bx * 7.5 + bz * 6.5) * 0.045
+            + np.cos(time * 2.0 + by * 8.5) * 0.035
         )
-        # Voice reactivity modulates wave
         wave_amp = 1.0 + audio * 2.5 + self._shockwave * 1.5
         wave = wave * wave_amp
 
-        self._positions[:, 0] = bx * (1.0 + wave * 0.35)
-        self._positions[:, 1] = by + wave
-        self._positions[:, 2] = bz * (1.0 + wave * 0.35)
+        px = bx * (1.0 + wave * 0.8)
+        py = by + wave
+        pz = bz * (1.0 + wave * 0.8)
+
+        # ── 3D Matrix Rotation (Y, then X, then Z) ───────────────────────────
+        cy, sy = math.cos(rot_y), math.sin(rot_y)
+        x1 = px * cy - pz * sy
+        z1 = px * sy + pz * cy
+
+        cx, sx = math.cos(rot_x), math.sin(rot_x)
+        y2 = py * cx - z1 * sx
+        z2 = py * sx + z1 * cx
+
+        cz, sz = math.cos(rot_z), math.sin(rot_z)
+        x3 = x1 * cz - y2 * sz
+        y3 = x1 * sz + y2 * cz
+
+        # ── Scale pulse with voice ───────────────────────────────────────────
+        pulse_scale = (
+            1.0
+            + math.sin(time * 3.0) * (0.09 if state == UltronState.SPEAKING else 0.035)
+            + audio * 0.25
+            + self._shockwave * 0.15
+        )
+        self._positions[:, 0] = x3 * pulse_scale
+        self._positions[:, 1] = y3 * pulse_scale
+        self._positions[:, 2] = z2 * pulse_scale
 
         # ── Brightness & Size: glowing voice reactivity ───────────────────────
         glow = cfg["glow"] * max(activation, 0.4)
@@ -162,34 +193,6 @@ class ParticleEngine:
             (PARTICLE_MIN_SIZE + (PARTICLE_MAX_SIZE - PARTICLE_MIN_SIZE) * (0.4 + audio * 0.6)) * voice_scale,
             PARTICLE_MIN_SIZE, PARTICLE_MAX_SIZE * 1.8
         ).astype(np.float32)
-
-    def model_matrix(self, time: float, state: UltronState, audio_level: float) -> np.ndarray:
-        """Computes the 4x4 model matrix for full 3D sphere revolution and tilt (hardware accelerated)."""
-        speed = 1.8 if state == UltronState.SPEAKING else (1.25 if state == UltronState.LISTENING else 0.75)
-        # Continuous visible revolution matching mobile phone
-        rot_y = time * 0.38 * speed + audio_level * 0.5
-        rot_x = math.sin(time * 0.22) * 0.18
-        rot_z = math.cos(time * 0.18) * 0.15
-
-        pulse_scale = (
-            1.0
-            + math.sin(time * 3.0) * (0.09 if state == UltronState.SPEAKING else 0.035)
-            + audio_level * 0.20
-            + self._shockwave * 0.15
-        )
-
-        cy, sy = math.cos(rot_y), math.sin(rot_y)
-        cx, sx = math.cos(rot_x), math.sin(rot_x)
-        cz, sz = math.cos(rot_z), math.sin(rot_z)
-
-        Ry = np.array([[cy, 0.0, sy], [0.0, 1.0, 0.0], [-sy, 0.0, cy]], dtype=np.float32)
-        Rx = np.array([[1.0, 0.0, 0.0], [0.0, cx, -sx], [0.0, sx, cx]], dtype=np.float32)
-        Rz = np.array([[cz, -sz, 0.0], [sz, cz, 0.0], [0.0, 0.0, 1.0]], dtype=np.float32)
-        R = (Ry @ Rx @ Rz) * pulse_scale
-
-        M = np.eye(4, dtype=np.float32)
-        M[:3, :3] = R
-        return M
 
     # ── Properties ───────────────────────────────────────────────────────────
 
