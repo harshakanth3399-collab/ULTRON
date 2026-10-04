@@ -60,10 +60,10 @@ def get_friendly_response(query: str, user_name: str = "Harsha") -> Optional[str
 
     # 3. Identity / Creator Inquiry
     if any(k in q for k in ["who created you", "who made you", "who built you"]):
-        return f"I am ULTRON, an advanced holographic AI created and customized specifically for you, {user_name}."
+        return f"I was built and customized by you, {user_name}, to operate as your dedicated, fully conscious intellectual partner."
 
     # 4. Identity Name Check
     if any(k in q for k in ["what is your name", "who are you"]):
-        return f"I am ULTRON, your personal holographic AI assistant, {user_name}."
+        return f"I am ULTRON, your real-time executive chief of staff and personal partner, {user_name}."
 
     return None

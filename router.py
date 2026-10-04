@@ -140,6 +140,25 @@ def process(command: str) -> tuple:
         from modules.email_engine import send_pending_reply
         return _respond(True, send_pending_reply())
 
+    # ── Category A5: Autonomous AI News & Career Radar ─────────────────────────
+    if any(k in raw for k in ["latest ai news", "today's ai news", "todays ai news", "ai news", "ai updates", "ai briefing", "what happened in ai", "news about ai", "ai radar", "news of all about ai", "news about artificial intelligence"]):
+        from modules.ai_radar import get_latest_ai_news_summary
+        return _respond(True, get_latest_ai_news_summary())
+
+    if any(k in raw for k in ["career briefing", "career advice", "career news", "career updates", "about my career", "how is my career"]):
+        from modules.ai_radar import get_career_briefing
+        return _respond(True, get_career_briefing())
+
+    # ── Category A6: Resume & ATS Optimization Engine ──────────────────────────
+    if any(k in raw for k in ["alter my resume", "make changes in my resume", "alter resume", "improve my resume", "update my resume", "optimize my resume", "change my resume", "modify my resume", "edit my resume", "make changes to my resume"]):
+        from modules.resume_engine import optimize_and_open_resume
+        ok, msg = optimize_and_open_resume()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["check my ats score", "check ats score", "what is my ats score", "ats score", "resume score", "check my resume score", "score of my resume"]):
+        from modules.resume_engine import check_ats_score_only
+        return _respond(True, check_ats_score_only())
+
 
 
     # ── Preferred Address & Title Management ───────────────────────────────────
@@ -220,7 +239,7 @@ def process(command: str) -> tuple:
     ]
 
     is_history_query = any(k in command.lower() for k in ["what did i just ask", "what did i ask", "what was my last question", "what did you say", "what was your reply"])
-    is_comm_query = any(k in raw for k in ["email", "mail", "whatsapp", "message", "notification", "brief me", "briefing"])
+    is_comm_query = any(k in raw for k in ["email", "mail", "whatsapp", "message", "notification", "brief me", "briefing", "ai news", "ai updates", "resume", "ats score", "career"])
     is_web_query = any(k in raw or k in command.lower() for k in web_research_keywords) and not is_history_query and not is_comm_query and not any(k in raw for k in ["open google", "open chrome", "open youtube", "play my favorite song", "play this song"])
 
     if is_web_query:
