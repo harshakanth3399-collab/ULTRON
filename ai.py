@@ -120,15 +120,15 @@ def _ask_groq(prompt: str, system_prompt: str, api_key: str) -> tuple[Optional[s
         except urllib.error.HTTPError as http_err:
             next_provider = GROQ_MODELS[idx + 1] if idx + 1 < len(GROQ_MODELS) else f"Ollama {DEFAULT_LOCAL_MODEL}"
             if http_err.code == 429:
-                print(f"[AI PROVIDER] PRIMARY ({model_name}) → HTTP 429 Rate Limit → FALLBACK PROVIDER ({next_provider})")
+                print(f"[AI PROVIDER] PRIMARY ({model_name}) -> HTTP 429 Rate Limit -> FALLBACK PROVIDER ({next_provider})")
                 continue
             elif http_err.code == 404:
                 continue
             else:
-                print(f"[AI PROVIDER] PRIMARY ({model_name}) → HTTP {http_err.code} ({http_err.reason}) → FALLBACK PROVIDER ({next_provider})")
+                print(f"[AI PROVIDER] PRIMARY ({model_name}) -> HTTP {http_err.code} ({http_err.reason}) -> FALLBACK PROVIDER ({next_provider})")
         except Exception as e:
             next_provider = GROQ_MODELS[idx + 1] if idx + 1 < len(GROQ_MODELS) else f"Ollama {DEFAULT_LOCAL_MODEL}"
-            print(f"[AI PROVIDER] PRIMARY ({model_name}) → Offline/Unavailable ({e}) → FALLBACK PROVIDER ({next_provider})")
+            print(f"[AI PROVIDER] PRIMARY ({model_name}) -> Offline/Unavailable ({e}) -> FALLBACK PROVIDER ({next_provider})")
 
     return None, 429
 
@@ -200,7 +200,7 @@ def ask_ai(prompt: str) -> str:
     if not raw_answer:
         groq_key = os.getenv("GROQ_API_KEY", "").strip()
         if groq_key and groq_key.startswith("gsk_") and "your_free_key_here" not in groq_key:
-            print(f"[AI PROVIDER] PRIMARY (Google Gemini Free API) → Unavailable/Rate Limit → FALLBACK PROVIDER (Groq Cloud API)")
+            print(f"[AI PROVIDER] PRIMARY (Google Gemini Free API) -> Unavailable/Rate Limit -> FALLBACK PROVIDER (Groq Cloud API)")
             raw_answer, groq_err_code = _ask_groq(prompt, full_system_prompt, groq_key)
             if raw_answer:
                 model_used = "groq-llama3.3"
@@ -210,10 +210,11 @@ def ask_ai(prompt: str) -> str:
         model_used = DEFAULT_LOCAL_MODEL
         is_ok, health_msg, avail_models = check_ai_backend_health()
         if not is_ok:
-            print(f"[AI ERROR] PRIMARY (Google Gemini & Groq Cloud API) → Rate Limit/Offline → Ollama local fallback is offline.")
+            print(f"[AI ERROR] PRIMARY (Google Gemini & Groq Cloud API) -> Rate Limit/Offline -> Ollama local fallback is offline.")
             return f"AI cloud APIs rate limit exceeded, {pref_address}. Please try again shortly."
 
-        print(f"[AI PROVIDER] PRIMARY (Google Gemini & Groq Cloud API) → Offline/Rate Limit → FALLBACK PROVIDER (Ollama {model_used})")
+        print(f"[AI PROVIDER] PRIMARY (Google Gemini & Groq Cloud API) -> Offline/Rate Limit -> FALLBACK PROVIDER (Ollama {model_used})")
+
 
 
 
