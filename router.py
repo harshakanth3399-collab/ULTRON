@@ -94,11 +94,20 @@ def process(command: str) -> tuple:
         pm.set_active_language("en")
         return _respond(True, "Switched back to English.")
 
+    # ── Instant Free Weather Handler ──────────────────────────────────────────
+    if any(k in raw for k in ["weather", "temperature", "climate", "forecast", "how is the weather", "watch the weather"]):
+        from modules.weather_service import get_live_weather
+        city_match = re.search(r"weather\s+(?:in|for|at|of)\s+([a-zA-Z\s]+)", raw)
+        loc = city_match.group(1).strip() if city_match else ""
+        ok, w_reply = get_live_weather(loc)
+        return _respond(ok, w_reply)
+
     # ── Category A0: Friendly Assistant & System Diagnostics ──────────────────
     from modules.friendly_assistant import get_friendly_response
     friendly_reply = get_friendly_response(raw, pref_address)
     if friendly_reply:
         return _respond(True, friendly_reply)
+
 
 
     # ── Preferred Address & Title Management ───────────────────────────────────

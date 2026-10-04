@@ -90,8 +90,9 @@ def _set_latest_mic_rms(val: float) -> None:
 
 # ── Faster-Whisper model ──────────────────────────────────────────────────────
 print("[VOICE] Loading Faster-Whisper model...")
-model = WhisperModel("tiny.en", device="cpu", compute_type="int8")
+model = WhisperModel("tiny.en", device="cpu", compute_type="int8", cpu_threads=4)
 print("[VOICE] Faster-Whisper model ready.")
+
 
 # ── Detect real hardware microphone parameters ─────────────────────────────────
 def _probe_mic() -> tuple[int, int, int]:

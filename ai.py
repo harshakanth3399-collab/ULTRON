@@ -167,11 +167,12 @@ def ask_ai(prompt: str) -> str:
     """
     t0 = time.time()
     pm = get_profile_manager()
-    pref_address = pm.get_preferred_address()
+    pref_address = pm.get_preferred_address() or "Harsha"
     active_lang = pm.get_active_language()
     system_ctx = pm.get_system_context()
 
-    addr_prompt_line = f"Address the user as '{pref_address}'." if pref_address else "Respond naturally without forcing titles like 'Sir'."
+    addr_prompt_line = f"Address the user as '{pref_address}'."
+
 
     if active_lang == "te":
         lang_line = "STRICT LANGUAGE RULE: Respond in clear, natural Telugu script/phrasing as requested."
