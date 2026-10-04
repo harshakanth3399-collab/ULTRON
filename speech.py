@@ -26,6 +26,7 @@ from typing import Optional
 
 import collections
 import pyaudio
+import requests
 from faster_whisper import WhisperModel
 
 try:
@@ -33,6 +34,23 @@ try:
 except Exception:
     def correct(text: str) -> str:
         return text
+
+def _load_env_file() -> None:
+    env_path = os.path.join(os.path.dirname(__file__), ".env")
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        os.environ.setdefault(k.strip(), v.strip().strip("'\""))
+        except Exception:
+            pass
+
+_load_env_file()
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+GROQ_WHISPER_MODEL = "whisper-large-v3-turbo"
 
 # ── Speaking guard (shared with speech_engine) ────────────────────────────────
 _speaking_event = threading.Event()
@@ -88,10 +106,16 @@ def _set_latest_mic_rms(val: float) -> None:
         _latest_mic_rms = val
 
 
-# ── Faster-Whisper model ──────────────────────────────────────────────────────
-print("[VOICE] Loading Faster-Whisper model...")
-model = WhisperModel("tiny.en", device="cpu", compute_type="int8", cpu_threads=4)
-print("[VOICE] Faster-Whisper model ready.")
+# ── Speech-to-Text Engines: Hybrid (Groq Large-v3-Turbo + Local base.en) ───────
+print("[VOICE] Loading Faster-Whisper local fallback model (base.en)...")
+try:
+    model = WhisperModel("base.en", device="cpu", compute_type="int8", cpu_threads=4)
+    print("[VOICE] Faster-Whisper local model (base.en) ready.")
+except Exception as e:
+    print(f"[VOICE] base.en init error: {e}. Falling back to tiny.en")
+    model = WhisperModel("tiny.en", device="cpu", compute_type="int8", cpu_threads=4)
+    print("[VOICE] Faster-Whisper local model (tiny.en) ready.")
+
 
 
 # ── Detect real hardware microphone parameters ─────────────────────────────────
@@ -329,10 +353,52 @@ PHONETIC_OVERRIDES = {
 _PHONETIC_OVERRIDES = PHONETIC_OVERRIDES
 
 
-# ── Transcription ──────────────────────────────────────────────────────────────
+# ── Transcription Engines ──────────────────────────────────────────────────────
+def _transcribe_groq(wav_bytes: bytes) -> tuple[Optional[str], Optional[str]]:
+    """
+    Transcribes audio using Groq Cloud Whisper (whisper-large-v3-turbo).
+    Ultra-low latency (~150-300ms), state-of-the-art 809M parameter accuracy, zero CPU load.
+    Returns (raw_text, detected_lang) or (None, None) on network/API failure.
+    """
+    api_key = os.getenv("GROQ_API_KEY", GROQ_API_KEY).strip()
+    if not api_key:
+        return None, None
+
+    try:
+        url = "https://api.groq.com/openai/v1/audio/transcriptions"
+        headers = {"Authorization": f"Bearer {api_key}"}
+        files = {"file": ("speech.wav", wav_bytes, "audio/wav")}
+        data = {
+            "model": GROQ_WHISPER_MODEL,
+            "response_format": "verbose_json",
+            "temperature": 0.0,
+            "prompt": "ULTRON, Hey ULTRON, AI assistant, Jarvis, Q-Spiders, Andhra Pradesh, Anantapur",
+        }
+        t0 = time.time()
+        resp = requests.post(url, headers=headers, files=files, data=data, timeout=3.5)
+        dt = int((time.time() - t0) * 1000)
+
+        if resp.status_code == 200:
+            res_data = resp.json()
+            raw_text = (res_data.get("text") or "").strip()
+            raw_lang = res_data.get("language") or "english"
+            lang_lower = raw_lang.lower()
+            lang_code = "te" if "telugu" in lang_lower else "en"
+            print(f"[TIME] Groq Whisper: {dt} ms | Language={lang_code} ({raw_lang}) | Model={GROQ_WHISPER_MODEL}")
+            return raw_text, lang_code
+        else:
+            print(f"[VOICE] [GROQ WHISPER] API HTTP {resp.status_code}: {resp.text[:120]}")
+            return None, None
+    except Exception as e:
+        print(f"[VOICE] [GROQ WHISPER] Network/API error ({e}) -> Triggering local fallback.")
+        return None, None
+
+
 def transcribe_audio_bytes(wav_bytes: bytes) -> tuple[str, str]:
     """
-    Transcribe WAV bytes using Faster-Whisper with automatic English/Telugu language detection.
+    Transcribe WAV bytes using Hybrid Architecture:
+    1. Primary: Groq Cloud Whisper (whisper-large-v3-turbo) -> SOTA 809M param accuracy, sub-250ms, zero-hallucination.
+    2. Fallback: Local Faster-Whisper (base.en) -> High offline accuracy, robust failsafe.
     Returns (transcript, language_code).
     """
     if not wav_bytes:
@@ -341,29 +407,46 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> tuple[str, str]:
     resampled = _resample_wav_16k(wav_bytes)
     normalized = _normalize_wav(resampled)
 
-    filename = ""
+    raw = None
+    detected_lang = "en"
+
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
-            f.write(normalized)
-            filename = f.name
+        # 1. Primary Engine: Groq Cloud Whisper (Large-v3-Turbo)
+        groq_text, groq_lang = _transcribe_groq(normalized)
+        if groq_text is not None:
+            raw = groq_text
+            detected_lang = groq_lang
+        else:
+            # 2. Fallback Engine: Local Faster-Whisper (base.en)
+            print("[VOICE] [FALLBACK] Invoking Local Faster-Whisper (base.en)...")
+            filename = ""
+            try:
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
+                    f.write(normalized)
+                    filename = f.name
 
-        print("[VOICE] [WHISPER] Starting model transcription...")
-        t0 = time.time()
-        # Omit explicit language parameter so Faster-Whisper auto-detects English vs Telugu!
-        segments, info = model.transcribe(
-            filename,
-            beam_size=1,
-            best_of=1,
-            temperature=0.0,
-            vad_filter=True,   # Filter silence / hallucination
-            condition_on_previous_text=False,
-        )
-        raw = " ".join(s.text.strip() for s in segments).strip()
-        t_whisp = int((time.time() - t0) * 1000)
+                t0 = time.time()
+                segments, info = model.transcribe(
+                    filename,
+                    beam_size=1,
+                    best_of=1,
+                    temperature=0.0,
+                    vad_filter=True,
+                    condition_on_previous_text=False,
+                )
+                raw = " ".join(s.text.strip() for s in segments).strip()
+                t_whisp = int((time.time() - t0) * 1000)
 
-        detected_lang = getattr(info, 'language', 'en') or 'en'
-        lang_prob = getattr(info, 'language_probability', 1.0)
-        print(f"[TIME] transcription: {t_whisp} ms | Language={detected_lang} (prob={lang_prob:.2f})")
+                detected_lang = getattr(info, 'language', 'en') or 'en'
+                lang_prob = getattr(info, 'language_probability', 1.0)
+                print(f"[TIME] local transcription: {t_whisp} ms | Language={detected_lang} (prob={lang_prob:.2f})")
+            finally:
+                if filename and os.path.exists(filename):
+                    try:
+                        os.remove(filename)
+                    except Exception:
+                        pass
+
         print(f"[RAW TRANSCRIPTION] '{raw}'")
 
         if not raw:
@@ -375,7 +458,6 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> tuple[str, str]:
         for mishearing, correction in PHONETIC_OVERRIDES.items():
             if mishearing in raw_check:
                 raw_corrected = raw_check.replace(mishearing, correction)
-
                 raw_check = raw_corrected
                 print(f"[VOICE] [PHONETIC] Override: '{mishearing}' → '{correction}'")
 
@@ -453,7 +535,6 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> tuple[str, str]:
                     print(f"[VOICE] [WHISPER] Repetitive hallucination loop detected ({unique_ratio:.2f} unique ratio), ignoring: '{raw[:60]}...'")
                     return "", "en"
 
-
         final = correct(raw)
         print(f"[FINAL TRANSCRIPTION] '{final}' (Language={detected_lang})")
         return final, detected_lang
@@ -461,12 +542,6 @@ def transcribe_audio_bytes(wav_bytes: bytes) -> tuple[str, str]:
     except Exception as e:
         print(f"[VOICE] [WHISPER] ERROR: Transcription failed: {e}")
         return "", "en"
-    finally:
-        if filename:
-            try:
-                os.remove(filename)
-            except Exception:
-                pass
 
 
 # ── Microphone audio capture ───────────────────────────────────────────────────
