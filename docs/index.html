@@ -15,7 +15,7 @@
             -webkit-tap-highlight-color: transparent;
         }
         body {
-            background-color: #03070d;
+            background-color: #060401;
             color: #ffffff;
             height: 100vh;
             display: flex;
@@ -33,11 +33,11 @@
             padding-top: 4px;
         }
         .logo {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 900;
-            letter-spacing: 5px;
-            color: #00E5FF;
-            text-shadow: 0 0 12px rgba(0, 229, 255, 0.7);
+            letter-spacing: 6px;
+            color: #FFB300;
+            text-shadow: 0 0 16px rgba(255, 179, 0, 0.85), 0 0 32px rgba(255, 111, 0, 0.5);
         }
         .status-badge {
             padding: 5px 14px;
@@ -45,9 +45,10 @@
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 2px;
-            background: rgba(0, 229, 255, 0.1);
-            border: 1px solid rgba(0, 229, 255, 0.45);
-            color: rgba(0, 229, 255, 0.95);
+            background: rgba(255, 179, 0, 0.12);
+            border: 1px solid rgba(255, 179, 0, 0.55);
+            color: #FFC107;
+            box-shadow: 0 0 12px rgba(255, 179, 0, 0.25);
             transition: all 0.3s ease;
         }
         /* 3D WebGL Matrix Container */
@@ -69,7 +70,8 @@
             font-size: 12px;
             font-weight: 700;
             letter-spacing: 3px;
-            color: rgba(0, 229, 255, 0.85);
+            color: rgba(255, 193, 7, 0.9);
+            text-shadow: 0 0 8px rgba(255, 145, 0, 0.5);
             text-transform: uppercase;
             margin-bottom: 10px;
             text-align: center;
@@ -89,12 +91,12 @@
             line-height: 1.4;
         }
         .user-line {
-            color: rgba(210, 210, 210, 0.75);
+            color: rgba(230, 220, 200, 0.75);
         }
         .ai-line {
-            color: #00E5FF;
+            color: #FFC107;
             font-weight: 600;
-            text-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
+            text-shadow: 0 0 10px rgba(255, 179, 0, 0.5);
         }
         /* Controls & Input Area */
         .controls-wrapper {
@@ -115,31 +117,31 @@
             width: 64px;
             height: 64px;
             border-radius: 50%;
-            background: radial-gradient(circle, #004D5A 0%, #001A24 100%);
-            border: 1px solid rgba(0, 229, 255, 0.6);
+            background: radial-gradient(circle, #4A2B00 0%, #1A0D00 100%);
+            border: 1px solid rgba(255, 179, 0, 0.7);
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            box-shadow: 0 0 24px rgba(0, 229, 255, 0.3);
+            box-shadow: 0 0 24px rgba(255, 179, 0, 0.35);
             transition: all 0.2s ease;
         }
         .mic-btn.active {
-            background: radial-gradient(circle, #FF3311 0%, #AA1100 100%);
-            border: 2px solid rgba(255, 60, 20, 0.95);
-            box-shadow: 0 0 35px rgba(255, 60, 20, 0.7);
+            background: radial-gradient(circle, #FF6F00 0%, #B71C1C 100%);
+            border: 2px solid rgba(255, 145, 0, 0.95);
+            box-shadow: 0 0 35px rgba(255, 145, 0, 0.7);
             animation: pulse-ring 1.5s infinite;
         }
         @keyframes pulse-ring {
-            0% { box-shadow: 0 0 0 0 rgba(255, 60, 20, 0.6); }
-            70% { box-shadow: 0 0 0 18px rgba(255, 60, 20, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 60, 20, 0); }
+            0% { box-shadow: 0 0 0 0 rgba(255, 179, 0, 0.6); }
+            70% { box-shadow: 0 0 0 18px rgba(255, 179, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 179, 0, 0); }
         }
         .mic-icon {
             width: 24px;
             height: 24px;
             fill: none;
-            stroke: #00E5FF;
+            stroke: #FFB300;
             stroke-width: 2;
             stroke-linecap: round;
             stroke-linejoin: round;
@@ -155,8 +157,8 @@
         }
         .cmd-input {
             flex: 1;
-            background: rgba(5, 25, 40, 0.85);
-            border: 1px solid rgba(0, 229, 255, 0.4);
+            background: rgba(25, 15, 3, 0.85);
+            border: 1px solid rgba(255, 179, 0, 0.45);
             border-radius: 20px;
             padding: 10px 16px;
             color: #ffffff;
@@ -164,10 +166,10 @@
             outline: none;
         }
         .cmd-input::placeholder {
-            color: rgba(0, 229, 255, 0.45);
+            color: rgba(255, 179, 0, 0.45);
         }
         .send-btn {
-            background: linear-gradient(135deg, #00E5FF, #0088CC);
+            background: linear-gradient(135deg, #FFB300, #FF6F00);
             border: none;
             border-radius: 20px;
             padding: 0 18px;
@@ -176,6 +178,7 @@
             font-size: 12px;
             cursor: pointer;
             letter-spacing: 1px;
+            box-shadow: 0 0 12px rgba(255, 179, 0, 0.4);
         }
     </style>
 </head>
@@ -217,7 +220,7 @@
     </div>
 
     <script>
-        // ── Three.js 3D WebGL Holographic Engine ─────────────────────────────
+        // ── Three.js 3D WebGL Holographic Engine (J.A.R.V.I.S. Neural Matrix) ──
         const container = document.querySelector('.visualizer-container');
         const canvas = document.getElementById('webgl-canvas');
         
@@ -232,82 +235,99 @@
         let isListening = false;
         let isSpeaking = false;
 
-        // 1. Particle Core Swarm
-        const particleCount = 4500;
+        // 1. J.A.R.V.I.S. Particle Core Swarm (Incandescent Gold & Amber Orange)
+        const particleCount = 6500;
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
+        const basePositions = new Float32Array(particleCount * 3);
         const colors = new Float32Array(particleCount * 3);
 
-        const cyanColor = new THREE.Color(0x00E5FF);
-        const redColor = new THREE.Color(0xFF0033);
+        const goldColor = new THREE.Color(0xFFD700);       // Pure Incandescent Gold
+        const amberColor = new THREE.Color(0xFFA000);      // Warm Radiant Amber
+        const orangeColor = new THREE.Color(0xFF6F00);     // Molten Flame Orange
+        const whiteGoldColor = new THREE.Color(0xFFF9C4);  // Luminous Core Spark
 
         for (let i = 0; i < particleCount; i++) {
             const u = Math.random();
             const v = Math.random();
             const theta = u * 2.0 * Math.PI;
             const phi = Math.acos(2.0 * v - 1.0);
-            const r = 0.85 + Math.random() * 0.45;
+            const r = 0.88 + Math.random() * 0.46;
 
-            positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-            positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-            positions[i * 3 + 2] = r * Math.cos(phi);
+            const x = r * Math.sin(phi) * Math.cos(theta);
+            const y = r * Math.sin(phi) * Math.sin(theta);
+            const z = r * Math.cos(phi);
 
-            const mixColor = u > 0.4 ? redColor : cyanColor;
-            colors[i * 3] = mixColor.r;
-            colors[i * 3 + 1] = mixColor.g;
-            colors[i * 3 + 2] = mixColor.b;
+            positions[i * 3]     = x;
+            positions[i * 3 + 1] = y;
+            positions[i * 3 + 2] = z;
+
+            basePositions[i * 3]     = x;
+            basePositions[i * 3 + 1] = y;
+            basePositions[i * 3 + 2] = z;
+
+            // Authentic J.A.R.V.I.S. movie color distribution
+            const mixRatio = Math.sin(phi * 2.5 + theta * 1.5) * 0.5 + 0.5;
+            let c;
+            if (u < 0.12) {
+                c = whiteGoldColor;
+            } else if (mixRatio > 0.65) {
+                c = goldColor.clone().lerp(amberColor, Math.random() * 0.5);
+            } else {
+                c = amberColor.clone().lerp(orangeColor, Math.random() * 0.6);
+            }
+
+            colors[i * 3]     = c.r;
+            colors[i * 3 + 1] = c.g;
+            colors[i * 3 + 2] = c.b;
         }
-
 
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
         const particleMaterial = new THREE.PointsMaterial({
-            size: 0.035,
+            size: 0.042,
             vertexColors: true,
             transparent: true,
-            opacity: 0.85,
+            opacity: 0.88,
             blending: THREE.AdditiveBlending
         });
 
         const particleSystem = new THREE.Points(geometry, particleMaterial);
         scene.add(particleSystem);
 
-        // 2. Concentric Orbital Rings
-        const ringGroup = new THREE.Group();
-        const ringCount = 3;
-        for (let r = 0; r < ringCount; r++) {
-            const ringGeo = new THREE.TorusGeometry(1.1 + r * 0.3, 0.008, 16, 100);
-            const ringMat = new THREE.MeshBasicMaterial({
-                color: r % 2 === 0 ? 0x00E5FF : 0xFF9900,
-                transparent: true,
-                opacity: 0.65,
-                blending: THREE.AdditiveBlending
-            });
-            const ring = new THREE.Mesh(ringGeo, ringMat);
-            ring.rotation.x = Math.PI * (0.2 + r * 0.25);
-            ring.rotation.y = Math.PI * (0.15 * r);
-            ringGroup.add(ring);
-        }
-        scene.add(ringGroup);
-
-        // 3. Animation Loop
+        // 2. Animation Loop (Fluid Organic Neural Wave)
         let clock = new THREE.Clock();
 
         function animate() {
             requestAnimationFrame(animate);
             const elapsedTime = clock.getElapsedTime();
 
-            const speed = isSpeaking ? 1.8 : (isListening ? 1.2 : 0.6);
-            particleSystem.rotation.y = elapsedTime * 0.3 * speed;
-            particleSystem.rotation.x = Math.sin(elapsedTime * 0.2) * 0.2;
+            const speed = isSpeaking ? 1.8 : (isListening ? 1.25 : 0.65);
+            particleSystem.rotation.y = elapsedTime * 0.28 * speed;
+            particleSystem.rotation.x = Math.sin(elapsedTime * 0.22) * 0.18;
+            particleSystem.rotation.z = Math.cos(elapsedTime * 0.18) * 0.15;
 
-            ringGroup.children.forEach((ring, idx) => {
-                ring.rotation.z = elapsedTime * (idx % 2 === 0 ? 0.4 : -0.5) * speed;
-            });
+            // Organic undulating wave ripple across particle grid
+            const posAttr = geometry.attributes.position;
+            const pArr = posAttr.array;
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                const bx = basePositions[i3];
+                const by = basePositions[i3 + 1];
+                const bz = basePositions[i3 + 2];
+
+                const wave = Math.sin(elapsedTime * 2.0 + bx * 3.0 + bz * 2.5) * 0.07
+                           + Math.cos(elapsedTime * 1.4 + by * 3.5) * 0.05;
+
+                pArr[i3]     = bx * (1.0 + wave * 0.35);
+                pArr[i3 + 1] = by + wave;
+                pArr[i3 + 2] = bz * (1.0 + wave * 0.35);
+            }
+            posAttr.needsUpdate = true;
 
             // Pulse radius on active states
-            const scale = 1.0 + Math.sin(elapsedTime * 3.0) * (isSpeaking ? 0.08 : 0.03);
+            const scale = 1.0 + Math.sin(elapsedTime * 3.0) * (isSpeaking ? 0.09 : 0.035);
             particleSystem.scale.set(scale, scale, scale);
 
             renderer.render(scene, camera);
@@ -326,11 +346,11 @@
             const btn = document.getElementById('mic-btn');
             if (btn.classList.contains('active')) {
                 btn.classList.remove('active');
-                updateBadge('● ONLINE', '#00E5FF');
+                updateBadge('● ONLINE', '#FFC107');
                 document.getElementById('state-text').innerText = "SAY 'HEY' OR TAP MIC";
             } else {
                 btn.classList.add('active');
-                updateBadge('● LISTENING', '#FF3311');
+                updateBadge('● LISTENING', '#FF6F00');
                 document.getElementById('state-text').innerText = "LISTENING FOR SIR...";
             }
         }

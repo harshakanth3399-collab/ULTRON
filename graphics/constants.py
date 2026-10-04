@@ -29,22 +29,22 @@ COLOR_GLOW = (0.58, 0.20, 0.98)     # Celestial Gemini Violet (#9433FA)
 COLOR_ARC  = (0.20, 0.70, 1.00)     # Ethereal Azure Stream
 COLOR_DEEP = (0.04, 0.02, 0.12)     # Deep Celestial Void
 
-# ── Dynamic Cinema Hologram State Palettes (Google Gemini AI Aesthetic) ──
+# ── Dynamic Cinema Hologram State Palettes (MCU J.A.R.V.I.S. Gold & Amber) ──
 STATE_PALETTES = {
     "idle": {
-        "core": (0.00, 0.88, 1.00),   # Vibrant Electric Cyan (#00E0FF)
-        "glow": (0.58, 0.20, 0.98),   # Celestial Gemini Violet (#9433FA)
-        "arc":  (0.20, 0.70, 1.00),   # Ethereal Azure Stream
+        "core": (1.00, 0.84, 0.15),   # Incandescent Gold (#FFD700)
+        "glow": (1.00, 0.45, 0.02),   # Radiant Amber Orange (#FF7300)
+        "arc":  (1.00, 0.65, 0.08),   # Golden Sunfire
     },
     "listening": {
-        "core": (0.00, 1.00, 0.82),   # Turquoise Luminous Cyan
-        "glow": (0.15, 0.75, 1.00),   # Deep Sky Blue Aura
-        "arc":  (0.40, 1.00, 0.85),   # Radiant Cyan Halo
+        "core": (1.00, 0.92, 0.35),   # Luminous White-Gold
+        "glow": (1.00, 0.55, 0.05),   # Vibrant Amber Halo
+        "arc":  (1.00, 0.75, 0.12),   # High-Energy Gold
     },
     "speaking": {
-        "core": (1.00, 0.18, 0.65),   # Glowing Magenta / Fuchsia
-        "glow": (1.00, 0.62, 0.10),   # Luminous Golden Amber
-        "arc":  (0.75, 0.25, 0.95),   # Violet Harmonic Waves
+        "core": (1.00, 0.96, 0.55),   # Incandescent Blazing Gold
+        "glow": (1.00, 0.38, 0.00),   # Deep Molten Flame
+        "arc":  (1.00, 0.70, 0.10),   # Harmonic Gold Waves
     },
 }
 
