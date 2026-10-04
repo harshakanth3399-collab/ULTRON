@@ -177,6 +177,70 @@ def process(command: str) -> tuple:
         ok, g_msg = gesture_engine.stop()
         return _respond(ok, g_msg)
 
+    # ── Category H3: Desktop Activity Recall ("What was I doing earlier?") ───
+    if any(k in raw for k in [
+        "what was i doing", "what was i working on", "what did i work on",
+        "recent activity", "my recent activity", "show my recent activity",
+        "what was that website", "what was that app", "what was i looking at"
+    ]):
+        from modules.desktop_recall import desktop_recall
+        # Extract potential keyword query
+        m_q = re.search(r"(?:website|app|document|error)\s+(?:called|about|named)?\s*([a-zA-Z0-9_\-\.]+)", raw)
+        if m_q:
+            return _respond(True, desktop_recall.query_activity(m_q.group(1)))
+        return _respond(True, desktop_recall.get_recent_activity(limit=4))
+
+    # ── Category H4: Voice-Driven Desktop & Folder Organizer ─────────────────
+    if any(k in raw for k in [
+        "organize desktop", "clean desktop", "clean my desktop", "organize my desktop", "tidy desktop"
+    ]):
+        from modules.folder_organizer import clean_desktop
+        ok, msg = clean_desktop()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in [
+        "organize downloads", "clean downloads", "clean my downloads", "organize my downloads",
+        "sort downloads", "sort my downloads", "organize my downloads folder"
+    ]):
+        from modules.folder_organizer import clean_downloads
+        ok, msg = clean_downloads()
+        return _respond(ok, msg)
+
+    # ── Category H5: Smart Window Snapping & Split-Screen Multi-Tasking ───────
+    if any(k in raw for k in ["snap left", "snap to left", "put window on left", "window left"]):
+        from modules.window_snapper import snap_left
+        ok, msg = snap_left()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["snap right", "snap to right", "put window on right", "window right"]):
+        from modules.window_snapper import snap_right
+        ok, msg = snap_right()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["split screen", "split-screen", "side by side", "tile windows", "arrange windows side by side"]):
+        from modules.window_snapper import split_screen
+        ok, msg = split_screen()
+        return _respond(ok, msg)
+
+    # ── Category H6: Touchless Head & Eye Tracking Cursor Control ────────────
+    if any(k in raw for k in [
+        "start head tracking", "enable head tracking", "turn on head tracking",
+        "start eye tracking", "enable eye tracking", "activate head tracking",
+        "head mouse on", "head tracking on"
+    ]):
+        from modules.head_tracker import head_tracker
+        ok, msg = head_tracker.start()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in [
+        "stop head tracking", "disable head tracking", "turn off head tracking",
+        "stop eye tracking", "disable eye tracking", "deactivate head tracking",
+        "head mouse off", "head tracking off"
+    ]):
+        from modules.head_tracker import head_tracker
+        ok, msg = head_tracker.stop()
+        return _respond(ok, msg)
+
     # ── Instant Free Weather Handler ──────────────────────────────────────────
     if any(k in raw for k in ["weather", "temperature", "climate", "forecast", "how is the weather", "watch the weather"]):
         from modules.weather_service import get_live_weather
