@@ -31,6 +31,7 @@ from graphics.constants import (
     COLOR_CORE,
     COLOR_DEEP,
     COLOR_GLOW,
+    STATE_PALETTES,
     FRAME_MS,
     PARTICLE_COUNT,
     SPHERE_RADIUS,
@@ -201,6 +202,11 @@ class UltronRenderer(QOpenGLWidget):
 
         self._audit_done = False
         self._audit_passed = False
+
+        # Dynamic Cinema Hologram State Palettes
+        self._curr_core = np.array(STATE_PALETTES["idle"]["core"], dtype=np.float32)
+        self._curr_glow = np.array(STATE_PALETTES["idle"]["glow"], dtype=np.float32)
+        self._curr_arc  = np.array(STATE_PALETTES["idle"]["arc"], dtype=np.float32)
 
     @property
     def state_manager(self) -> StateManager:
@@ -403,6 +409,13 @@ class UltronRenderer(QOpenGLWidget):
             # 1a. Core Glow (Disabled to keep background pitch black for crisp MCU details)
             pass
 
+            # Dynamic cinema hologram color interpolation
+            target_pal = STATE_PALETTES.get(state.name.lower(), STATE_PALETTES["idle"])
+            blend = min(1.0, dt * 4.5)
+            self._curr_core += (np.array(target_pal["core"], dtype=np.float32) - self._curr_core) * blend
+            self._curr_glow += (np.array(target_pal["glow"], dtype=np.float32) - self._curr_glow) * blend
+            self._curr_arc  += (np.array(target_pal["arc"], dtype=np.float32)  - self._curr_arc)  * blend
+
             # 1b. Electric Arcs & J.A.R.V.I.S. 3D Rings + Oscilloscope
             try:
                 self._ctx.enable(moderngl.DEPTH_TEST)
@@ -415,7 +428,7 @@ class UltronRenderer(QOpenGLWidget):
                 if "u_mvp" in self._arc_prog:
                     self._arc_prog["u_mvp"].write(mvp.tobytes())
                 if "u_color_arc" in self._arc_prog:
-                    self._arc_prog["u_color_arc"].value = COLOR_ARC
+                    self._arc_prog["u_color_arc"].value = tuple(self._curr_arc)
                 if "u_time" in self._arc_prog:
                     self._arc_prog["u_time"].value = self._time
                 if "u_viewport" in self._arc_prog:
@@ -442,9 +455,9 @@ class UltronRenderer(QOpenGLWidget):
                     if "u_glow" in self._billboard_prog:
                         self._billboard_prog["u_glow"].value = glow_val
                     if "u_color_core" in self._billboard_prog:
-                        self._billboard_prog["u_color_core"].value = COLOR_CORE
+                        self._billboard_prog["u_color_core"].value = tuple(self._curr_core)
                     if "u_color_glow" in self._billboard_prog:
-                        self._billboard_prog["u_color_glow"].value = COLOR_GLOW
+                        self._billboard_prog["u_color_glow"].value = tuple(self._curr_glow)
                     self._billboard_vao.render(moderngl.TRIANGLE_STRIP, instances=self._engine.count)
                 else:
                     if "u_mvp" in self._particle_prog:
@@ -454,9 +467,9 @@ class UltronRenderer(QOpenGLWidget):
                     if "u_glow" in self._particle_prog:
                         self._particle_prog["u_glow"].value = glow_val
                     if "u_color_core" in self._particle_prog:
-                        self._particle_prog["u_color_core"].value = COLOR_CORE
+                        self._particle_prog["u_color_core"].value = tuple(self._curr_core)
                     if "u_color_glow" in self._particle_prog:
-                        self._particle_prog["u_color_glow"].value = COLOR_GLOW
+                        self._particle_prog["u_color_glow"].value = tuple(self._curr_glow)
                     self._particle_vao.render(moderngl.POINTS, vertices=self._engine.count)
             except Exception as e:
                 _log(f"Particle render pass error: {e}")

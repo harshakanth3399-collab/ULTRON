@@ -29,6 +29,25 @@ COLOR_GLOW = (0.00, 0.80, 1.00)     # Cyber Cyan Glow (#00C8FF)
 COLOR_ARC  = (1.00, 0.55, 0.10)     # Golden Arc Filaments (#FF8C1A)
 COLOR_DEEP = (0.12, 0.04, 0.01)     # Quantum Void Shadow
 
+# ── Dynamic Cinema Hologram State Palettes (J.A.R.V.I.S. Cyan <-> Ultron Crimson) ──
+STATE_PALETTES = {
+    "idle": {
+        "core": (0.05, 0.62, 0.98),   # Arc Reactor Cyan
+        "glow": (0.00, 0.85, 1.00),   # Neon Azure Halo
+        "arc":  (0.25, 0.80, 1.00),   # Electric Blue Arcs
+    },
+    "listening": {
+        "core": (0.08, 0.88, 0.82),   # Radiant Turquoise Core
+        "glow": (0.20, 1.00, 0.95),   # Hyper-Bright Cyan Halo
+        "arc":  (0.00, 1.00, 0.70),   # Emerald-Cyan Lightning
+    },
+    "speaking": {
+        "core": (1.00, 0.44, 0.05),   # Ultron Golden Amber Core
+        "glow": (1.00, 0.20, 0.02),   # Crimson Energy Halo
+        "arc":  (1.00, 0.72, 0.12),   # Golden Arcs
+    },
+}
+
 
 
 
