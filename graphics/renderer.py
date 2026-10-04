@@ -267,16 +267,9 @@ class UltronRenderer(QOpenGLWidget):
             self._blit_prog = self._ctx.program(
                 vertex_shader=FULLSCREEN_VERT, fragment_shader=BLIT_FRAG
             )
-            try:
-                self._arc_prog = self._ctx.program(
-                    vertex_shader=ARC_VERT, fragment_shader=ARC_FRAG, geometry_shader=ARC_GEOM
-                )
-            except Exception as e:
-                _log(f"Geometry shader program skipped fallback to lines: {e}")
-                self._arc_prog = self._ctx.program(
-                    vertex_shader=ARC_VERT, fragment_shader=ARC_FRAG
-                )
-
+            self._arc_prog = self._ctx.program(
+                vertex_shader=ARC_VERT, fragment_shader=ARC_FRAG
+            )
             _log("ModernGL shader programs initialized.")
         except Exception as e:
             _log(f"Shader compilation failed: {e}")
@@ -434,27 +427,8 @@ class UltronRenderer(QOpenGLWidget):
                 pass
 
             # 1b. Electric Arcs & J.A.R.V.I.S. 3D Rings + Oscilloscope
-            try:
-                self._ctx.enable(moderngl.DEPTH_TEST)
-                arc_data = self._arcs.vertices
-                self._arc_vbo.write(arc_data.tobytes())
-
-                ring_data = self._jarvis.vertices
-                self._ring_vbo.write(ring_data.tobytes())
-
-                if "u_mvp" in self._arc_prog:
-                    self._arc_prog["u_mvp"].write(mvp.tobytes())
-                if "u_color_arc" in self._arc_prog:
-                    self._arc_prog["u_color_arc"].value = tuple(self._curr_arc)
-                if "u_time" in self._arc_prog:
-                    self._arc_prog["u_time"].value = self._time
-                if "u_viewport" in self._arc_prog:
-                    self._arc_prog["u_viewport"].value = (float(self._width), float(self._height))
-
-                self._arc_vao.render(moderngl.LINES, vertices=self._arcs.vertex_count)
-                self._ring_vao.render(moderngl.LINES, vertices=self._jarvis.vertex_count)
-            except Exception:
-                pass
+            # 1b. (Rings & Arcs omitted to keep core orb cinematic, pure, and glitch-free)
+            pass
 
             # 1c. Particle Sphere (Point Sprites or Instanced Billboards)
             try:
@@ -525,7 +499,7 @@ class UltronRenderer(QOpenGLWidget):
             self._audio.shutdown()
         if self._timer:
             self._timer.stop()
-        if self._bloom:
+        if hasattr(self, '_bloom') and self._bloom is not None:
             self._bloom.release()
 
 

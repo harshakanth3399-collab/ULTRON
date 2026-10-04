@@ -151,7 +151,7 @@ void main() {
 ARC_FRAG = """
 #version 330 core
 
-in float g_intensity;
+in float v_intensity;
 
 uniform vec3 u_color_arc;
 uniform float u_time;
@@ -159,8 +159,8 @@ uniform float u_time;
 out vec4 frag_color;
 
 void main() {
-    float flicker = 0.75 + 0.25 * sin(u_time * 42.0 + g_intensity * 17.0);
-    float intensity = g_intensity * flicker;
+    float flicker = 0.75 + 0.25 * sin(u_time * 42.0 + v_intensity * 17.0);
+    float intensity = v_intensity * flicker;
     vec3 col = u_color_arc * intensity * 2.2;
     float alpha = clamp(intensity * 1.4, 0.0, 1.0);
     frag_color = vec4(col, alpha);
@@ -324,7 +324,7 @@ void main() {
     vec3 rd = normalize(vec3(p, -1.9));
 
     // Dynamic radius breathing with voice audio
-    float base_radius = 0.50 + u_audio * 0.10 + sin(u_time * 1.8) * 0.012;
+    float base_radius = 0.28 + u_audio * 0.05 + sin(u_time * 1.5) * 0.008;
 
     float b = dot(ro, rd);
     float c = dot(ro, ro) - base_radius * base_radius;
@@ -335,11 +335,11 @@ void main() {
 
     // Atmospheric coronal glow around sphere
     float d_center = length(p);
-    float corona_dist = max(0.0, d_center - base_radius * 0.75);
-    float corona = exp(-corona_dist * corona_dist * 18.0) * (0.45 + u_audio * 0.55);
-    vec3 corona_col = mix(u_color_glow, u_color_core, clamp(corona * 1.5, 0.0, 1.0));
+    float corona_dist = max(0.0, d_center - base_radius * 0.80);
+    float corona = exp(-corona_dist * corona_dist * 28.0) * (0.35 + u_audio * 0.40);
+    vec3 corona_col = mix(u_color_glow, u_color_core, clamp(corona * 1.4, 0.0, 1.0));
     col += corona_col * corona;
-    alpha += corona * 0.7;
+    alpha += corona * 0.6;
 
     if (disc > 0.0) {
         float t = -b - sqrt(disc);
@@ -350,36 +350,36 @@ void main() {
         float t_flow = u_time * 0.45;
         vec3 noise_coord = norm * 2.5 + vec3(0.0, t_flow, t_flow * 0.5);
         float fluid = fbm(noise_coord);
-        float audio_ripple = sin(norm.y * 14.0 - u_time * 5.0 + fluid * 4.0) * (0.05 + u_audio * 0.15);
+        float audio_ripple = sin(norm.y * 14.0 - u_time * 5.0 + fluid * 4.0) * (0.04 + u_audio * 0.12);
 
         // Modulate normal with fluid turbulence
-        vec3 displaced_norm = normalize(norm + vec3(fluid * 0.35, fluid * 0.25, audio_ripple));
+        vec3 displaced_norm = normalize(norm + vec3(fluid * 0.30, fluid * 0.20, audio_ripple));
 
         // High-end Fresnel rim lighting
-        float fresnel = pow(1.0 - max(0.0, dot(norm, -rd)), 2.6);
-        float rim_edge = pow(1.0 - max(0.0, dot(norm, -rd)), 5.0);
+        float fresnel = pow(1.0 - max(0.0, dot(norm, -rd)), 2.5);
+        float rim_edge = pow(1.0 - max(0.0, dot(norm, -rd)), 4.5);
 
-        // Core incandescent illumination
-        float core_light = pow(max(0.0, dot(norm, vec3(0.0, 0.0, 1.0))), 1.8);
+        // Core soft illumination (saturated, not blown-out white)
+        float core_light = pow(max(0.0, dot(norm, vec3(0.0, 0.0, 1.0))), 2.2);
 
-        // Iridescent multi-layer color blending (Gemini / J.A.R.V.I.S. chromatic flow)
-        float color_t = clamp(fluid * 0.85 + norm.y * 0.3 + fresnel * 0.65, 0.0, 1.0);
+        // Iridescent multi-layer color blending (Gemini Electric Cyan & Celestial Violet)
+        float color_t = clamp(fluid * 0.75 + norm.y * 0.35 + fresnel * 0.55, 0.0, 1.0);
         vec3 surface_col = mix(u_color_core, u_color_glow, color_t);
         
         // Chromatic dispersion accent on outer rim
-        surface_col = mix(surface_col, u_color_arc, rim_edge);
+        surface_col = mix(surface_col, u_color_arc, rim_edge * 0.6);
 
-        // Internal glowing caustics and audio pulse
-        vec3 core_glow = mix(u_color_core * 1.6, vec3(1.0), core_light * 0.7);
-        surface_col = mix(surface_col, core_glow, core_light * (0.35 + u_audio * 0.65));
+        // Soft internal caustics
+        vec3 core_glow = mix(u_color_core * 1.3, u_color_glow * 1.2, 0.5 + 0.5 * sin(u_time * 2.0));
+        surface_col = mix(surface_col, core_glow, core_light * (0.35 + u_audio * 0.35));
 
-        // Smooth specular reflection
-        vec3 light_dir = normalize(vec3(0.4, 0.6, 1.0));
+        // Subtle specular highlight
+        vec3 light_dir = normalize(vec3(0.35, 0.55, 1.0));
         vec3 h = normalize(-rd + light_dir);
-        float spec = pow(max(0.0, dot(displaced_norm, h)), 24.0);
-        surface_col += vec3(spec * 0.75);
+        float spec = pow(max(0.0, dot(displaced_norm, h)), 32.0);
+        surface_col += vec3(spec * 0.45);
 
-        float sphere_alpha = clamp(0.85 + fresnel * 0.15 + u_audio * 0.15, 0.0, 1.0);
+        float sphere_alpha = clamp(0.85 + fresnel * 0.15, 0.0, 1.0);
         col = mix(col, surface_col, sphere_alpha);
         alpha = max(alpha, sphere_alpha);
     }

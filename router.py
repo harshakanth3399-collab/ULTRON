@@ -226,13 +226,22 @@ def process(command: str) -> tuple:
         addr_suffix = pm.get_address_suffix(", ")
         return _respond(True, f"The verified search sources for this information are {sources_str}{addr_suffix}.")
 
+    # ── Meta-Inquiry on Internet & Web Capability ─────────────────────────────
+    if any(k in raw for k in [
+        "connected to internet", "connected to the internet", "connected to web", "access to the internet",
+        "access to internet", "access to web", "can you search the web", "can you browse", "do you have internet",
+        "do you have web search", "are you connected to internet", "are you connected to web", "access to the globe"
+    ]):
+        return _respond(True, "I have live, unrestricted access to the global internet and real-time search engines. What would you like me to look up?")
+
     # ── Category C: Web Research Requests ──────────────────────────────────────
     web_research_keywords = [
         "search", "google", "check in google", "check the internet", "look up", "find online",
         "latest", "current", "today", "where are", "how many locations", "what are the branches",
         "locations in", "branches in", "q-spiders", "qspiders", "q spider", "tell me about",
         "placement details", "current price", "nearest", "those locations", "the first one",
-        "headquarters", "head office", "hq",
+        "headquarters", "head office", "hq", "incident", "viral", "happened", "controversy",
+        "what happened", "who is", "news about", "update on", "x platform", "twitter",
         "dollar", "usd", "inr", "exchange rate", "currency", "forex", "rupee", "gold rate",
         "silver rate", "stock price", "share price", "nifty", "sensex", "bitcoin", "crypto",
         "market price", "rate today", "price today", "weather", "temperature", "news"
@@ -255,12 +264,13 @@ def process(command: str) -> tuple:
             sources_str = ", ".join(res["sources"]) if res.get("sources") else "web sources"
             addr_suffix = pm.get_address_suffix(", ")
             prompt = (
-                f"User Question: '{command}' ({resolved_prompt})\n"
-                f"Web Research Evidence (from {sources_str}):\n{evidence}\n\n"
+                f"You are ULTRON, a real-time AI assistant with live global internet access.\n"
+                f"User Question: '{command}'\n"
+                f"Live Web Research Evidence (from {sources_str}):\n{evidence}\n\n"
                 f"INSTRUCTIONS FOR ULTRON:\n"
-                f"1. Answer Harsha directly by providing a complete, comprehensive response based on the web evidence above.\n"
-                f"2. For location, branch, area list, or headquarters questions, list the specific area names, branch names, or headquarters area mentioned in the web text above (e.g. Basavanagudi, Rajaji Nagar / Rajajinagar, BTM Layout, Marathahalli, Hebbal, etc.).\n"
-                f"3. Do NOT say 'I couldn't verify' when area/location details are present in the evidence.\n"
+                f"1. Answer Harsha directly with complete, accurate real-time facts based on the live web evidence above.\n"
+                f"2. Never claim you are not connected to the internet or that you lack real-time access. You DO have live internet access.\n"
+                f"3. For location, branch, area list, or headquarters questions, list the specific area names or branches mentioned.\n"
                 f"4. Deliver your answer with supreme executive clarity and natural confidence. Do NOT include bracketed or parenthetical citations (like (Wikipedia, OpenAI)) in voice responses.\n"
                 f"5. STRICT RULE: Output ONLY your direct answer. Do NOT output internal thinking process or <think> tags."
             )

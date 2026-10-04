@@ -85,27 +85,28 @@ class ShortTermMemory:
             return raw, raw
 
 
-        # 2. Entity / Location reference resolution
-        location_refs = ["those location", "those 5 location", "those five location", "the five branch", "the branches", "the company", "there", "their branch", "those branches", "what are those"]
-        if any(ref in raw_lower for ref in location_refs) or "those 5" in raw_lower or "those locations" in raw_lower or "the 5 locations" in raw_lower:
-            context_subject = "Q-Spiders Bangalore"
-            if last_entities:
-                context_subject = " ".join(last_entities)
-            
-            clean_search = f"Q-Spiders locations in Bangalore"
-            resolved_prompt = f"{raw} (referring to {context_subject} locations mentioned in previous turn: '{last_ai[:120]}...')"
-            print(f"[SHORT-TERM MEMORY] Resolved reference: '{raw}' -> search='{clean_search}'")
-            return clean_search, resolved_prompt
+        # 2. Entity / Location reference resolution (ONLY for genuine pronoun follow-ups)
+        # Never hijack a complete standalone thought/query
+        is_standalone = len(raw.split()) > 4 and any(w in raw_lower for w in ["incident", "video", "news", "what happened", "who is", "tell me about", "what is", "why", "how to"])
+        if not is_standalone:
+            location_refs = ["those locations", "those 5 locations", "those five locations", "the five branches", "the branches", "their branches", "those branches", "what are those"]
+            if any(ref in raw_lower for ref in location_refs):
+                context_subject = " ".join(last_entities) if last_entities else ""
+                if context_subject:
+                    clean_search = f"{context_subject} branches locations"
+                    resolved_prompt = f"{raw} (referring to {context_subject} from previous turn)"
+                    print(f"[SHORT-TERM MEMORY] Resolved reference: '{raw}' -> search='{clean_search}'")
+                    return clean_search, resolved_prompt
 
-        # 3. Item index resolution ("the first one", "the second one", "the 1st location")
-        m_index = re.search(r"\b(the\s+)?(first|1st|second|2nd|third|3rd)\s*(one|location|branch)?\b", raw_lower)
-        if m_index:
-            ordinal = m_index.group(2).lower()
-            context_subject = "Q-Spiders Bangalore"
-            clean_search = f"Q-Spiders Rajajinagar Bangalore location address" if "first" in ordinal or "1st" in ordinal else f"Q-Spiders {ordinal} location Bangalore"
-            resolved_prompt = f"{raw} (referring to the {ordinal} location of {context_subject} from previous turn: '{last_ai[:120]}...')"
-            print(f"[SHORT-TERM MEMORY] Resolved index reference: '{raw}' -> search='{clean_search}'")
-            return clean_search, resolved_prompt
+            # 3. Item index resolution ("the first one", "the second one", "the 1st location")
+            m_index = re.search(r"^\s*(what is\s+|tell me about\s+)?(the\s+)?(first|1st|second|2nd|third|3rd)\s*(one|location|branch)?\s*$", raw_lower)
+            if m_index:
+                ordinal = m_index.group(3).lower()
+                context_subject = " ".join(last_entities) if last_entities else "previous topic"
+                clean_search = f"{context_subject} {ordinal} branch location"
+                resolved_prompt = f"{raw} (referring to {ordinal} of {context_subject})"
+                print(f"[SHORT-TERM MEMORY] Resolved index reference: '{raw}' -> search='{clean_search}'")
+                return clean_search, resolved_prompt
 
         return raw, raw
 
