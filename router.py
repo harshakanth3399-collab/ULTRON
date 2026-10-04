@@ -95,6 +95,88 @@ def process(command: str) -> tuple:
         pm.set_active_language("en")
         return _respond(True, "Switched back to English.")
 
+    # ── Category H0: Free Autonomous Human Laptop Control & Vision Clicking ──
+    from modules.human_controller import human_controller
+
+    # 1. Screen Clicking / Button Presser ("click submit", "press login", "click button next")
+    m_click = re.match(r"^(?:click|press|tap)(?:\s+(?:the|button|on|link))*\s+([a-zA-Z0-9_\-\.\s]{1,30})$", raw)
+    if m_click and not any(k in raw for k in ["enter", "tab", "escape", "space", "backspace", "delete", "key"]):
+        btn_label = m_click.group(1).strip()
+        if btn_label not in ("enter", "tab", "esc", "escape", "space", "backspace", "delete", "up", "down", "left", "right"):
+            ok, msg = human_controller.find_and_click_button(btn_label)
+            return _respond(True, msg)
+
+    # 2. Hands-Free Typing & Dictation ("type hello world", "write this is harsha")
+    m_type = re.match(r"^(?:type|write|enter text)\s+(?:this\s+)?[:\s]*(.*)$", command.strip(), re.IGNORECASE)
+    if m_type:
+        text_to_type = m_type.group(1).strip()
+        if text_to_type:
+            human_controller.type_text(text_to_type)
+            return _respond(True, f"Typed '{text_to_type}'.")
+
+    # 3. Functional Keys ("press enter", "hit enter", "press tab", "press escape")
+    if any(raw == k or raw.startswith(f"{k} ") for k in ["press enter", "hit enter", "press tab", "press escape", "press esc", "press backspace", "press space", "press delete"]):
+        key = raw.replace("press ", "").replace("hit ", "").strip()
+        human_controller.press_key(key)
+        return _respond(True, f"Pressed {key.capitalize()}.")
+
+    # 4. Human Shortcuts ("copy that", "paste here", "select all", "close tab", "new tab", "switch window", "show desktop", "lock laptop")
+    _SHORTCUT_MAP = {
+        "copy that": "copy", "copy this": "copy", "copy": "copy",
+        "paste here": "paste", "paste this": "paste", "paste": "paste",
+        "select all": "select all", "select everything": "select all",
+        "undo that": "undo", "undo": "undo",
+        "close tab": "close tab", "close this tab": "close tab",
+        "new tab": "new tab", "open new tab": "new tab",
+        "switch window": "switch app", "switch app": "switch app", "next window": "switch app",
+        "show desktop": "show desktop", "minimize all": "show desktop",
+        "lock laptop": "lock laptop", "lock pc": "lock laptop", "lock computer": "lock laptop",
+    }
+    for trigger, action in _SHORTCUT_MAP.items():
+        if raw == trigger or raw == f"please {trigger}":
+            human_controller.press_shortcut(action)
+            return _respond(True, f"Executed {action}.")
+
+    # 5. Natural Page Scrolling ("scroll down", "scroll up")
+    if any(k in raw for k in ["scroll down", "page down", "scroll further"]):
+        human_controller.scroll(-5)
+        return _respond(True, "Scrolled down.")
+
+    if any(k in raw for k in ["scroll up", "page up"]):
+        human_controller.scroll(5)
+        return _respond(True, "Scrolled up.")
+
+    # ── Category H1: Laptop Camera Perception & Real-Time Vision ─────────────
+    if any(k in raw for k in [
+        "access laptop camera", "look at laptop camera", "access camera", "look at camera",
+        "what is in front of camera", "what is in front of the camera",
+        "what do you see in front of camera", "what do you see in front of the camera",
+        "scan using camera", "what do you see through camera", "what do you see through the camera",
+        "what do you see", "describe what you see", "check camera"
+    ]):
+        from modules.camera_vision import analyze_camera_view
+        ok, cam_desc = analyze_camera_view()
+        return _respond(ok, cam_desc)
+
+    # ── Category H2: Real-Time Hand Gesture Controls (MediaPipe AI) ──────────
+    if any(k in raw for k in [
+        "start gesture control", "enable hand gestures", "activate gesture control",
+        "turn on hand gestures", "start gestures", "activate gestures", "enable gestures",
+        "turn on gestures"
+    ]):
+        from modules.gesture_engine import gesture_engine
+        ok, g_msg = gesture_engine.start()
+        return _respond(ok, g_msg)
+
+    if any(k in raw for k in [
+        "stop gesture control", "disable hand gestures", "deactivate gesture control",
+        "turn off hand gestures", "stop gestures", "deactivate gestures", "disable gestures",
+        "turn off gestures"
+    ]):
+        from modules.gesture_engine import gesture_engine
+        ok, g_msg = gesture_engine.stop()
+        return _respond(ok, g_msg)
+
     # ── Instant Free Weather Handler ──────────────────────────────────────────
     if any(k in raw for k in ["weather", "temperature", "climate", "forecast", "how is the weather", "watch the weather"]):
         from modules.weather_service import get_live_weather
