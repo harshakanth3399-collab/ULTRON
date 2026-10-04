@@ -152,6 +152,7 @@ ARC_FRAG = """
 #version 330 core
 
 in float v_intensity;
+in float v_width;
 
 uniform vec3 u_color_arc;
 uniform float u_time;
@@ -160,7 +161,7 @@ out vec4 frag_color;
 
 void main() {
     float flicker = 0.75 + 0.25 * sin(u_time * 42.0 + v_intensity * 17.0);
-    float intensity = v_intensity * flicker;
+    float intensity = v_intensity * flicker * (v_width > -1.0 ? 1.0 : 0.0);
     vec3 col = u_color_arc * intensity * 2.2;
     float alpha = clamp(intensity * 1.4, 0.0, 1.0);
     frag_color = vec4(col, alpha);

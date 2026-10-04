@@ -308,21 +308,24 @@ class UltronRenderer(QOpenGLWidget):
         )
 
         # Arc & Ring Buffers
-        arc_max_verts = ARC_COUNT * ARC_SEGMENTS * 2
-        self._arc_vbo = self._ctx.buffer(reserve=arc_max_verts * stride)
-        self._arc_vao = self._ctx.vertex_array(
-            self._arc_prog,
-            [(self._arc_vbo, "3f 1f 1f", "in_pos", "in_width", "in_intensity")],
-            mode=moderngl.LINES,
-        )
+        try:
+            arc_max_verts = ARC_COUNT * ARC_SEGMENTS * 2
+            self._arc_vbo = self._ctx.buffer(reserve=arc_max_verts * stride)
+            self._arc_vao = self._ctx.vertex_array(
+                self._arc_prog,
+                [(self._arc_vbo, "3f 1f 1f", "in_pos", "in_width", "in_intensity")],
+                mode=moderngl.LINES,
+            )
 
-        ring_max_verts = self._jarvis.vertex_count
-        self._ring_vbo = self._ctx.buffer(reserve=ring_max_verts * stride)
-        self._ring_vao = self._ctx.vertex_array(
-            self._arc_prog,
-            [(self._ring_vbo, "3f 1f 1f", "in_pos", "in_width", "in_intensity")],
-            mode=moderngl.LINES,
-        )
+            ring_max_verts = self._jarvis.vertex_count
+            self._ring_vbo = self._ctx.buffer(reserve=ring_max_verts * stride)
+            self._ring_vao = self._ctx.vertex_array(
+                self._arc_prog,
+                [(self._ring_vbo, "3f 1f 1f", "in_pos", "in_width", "in_intensity")],
+                mode=moderngl.LINES,
+            )
+        except Exception as e:
+            _log(f"Optional arc VAO setup note: {e}")
 
         # Framebuffers & Bloom
         self._build_scene_fbo()
@@ -364,7 +367,7 @@ class UltronRenderer(QOpenGLWidget):
     def _compute_mvp(self) -> np.ndarray:
         aspect = self._width / self._height
         proj = _perspective(45.0, aspect, 0.05, 8.0)
-        eye = np.array([0.0, 0.0, 1.35], dtype=np.float32)
+        eye = np.array([0.0, 0.0, 2.6], dtype=np.float32)
         view = _look_at(eye, np.zeros(3, dtype=np.float32), np.array([0.0, 1.0, 0.0], dtype=np.float32))
         return (proj @ view).astype(np.float32)
 
@@ -406,29 +409,7 @@ class UltronRenderer(QOpenGLWidget):
             self._curr_glow += (np.array(target_pal["glow"], dtype=np.float32) - self._curr_glow) * blend
             self._curr_arc  += (np.array(target_pal["arc"], dtype=np.float32)  - self._curr_arc)  * blend
 
-            # 1a. Raymarched Holographic Liquid Plasma Orb (Continuous Fluid Energy Core)
-            try:
-                self._ctx.disable(moderngl.DEPTH_TEST)
-                self._ctx.enable(moderngl.BLEND)
-                if "u_time" in self._glow_prog:
-                    self._glow_prog["u_time"].value = self._time
-                if "u_audio" in self._glow_prog:
-                    self._glow_prog["u_audio"].value = audio_level
-                if "u_aspect" in self._glow_prog:
-                    self._glow_prog["u_aspect"].value = float(self._width) / float(max(self._height, 1))
-                if "u_color_core" in self._glow_prog:
-                    self._glow_prog["u_color_core"].value = tuple(self._curr_core)
-                if "u_color_glow" in self._glow_prog:
-                    self._glow_prog["u_color_glow"].value = tuple(self._curr_glow)
-                if "u_color_arc" in self._glow_prog:
-                    self._glow_prog["u_color_arc"].value = tuple(self._curr_arc)
-                self._glow_vao.render(moderngl.TRIANGLES)
-            except Exception:
-                pass
-
-            # 1b. Electric Arcs & J.A.R.V.I.S. 3D Rings + Oscilloscope
-            # 1b. (Rings & Arcs omitted to keep core orb cinematic, pure, and glitch-free)
-            pass
+            # 1a. Background sphere & lines omitted to keep pure J.A.R.V.I.S. particle wave aesthetic
 
             # 1c. Particle Sphere (Point Sprites or Instanced Billboards)
             try:

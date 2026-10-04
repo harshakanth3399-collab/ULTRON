@@ -1,11 +1,11 @@
 """Graphics pipeline constants and tunables."""
 
 # ── Particles ────────────────────────────────────────────────────────────
-# Subtle quantum stardust sparks orbiting the continuous liquid plasma orb
-PARTICLE_COUNT = 300
-SPHERE_RADIUS  = 0.35
-PARTICLE_MIN_SIZE = 1.0
-PARTICLE_MAX_SIZE = 2.4
+# 6,500 MCU J.A.R.V.I.S. neural matrix particles undulating in real time
+PARTICLE_COUNT = 6500
+SPHERE_RADIUS  = 0.75
+PARTICLE_MIN_SIZE = 2.0
+PARTICLE_MAX_SIZE = 4.8
 
 # ── Electric arcs / Halos ──────────────────────────────────────────────────
 ARC_COUNT = 6
@@ -23,11 +23,11 @@ AUDIO_ATTACK = 0.42
 AUDIO_RELEASE = 0.08
 AUDIO_GAIN = 2.8
 
-# ── Palette (Google Gemini Signature Holographic Colors) ───────────────────
-COLOR_CORE = (0.00, 0.88, 1.00)     # Luminous Electric Cyan (#00E0FF)
-COLOR_GLOW = (0.58, 0.20, 0.98)     # Celestial Gemini Violet (#9433FA)
-COLOR_ARC  = (0.20, 0.70, 1.00)     # Ethereal Azure Stream
-COLOR_DEEP = (0.04, 0.02, 0.12)     # Deep Celestial Void
+# ── Palette (MCU J.A.R.V.I.S. Signature Gold & Amber Palette) ──────────────
+COLOR_CORE = (1.00, 0.84, 0.15)     # Incandescent Gold (#FFD700)
+COLOR_GLOW = (1.00, 0.45, 0.02)     # Radiant Amber Orange (#FF7300)
+COLOR_ARC  = (1.00, 0.65, 0.08)     # Golden Sunfire
+COLOR_DEEP = (0.02, 0.01, 0.00)     # Matte Obsidian Black
 
 # ── Dynamic Cinema Hologram State Palettes (MCU J.A.R.V.I.S. Gold & Amber) ──
 STATE_PALETTES = {
