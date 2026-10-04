@@ -39,8 +39,8 @@ def summarize_active_app_to_notepad() -> Tuple[bool, str]:
         "Summarize the following text extracted from the user's active window into clean, "
         "concise bullet points with key takeaways:\n\n" + copied_text[:4000]
     )
-    ok, summary = ask_ai(prompt)
-    if not ok or not summary:
+    summary = ask_ai(prompt)
+    if not summary:
         summary = copied_text[:500]
 
     header = f"--- ULTRON AUTOPILOT SUMMARY [{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}] ---\n\n"

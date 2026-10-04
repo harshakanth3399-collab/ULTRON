@@ -9,10 +9,11 @@ search, and paste previous clipboard items hands-free.
 from __future__ import annotations
 
 import collections
-import ctypes
 import threading
 import time
 from typing import Dict, List, Optional, Tuple
+
+import win32clipboard
 
 
 class SmartClipboard:
@@ -27,61 +28,35 @@ class SmartClipboard:
         self._last_text = ""
 
     def _get_current_clipboard_text(self) -> str:
-        """Reads Unicode text directly from Windows clipboard via Win32 API."""
-        u32 = ctypes.windll.user32
-        k32 = ctypes.windll.kernel32
-
-        u32.GetClipboardData.restype = ctypes.c_void_p
-        k32.GlobalLock.restype = ctypes.c_void_p
-        k32.GlobalLock.argtypes = [ctypes.c_void_p]
-        k32.GlobalUnlock.argtypes = [ctypes.c_void_p]
-
-        if not u32.OpenClipboard(0):
+        """Reads Unicode text directly from Windows clipboard via win32clipboard."""
+        try:
+            win32clipboard.OpenClipboard()
+            text = ""
+            if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
+                text = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
+            win32clipboard.CloseClipboard()
+            return text or ""
+        except Exception:
+            try:
+                win32clipboard.CloseClipboard()
+            except Exception:
+                pass
             return ""
 
-        text = ""
-        try:
-            h = u32.GetClipboardData(13)  # CF_UNICODETEXT
-            if h:
-                p = k32.GlobalLock(h)
-                if p:
-                    text = ctypes.wstring_at(p)
-                    k32.GlobalUnlock(h)
-        finally:
-            u32.CloseClipboard()
-
-        return text or ""
-
     def _set_clipboard_text(self, text: str) -> bool:
-        """Writes Unicode text directly to Windows clipboard."""
-        u32 = ctypes.windll.user32
-        k32 = ctypes.windll.kernel32
-
-        k32.GlobalAlloc.restype = ctypes.c_void_p
-        k32.GlobalAlloc.argtypes = [ctypes.c_uint, ctypes.c_size_t]
-        k32.GlobalLock.restype = ctypes.c_void_p
-        k32.GlobalLock.argtypes = [ctypes.c_void_p]
-        k32.GlobalUnlock.argtypes = [ctypes.c_void_p]
-        u32.SetClipboardData.argtypes = [ctypes.c_uint, ctypes.c_void_p]
-
-        if not u32.OpenClipboard(0):
-            return False
-
+        """Writes Unicode text directly to Windows clipboard via win32clipboard."""
         try:
-            u32.EmptyClipboard()
-            encoded = text.encode("utf-16le") + b"\x00\x00"
-            h_mem = k32.GlobalAlloc(0x0042, len(encoded))  # GMEM_MOVEABLE | GMEM_ZEROINIT
-            if not h_mem:
-                return False
-            p_mem = k32.GlobalLock(h_mem)
-            if not p_mem:
-                return False
-            ctypes.memmove(p_mem, encoded, len(encoded))
-            k32.GlobalUnlock(h_mem)
-            u32.SetClipboardData(13, h_mem)
+            win32clipboard.OpenClipboard()
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardText(text, win32clipboard.CF_UNICODETEXT)
+            win32clipboard.CloseClipboard()
             return True
-        finally:
-            u32.CloseClipboard()
+        except Exception:
+            try:
+                win32clipboard.CloseClipboard()
+            except Exception:
+                pass
+            return False
 
     def _watcher_loop(self) -> None:
         """Polls clipboard changes every 0.8 seconds."""
@@ -97,7 +72,6 @@ class SmartClipboard:
                             "preview": curr[:100] + ("..." if len(curr) > 100 else ""),
                             "is_url": curr.startswith(("http://", "https://", "www.")),
                         }
-                        # Remove if already exists to push to top
                         self._history = collections.deque(
                             [h for h in self._history if h["text"] != curr],
                             maxlen=self.max_history
@@ -146,7 +120,6 @@ class SmartClipboard:
         with self._lock:
             for item in self._history:
                 if q in item["text"].lower():
-                    # Set it as active clipboard
                     self._set_clipboard_text(item["text"])
                     return True, f"Found and restored to clipboard: '{item['preview']}'."
         return False, f"No clipboard item found matching '{query}'."
@@ -159,7 +132,6 @@ class SmartClipboard:
             prev_item = self._history[1]
             self._set_clipboard_text(prev_item["text"])
 
-        # Trigger human paste shortcut
         try:
             from modules.human_controller import human_controller
             human_controller.press_shortcut("paste")

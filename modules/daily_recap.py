@@ -80,9 +80,9 @@ class DailyRecapEngine:
             "You are ULTRON, Harsha's personal AI assistant. "
             f"Deliver this daily productivity recap to Harsha in 2 crisp, human sentences:\n{raw_summary}"
         )
-        ok, ai_summary = ask_ai(prompt)
-        if ok and ai_summary:
-            return True, ai_summary
+        ai_summary = ask_ai(prompt)
+        if ai_summary:
+            return True, str(ai_summary)
 
         return True, f"Today you logged {time_str} of active computer time, Harsha. Your primary focus was on {top_apps_str}."
 

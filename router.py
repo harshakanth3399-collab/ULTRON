@@ -475,6 +475,78 @@ def process(command: str) -> tuple:
         ok, msg = get_offline_status()
         return _respond(ok, msg)
 
+    # ── Category H22: Mobile Phone & Laptop Cross-Device Synergy ─────────────
+    if any(k in raw for k in ["sync clipboard with phone", "sync phone clipboard", "paste from phone"]):
+        from modules.cross_device_sync import cross_device_sync
+        phone_txt = cross_device_sync._shared_clipboard
+        if phone_txt:
+            should_paste = ("paste from phone" in raw)
+            ok, msg = cross_device_sync.set_clipboard_from_phone(phone_txt, auto_paste=should_paste)
+            return _respond(ok, msg)
+        return _respond(False, "No text has been sent from your phone yet, Harsha.")
+
+    if any(k in raw for k in ["where is my phone", "ring my phone", "find my phone"]):
+        from modules.cross_device_sync import cross_device_sync
+        ok, msg = cross_device_sync.ring_phone()
+        return _respond(ok, msg)
+
+    # ── Category H23: Morning Protocol Briefing & Motivation Coach ───────────
+    if any(k in raw for k in [
+        "good morning ultron", "good morning", "morning briefing", "morning update",
+        "daily briefing", "jarvis briefing"
+    ]):
+        from modules.morning_briefing import generate_morning_briefing
+        ok, msg = generate_morning_briefing()
+        return _respond(ok, msg)
+
+    # ── Category H24: Natural Voice PDF & Document Intelligence ──────────────
+    if any(k in raw for k in [
+        "analyze my resume", "analyze resume", "check my resume", "review resume",
+        "analyze pdf", "summarize pdf", "read pdf"
+    ]):
+        from modules.pdf_analyzer import analyze_pdf
+        ok, msg = analyze_pdf(raw)
+        return _respond(ok, msg)
+
+    # ── Category H25: 20-20-20 Eye-Strain & Posture Guardian ─────────────────
+    if any(k in raw for k in ["start eye guardian", "enable eye guardian", "turn on eye guardian"]):
+        from modules.eye_guardian import eye_guardian
+        ok, msg = eye_guardian.start()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["stop eye guardian", "disable eye guardian", "turn off eye guardian"]):
+        from modules.eye_guardian import eye_guardian
+        ok, msg = eye_guardian.stop()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["eye guardian status", "eye strain status"]):
+        from modules.eye_guardian import eye_guardian
+        return _respond(True, eye_guardian.status())
+
+    # ── Category H26: Private Vault & Protocol Lockdown ──────────────────────
+    if any(k in raw for k in [
+        "initiate protocol lockdown", "protocol lockdown", "lockdown vault",
+        "lock vault", "secure vault", "hide vault"
+    ]):
+        from modules.vault_lockdown import initiate_protocol_lockdown
+        ok, msg = initiate_protocol_lockdown()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["unlock vault", "open vault", "reveal vault", "disengage protocol lockdown"]):
+        from modules.vault_lockdown import unlock_vault
+        ok, msg = unlock_vault()
+        return _respond(ok, msg)
+
+    # ── Category H27: Network Speedmaster & Wi-Fi Controller ─────────────────
+    if any(k in raw for k in [
+        "check internet speed", "internet speed", "network latency",
+        "ping status", "wifi status", "check network", "network speed"
+    ]):
+        from modules.network_speedmaster import get_network_diagnostics
+        ok, msg = get_network_diagnostics()
+        return _respond(ok, msg)
+
+
 
 
 

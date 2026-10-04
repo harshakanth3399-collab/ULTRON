@@ -68,9 +68,62 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 print(f"[SERVER ERROR] Serving index.html failed: {e}")
 
+        if self.path.startswith("/api/clipboard"):
+            from modules.cross_device_sync import cross_device_sync
+            clip_text = cross_device_sync.get_laptop_clipboard_for_phone()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(json.dumps({"clipboard": clip_text}).encode("utf-8"))
+            return
+
         super().do_GET()
 
     def do_POST(self):
+        if self.path.startswith("/api/clipboard"):
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length).decode('utf-8')
+            try:
+                data = json.loads(post_data)
+                text = data.get("text", "")
+                auto_paste = data.get("auto_paste", False)
+                from modules.cross_device_sync import cross_device_sync
+                ok, msg = cross_device_sync.set_clipboard_from_phone(text, auto_paste)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": ok, "message": msg}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+
+        if self.path.startswith("/api/touchpad"):
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length).decode('utf-8')
+            try:
+                data = json.loads(post_data)
+                dx = int(data.get("dx", 0))
+                dy = int(data.get("dy", 0))
+                action = data.get("action", "move")
+                from modules.cross_device_sync import cross_device_sync
+                ok = cross_device_sync.handle_touchpad_input(dx, dy, action)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": ok}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+
         if self.path.startswith("/api/command"):
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length).decode('utf-8')
