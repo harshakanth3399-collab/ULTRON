@@ -403,6 +403,26 @@ def process(command: str) -> tuple:
         ok, msg = smart_clipboard.clear()
         return _respond(ok, msg)
 
+    # ── Category H16: Full Autonomous Control & Self-Evolution ────────────────
+    if any(k in raw for k in [
+        "enable autonomous mode", "full autonomous mode", "autonomous control",
+        "give full control", "take full control", "auto pilot mode"
+    ]):
+        from modules.self_optimizer import self_optimizer
+        from modules.system_guardian import system_guardian
+        self_optimizer.start()
+        system_guardian.start()
+        return _respond(True, "Full autonomous control granted, Harsha. I am actively monitoring hardware, arbitrating devices, and self-optimizing in the background.")
+
+    if any(k in raw for k in [
+        "self optimize", "optimize system", "run maintenance", "system maintenance",
+        "clean temporary files", "clean temp files", "ultron optimize"
+    ]):
+        from modules.self_optimizer import self_optimizer
+        rep = self_optimizer.run_maintenance_cycle()
+        return _respond(True, rep)
+
+
 
     # ── Instant Free Weather Handler ──────────────────────────────────────────
     if any(k in raw for k in ["weather", "temperature", "climate", "forecast", "how is the weather", "watch the weather"]):

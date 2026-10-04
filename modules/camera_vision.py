@@ -118,7 +118,7 @@ def analyze_camera_view(user_prompt: str = "") -> Tuple[bool, str]:
             except Exception:
                 continue
 
-        return False, "I captured the camera frame, but encountered an issue analyzing the scene."
+        return False, "I captured the camera frame, but cannot reach the vision service right now. Please verify your internet connection, Harsha."
     except Exception as e:
         print(f"[CAMERA VISION ERROR] {e}")
-        return False, f"Vision network error: {e}"
+        return False, "I captured the camera frame, but cannot reach the vision service right now. Please verify your internet connection, Harsha."

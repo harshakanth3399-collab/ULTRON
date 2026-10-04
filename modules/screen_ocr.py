@@ -87,10 +87,10 @@ def read_screen_content(user_question: str = "") -> Tuple[bool, str]:
             except Exception as e:
                 last_error = str(e)
 
-        return False, f"Vision API temporarily unavailable: {last_error}"
+        return False, "I am currently unable to reach the vision service, Harsha. Please check your internet connection."
     except Exception as e:
         print(f"[SCREEN OCR ERROR] {e}")
-        return False, f"Unable to process screen content: {e}"
+        return False, "I encountered an issue processing the screen view, Harsha."
 
 
 def read_physical_document(user_question: str = "") -> Tuple[bool, str]:

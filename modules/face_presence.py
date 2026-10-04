@@ -89,6 +89,18 @@ class FacePresenceSentinel:
         self._last_seen_time = time.time()
 
         while self._running:
+            # Camera arbitration: yield camera if interactive tracking is active
+            try:
+                from modules.gesture_engine import gesture_engine
+                from modules.head_tracker import head_tracker
+                if gesture_engine._running or head_tracker._running:
+                    if cap.isOpened():
+                        cap.release()
+                    time.sleep(2.0)
+                    continue
+            except Exception:
+                pass
+
             if not cap.isOpened():
                 cap.open(0)
                 time.sleep(1.0)

@@ -88,9 +88,21 @@ def main() -> int:
         try:
             from modules.memory.vector_memory import vector_memory
             threading.Thread(target=vector_memory.index_workspace, args=(".",), daemon=True).start()
-            print("[BOOT] Long-Term Semantic Vector Memory active & indexing workspace.", flush=True)
+        # Auto-start Autonomous System Guardian (Battery & Memory)
+        try:
+            from modules.system_guardian import system_guardian
+            system_guardian.start()
+            print("[BOOT] Autonomous System & Battery Guardian active.", flush=True)
         except Exception as e:
-            print(f"[VECTOR MEMORY BOOT] Note: {e}", flush=True)
+            print(f"[SYSTEM GUARDIAN BOOT] Note: {e}", flush=True)
+
+        # Auto-start Autonomous Self-Optimization & Maintenance
+        try:
+            from modules.self_optimizer import self_optimizer
+            self_optimizer.start()
+            print("[BOOT] Autonomous Self-Optimization & Evolution Sentinel active.", flush=True)
+        except Exception as e:
+            print(f"[SELF OPTIMIZER BOOT] Note: {e}", flush=True)
 
         print(f"\n==================================================", flush=True)
         print(f"[MOBILE] ULTRON MOBILE WEB SERVER ACTIVE!", flush=True)
