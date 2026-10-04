@@ -1,11 +1,11 @@
 """Graphics pipeline constants and tunables."""
 
 # ── Particles ────────────────────────────────────────────────────────────
-# 8,000 crisp, laser-like holographic particles (compact, elegant density — NO solid white blob)
-PARTICLE_COUNT = 8_000
+# 16,000 crisp, high-density holographic stardust particles (cinematic J.A.R.V.I.S. neural matrix)
+PARTICLE_COUNT = 16_000
 SPHERE_RADIUS  = 0.24
-PARTICLE_MIN_SIZE = 1.0
-PARTICLE_MAX_SIZE = 2.4
+PARTICLE_MIN_SIZE = 0.9
+PARTICLE_MAX_SIZE = 2.2
 
 # ── Electric arcs ──────────────────────────────────────────────────────────
 ARC_COUNT = 10
