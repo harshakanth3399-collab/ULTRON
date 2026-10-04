@@ -76,10 +76,12 @@ def organize_folder(folder_path: str | Path | None = None) -> Tuple[bool, str]:
 
 
 def clean_desktop() -> Tuple[bool, str]:
-    desktop_dir = Path.home() / "Desktop"
+    from modules.system_paths import get_desktop_dir
+    desktop_dir = get_desktop_dir()
     return organize_folder(desktop_dir)
 
 
 def clean_downloads() -> Tuple[bool, str]:
-    downloads_dir = Path.home() / "Downloads"
+    from modules.system_paths import get_downloads_dir
+    downloads_dir = get_downloads_dir()
     return organize_folder(downloads_dir)

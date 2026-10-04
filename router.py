@@ -241,6 +241,169 @@ def process(command: str) -> tuple:
         ok, msg = head_tracker.stop()
         return _respond(ok, msg)
 
+    # ── Category H7: Face Presence Auto-Wake & Walk-Away Lock ─────────────────
+    if any(k in raw for k in [
+        "start presence lock", "enable presence lock", "activate presence lock", "turn on presence lock",
+        "start face presence", "enable face presence"
+    ]):
+        from modules.face_presence import face_presence
+        ok, msg = face_presence.start()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in [
+        "stop presence lock", "disable presence lock", "turn off presence lock", "deactivate presence lock",
+        "stop face presence", "disable face presence"
+    ]):
+        from modules.face_presence import face_presence
+        ok, msg = face_presence.stop()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["presence lock status", "presence status", "is presence lock on"]):
+        from modules.face_presence import face_presence
+        return _respond(True, face_presence.status())
+
+    # ── Category H8: Document & Screen OCR Explainer ─────────────────────────
+    if any(k in raw for k in [
+        "read this screen", "read screen", "what does this screen say", "what's on my screen",
+        "explain this screen error", "explain screen error", "explain this screen", "explain this error",
+        "diagnose screen error"
+    ]):
+        from modules.screen_ocr import read_screen_content
+        ok, msg = read_screen_content(raw)
+        return _respond(ok, msg)
+
+    if any(k in raw for k in [
+        "read document", "read paper", "read what is in my hand", "read what's in my hand",
+        "read physical document", "read ID card", "scan document"
+    ]):
+        from modules.screen_ocr import read_physical_document
+        ok, msg = read_physical_document(raw)
+        return _respond(ok, msg)
+
+    # ── Category H9: Multi-App Workflow & Cross-App Autopilot ────────────────
+    if any(k in raw for k in [
+        "summarize this to notepad", "summarize page to notepad", "summarize this page to notepad",
+        "summarize active window to notepad", "copy and summarize to notepad"
+    ]):
+        from modules.cross_app_autopilot import summarize_active_app_to_notepad
+        ok, msg = summarize_active_app_to_notepad()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in [
+        "save notes to desktop", "save screen notes to desktop", "save active notes to desktop",
+        "save note to desktop"
+    ]):
+        from modules.cross_app_autopilot import save_active_notes_to_desktop
+        ok, msg = save_active_notes_to_desktop()
+        return _respond(ok, msg)
+
+    # ── Category H10: Natural Language Semantic File Finder ───────────────────
+    if raw.startswith("find and open ") or raw.startswith("search and open "):
+        from modules.smart_file_finder import find_and_open
+        target_q = raw.replace("find and open ", "").replace("search and open ", "").strip()
+        ok, msg = find_and_open(target_q)
+        return _respond(ok, msg)
+
+    if any(raw.startswith(p) for p in ["find file ", "search file ", "search for file ", "locate file ", "find document "]):
+        from modules.smart_file_finder import search_files
+        ok, msg, _ = search_files(raw)
+        return _respond(ok, msg)
+
+    # ── Category H11: Hands-Free WhatsApp & Email Voice Dispatcher ───────────
+    if any(k in raw for k in ["send whatsapp", "send a whatsapp", "draft email", "draft an email"]):
+        from modules.voice_messenger import parse_and_dispatch_messenger
+        ok, msg = parse_and_dispatch_messenger(command)
+        if ok:
+            return _respond(ok, msg)
+
+    # ── Category H12: Live Meeting & Lecture Scribe ──────────────────────────
+    if any(k in raw for k in [
+        "start meeting notes", "take meeting notes", "record meeting notes", "start lecture notes",
+        "start scribe", "begin meeting notes"
+    ]):
+        from modules.meeting_scribe import meeting_scribe
+        ok, msg = meeting_scribe.start()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in [
+        "stop meeting notes", "finish meeting notes", "end meeting notes", "summarize meeting",
+        "stop scribe", "conclude meeting"
+    ]):
+        from modules.meeting_scribe import meeting_scribe
+        ok, msg = meeting_scribe.stop()
+        return _respond(ok, msg)
+
+    # ── Category H13: Background Voice DJ & Media Controller ─────────────────
+    if raw in ["pause music", "pause song", "pause audio", "stop music", "resume music", "play music"]:
+        from modules.voice_dj import toggle_play_pause
+        ok, msg = toggle_play_pause()
+        return _respond(ok, msg)
+
+    if raw in ["next track", "next song", "skip song", "skip track"]:
+        from modules.voice_dj import next_track
+        ok, msg = next_track()
+        return _respond(ok, msg)
+
+    if raw in ["previous track", "previous song", "prev song"]:
+        from modules.voice_dj import prev_track
+        ok, msg = prev_track()
+        return _respond(ok, msg)
+
+    if raw in ["volume up", "increase volume", "louder"]:
+        from modules.voice_dj import volume_up
+        ok, msg = volume_up()
+        return _respond(ok, msg)
+
+    if raw in ["volume down", "decrease volume", "lower volume", "softer"]:
+        from modules.voice_dj import volume_down
+        ok, msg = volume_down()
+        return _respond(ok, msg)
+
+    # ── Category H14: Proactive Battery & System Guardian ────────────────────
+    if any(k in raw for k in [
+        "system health status", "battery status", "check battery", "system vitals",
+        "laptop health", "battery level", "system status"
+    ]):
+        from modules.system_guardian import system_guardian
+        ok, msg = system_guardian.get_health_report()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["start system guardian", "enable system guardian", "turn on system guardian"]):
+        from modules.system_guardian import system_guardian
+        ok, msg = system_guardian.start()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["stop system guardian", "disable system guardian", "turn off system guardian"]):
+        from modules.system_guardian import system_guardian
+        ok, msg = system_guardian.stop()
+        return _respond(ok, msg)
+
+    # ── Category H15: Smart Voice Clipboard ──────────────────────────────────
+    if any(k in raw for k in [
+        "what did i copy", "what was the last thing i copied", "last copied item",
+        "last copied text", "what's in my clipboard", "what is on my clipboard"
+    ]):
+        from modules.smart_clipboard import smart_clipboard
+        ok, msg = smart_clipboard.get_last_copied()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["paste previous", "paste previous clipboard", "paste earlier"]):
+        from modules.smart_clipboard import smart_clipboard
+        ok, msg = smart_clipboard.paste_previous()
+        return _respond(ok, msg)
+
+    if raw.startswith("search clipboard ") or raw.startswith("find clipboard "):
+        from modules.smart_clipboard import smart_clipboard
+        q = raw.replace("search clipboard ", "").replace("find clipboard ", "").strip()
+        ok, msg = smart_clipboard.search_clipboard(q)
+        return _respond(ok, msg)
+
+    if raw in ["clear clipboard history", "clear clipboard"]:
+        from modules.smart_clipboard import smart_clipboard
+        ok, msg = smart_clipboard.clear()
+        return _respond(ok, msg)
+
+
     # ── Instant Free Weather Handler ──────────────────────────────────────────
     if any(k in raw for k in ["weather", "temperature", "climate", "forecast", "how is the weather", "watch the weather"]):
         from modules.weather_service import get_live_weather

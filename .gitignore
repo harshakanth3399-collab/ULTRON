@@ -20,4 +20,6 @@ renderer_audit.log
 adb.zip
 *.tmp
 memory/*.tmp
+data/camera_captures/
+data/screen_captures/
 

@@ -87,7 +87,7 @@ def analyze_camera_view(user_prompt: str = "") -> Tuple[bool, str]:
     if user_prompt:
         prompt += f" Specifically answer this question: {user_prompt}"
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={api_key}"
+    candidate_models = ["gemini-3.7-flash", "gemini-3.8-flash", "gemini-3.5-flash"]
     payload = {
         "contents": [{
             "parts": [
@@ -102,19 +102,23 @@ def analyze_camera_view(user_prompt: str = "") -> Tuple[bool, str]:
     }
 
     try:
-        t0 = time.time()
-        resp = requests.post(url, json=payload, timeout=7.0)
-        dt = int((time.time() - t0) * 1000)
-        print(f"[TIME] Camera Vision AI: {dt} ms")
+        for model in candidate_models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            try:
+                t0 = time.time()
+                resp = requests.post(url, json=payload, timeout=7.0)
+                dt = int((time.time() - t0) * 1000)
+                print(f"[TIME] Camera Vision AI ({model}): {dt} ms")
 
-        if resp.status_code == 200:
-            data = resp.json()
-            description = data["candidates"][0]["content"]["parts"][0]["text"].strip()
-            print(f"[CAMERA VISION] Result: '{description}'")
-            return True, description
-        else:
-            print(f"[CAMERA VISION ERROR] API HTTP {resp.status_code}: {resp.text[:150]}")
-            return False, "I captured the camera frame, but encountered an issue analyzing the scene."
+                if resp.status_code == 200:
+                    data = resp.json()
+                    description = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    print(f"[CAMERA VISION] Result: '{description}'")
+                    return True, description
+            except Exception:
+                continue
+
+        return False, "I captured the camera frame, but encountered an issue analyzing the scene."
     except Exception as e:
         print(f"[CAMERA VISION ERROR] {e}")
         return False, f"Vision network error: {e}"
