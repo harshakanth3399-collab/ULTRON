@@ -1986,39 +1986,39 @@
             const elapsedTime = clock.getElapsedTime();
 
             speechPulse *= 0.88;
-            const dynamicPulse = isSpeaking ? (0.12 + speechPulse * 0.35) : (isListening ? 0.07 : 0.025);
-            const speedMultiplier = isSpeaking ? (2.4 + speechPulse * 2.0) : (isListening ? 1.5 : (isLowPowerMode ? 0.4 : 0.75));
+            const dynamicPulse = isSpeaking ? (0.09 + speechPulse * 0.28) : (isListening ? 0.05 : 0.015);
+            const speedMultiplier = isSpeaking ? (0.8 + speechPulse * 0.35) : (isListening ? 0.65 : (isLowPowerMode ? 0.3 : 0.5));
 
-            // Rotate Concentric Rings
+            // Rotate Concentric Rings slowly and elegantly
             if (ring1Mesh) {
-                ring1Mesh.rotation.z = elapsedTime * 0.45 * speedMultiplier;
-                ring1Mesh.rotation.x = 0.35 + Math.sin(elapsedTime * 0.6) * 0.15;
+                ring1Mesh.rotation.z = elapsedTime * 0.12 * speedMultiplier;
+                ring1Mesh.rotation.x = 0.35 + Math.sin(elapsedTime * 0.25) * 0.10;
             }
             if (ring2Mesh) {
-                ring2Mesh.rotation.y = -elapsedTime * 0.55 * speedMultiplier;
-                ring2Mesh.rotation.z = 0.75 + Math.cos(elapsedTime * 0.5) * 0.12;
+                ring2Mesh.rotation.y = -elapsedTime * 0.14 * speedMultiplier;
+                ring2Mesh.rotation.z = 0.75 + Math.cos(elapsedTime * 0.20) * 0.08;
             }
             if (ring3Mesh) {
-                ring3Mesh.rotation.x = elapsedTime * 0.35 * speedMultiplier;
-                ring3Mesh.rotation.y = Math.sin(elapsedTime * 0.4) * 0.2;
+                ring3Mesh.rotation.x = elapsedTime * 0.10 * speedMultiplier;
+                ring3Mesh.rotation.y = Math.sin(elapsedTime * 0.18) * 0.12;
             }
 
             // Pulse Core Sphere according to speech & voice words
             if (arcCoreMesh) {
-                const coreScale = 1.0 + Math.sin(elapsedTime * 3.5) * 0.04 + dynamicPulse * 0.8;
+                const coreScale = 1.0 + Math.sin(elapsedTime * 1.8) * 0.025 + dynamicPulse * 0.65;
                 arcCoreMesh.scale.set(coreScale, coreScale, coreScale);
             }
             if (outerGlowMesh) {
-                outerGlowMesh.rotation.y = -elapsedTime * 0.28 * speedMultiplier;
-                outerGlowMesh.rotation.x = Math.sin(elapsedTime * 0.2) * 0.15;
-                const glowScale = 1.0 + Math.sin(elapsedTime * 2.8) * 0.05 + dynamicPulse * 0.6;
+                outerGlowMesh.rotation.y = -elapsedTime * 0.08 * speedMultiplier;
+                outerGlowMesh.rotation.x = Math.sin(elapsedTime * 0.12) * 0.08;
+                const glowScale = 1.0 + Math.sin(elapsedTime * 1.5) * 0.035 + dynamicPulse * 0.55;
                 outerGlowMesh.scale.set(glowScale, glowScale, glowScale);
             }
 
             // Displace Neural Particles with harmonic speech waves
             if (particleSystem && particleGeometry) {
-                particleSystem.rotation.y = elapsedTime * 0.22 * speedMultiplier;
-                particleSystem.rotation.x = Math.sin(elapsedTime * 0.2) * 0.15;
+                particleSystem.rotation.y = elapsedTime * 0.06 * speedMultiplier;
+                particleSystem.rotation.x = Math.sin(elapsedTime * 0.10) * 0.08;
 
                 const posAttr = particleGeometry.attributes.position;
                 const pArr = posAttr.array;
@@ -2028,12 +2028,12 @@
                     const by = basePositions[i3 + 1];
                     const bz = basePositions[i3 + 2];
 
-                    const wave = Math.sin(elapsedTime * 2.5 + bx * 3.2 + bz * 2.8) * (0.07 + dynamicPulse * 0.6)
-                               + Math.cos(elapsedTime * 1.8 + by * 3.8) * (0.06 + dynamicPulse * 0.5);
+                    const wave = Math.sin(elapsedTime * 1.2 + bx * 2.2 + bz * 2.0) * (0.04 + dynamicPulse * 0.45)
+                               + Math.cos(elapsedTime * 1.0 + by * 2.5) * (0.03 + dynamicPulse * 0.35);
 
-                    pArr[i3]     = bx * (1.0 + wave * 0.45);
+                    pArr[i3]     = bx * (1.0 + wave * 0.35);
                     pArr[i3 + 1] = by + wave;
-                    pArr[i3 + 2] = bz * (1.0 + wave * 0.45);
+                    pArr[i3 + 2] = bz * (1.0 + wave * 0.35);
                 }
                 posAttr.needsUpdate = true;
             }

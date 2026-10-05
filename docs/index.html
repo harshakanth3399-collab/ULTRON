@@ -15,8 +15,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ULTRON">
 
-    <!-- Three.js 3D WebGL Graphics Engine -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Three.js 3D WebGL Graphics Engine (Local First + CDN Fallback) -->
+    <script src="three.min.js"></script>
+    <script>
+        if (typeof THREE === 'undefined') {
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+        }
+    </script>
     <style>
         * {
             margin: 0;
@@ -493,13 +498,52 @@
             text-shadow: 0 0 12px rgba(255, 179, 0, 0.8);
         }
 
+        /* ── Screen Resolution Optimization (Laptop vs Mobile) ── */
+        @media (min-width: 768px) {
+            /* Laptop / Desktop Screen: Hide touchpad button (laptop already has trackpad) */
+            #dock-btn-touchpad {
+                display: none !important;
+            }
+            #touchpad-panel {
+                display: none !important;
+            }
+            .container {
+                max-width: 680px;
+            }
+            .visualizer-container {
+                width: 350px;
+                height: 350px;
+            }
+        }
+        @media (max-width: 767px) {
+            /* Mobile Phone Screen: Touchpad is active & ready */
+            #dock-btn-touchpad {
+                display: flex !important;
+            }
+            .visualizer-container {
+                width: 290px;
+                height: 290px;
+            }
+            .header-right {
+                gap: 5px;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+            }
+            .telemetry-badge {
+                display: none;
+            }
+            .logo-domain {
+                display: none;
+            }
+        }
+
         /* ── LiveLink Security Gatekeeper Modal (Holographic Golden Glass) ── */
         #livelink-modal-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(6, 4, 1, 0.94);
-            backdrop-filter: blur(12px);
+            background: rgba(6, 4, 1, 0.40);
+            backdrop-filter: blur(2px);
             z-index: 999;
             justify-content: center;
             align-items: center;
@@ -508,12 +552,13 @@
         .livelink-card {
             width: 100%;
             max-width: 380px;
-            background: radial-gradient(circle at center, #1E1204 0%, #0A0501 100%);
+            background: rgba(18, 10, 3, 0.88);
             border: 1px solid rgba(255, 179, 0, 0.7);
             border-radius: 20px;
             padding: 24px;
-            box-shadow: 0 0 35px rgba(255, 179, 0, 0.35), inset 0 0 15px rgba(255, 179, 0, 0.1);
+            box-shadow: 0 0 40px rgba(255, 179, 0, 0.45), inset 0 0 15px rgba(255, 179, 0, 0.15);
             text-align: center;
+            backdrop-filter: blur(10px);
         }
         .livelink-shield {
             margin-bottom: 8px;
@@ -676,6 +721,11 @@
     </style>
 </head>
 <body>
+    <!-- Top Floating Alert Banner for Harsha Sir on Mobile & Laptop -->
+    <div id="pending-alert-banner" onclick="openCommanderVault()" style="display:none; position:fixed; top:12px; left:50%; transform:translateX(-50%); z-index:1010; background:linear-gradient(135deg, #FF9100, #FF3D00); color:#FFF; font-weight:900; font-size:11px; padding:7px 18px; border-radius:24px; box-shadow:0 0 20px rgba(255,61,0,0.85); cursor:pointer; text-align:center; white-space:nowrap; border:1px solid #FFE082;">
+        🚨 <span id="banner-pending-text">New Request Pending!</span> &nbsp;<u>TAP TO REVIEW</u>
+    </div>
+
     <!-- Top Holographic HUD Header -->
     <header>
         <div class="logo">
@@ -687,9 +737,10 @@
         </div>
         <div class="header-right">
             <button class="qr-btn" id="qr-modal-btn" onclick="toggleQRModal()" title="Show Phone Connection QR">📱 PAIR</button>
-            <div class="telemetry-badge" id="telemetry-badge">⚡ --% • RAM --%</div>
             <div class="status-badge" id="badge">● ONLINE</div>
-            <div id="user-hud-badge" style="display:none; font-size:11px; font-weight:800; color:#FFD700; background:rgba(255,179,0,0.15); border:1px solid #FFB300; border-radius:12px; padding:3px 9px;">👤 <span id="user-hud-name">Harsha</span></div>
+            <div class="telemetry-badge" id="telemetry-badge">⚡ --% • RAM --%</div>
+            <div id="user-hud-badge" style="display:none; font-size:11px; font-weight:800; color:#FFD700; background:rgba(255,179,0,0.15); border:1px solid #FFB300; border-radius:12px; padding:3px 9px;">👤 <span id="user-hud-name">Harsha Sir</span></div>
+            <button id="admin-vault-btn" onclick="openCommanderVault()" style="display:none; font-size:11px; font-weight:900; color:#060401; background:linear-gradient(135deg, #FF9100, #FFD54F); border:none; border-radius:12px; padding:5px 12px; cursor:pointer; box-shadow:0 0 12px rgba(255,179,0,0.7);" title="Review Friend Requests">🚨 REQUESTS (<span id="header-pending-count">0</span>)</button>
             <button class="logout-btn-hud" id="logout-btn-hud" onclick="logoutUser()" style="display:none;" title="Sign out of ULTRON">🚪 LOGOUT</button>
         </div>
     </header>
@@ -821,10 +872,11 @@
 
         <!-- ── LiveLink Floating Synergy Dock ── -->
         <div class="dock-bar">
-            <button class="dock-btn active" id="dock-btn-command" onclick="switchDockTab('command')">💬 AI CORE</button>
-            <button class="dock-btn" id="dock-btn-files" onclick="switchDockTab('files')">📁 FILES ⇄</button>
-            <button class="dock-btn" id="dock-btn-touchpad" onclick="switchDockTab('touchpad')">🖱️ TOUCHPAD</button>
+            <button class="dock-btn active" id="dock-btn-command" onclick="switchDockTab('command')">🎙️ ASSISTANT</button>
+            <button class="dock-btn" id="dock-btn-vault" onclick="openCommanderVault()" style="display:none; color:#FFD700; border-color:#FFD700; background:rgba(255,145,0,0.22); font-weight:800;" title="Review Access Requests">🚨 REQUESTS (<span id="dock-pending-count">0</span>)</button>
             <button class="dock-btn" id="dock-btn-remote" onclick="switchDockTab('remote')">⚡ REMOTE</button>
+            <button class="dock-btn" id="dock-btn-touchpad" onclick="switchDockTab('touchpad')">🖱️ TOUCHPAD</button>
+            <button class="dock-btn" id="dock-btn-files" onclick="switchDockTab('files')">📁 FILES ⇄</button>
         </div>
     </div>
 
@@ -874,7 +926,7 @@
     <div id="livelink-modal-overlay">
         <div class="livelink-card" style="max-width: 420px;">
             <div class="livelink-shield">
-                <img src="icon.png" class="livelink-avatar" alt="ULTRON App Icon">
+                <img src="icon.png" class="livelink-avatar" alt="ULTRON App Icon" onclick="tapHelmetSecret()" title="ULTRON" style="cursor:pointer;">
             </div>
             <div class="livelink-title">ULTRON ACCESS PORTAL</div>
             <div class="livelink-sub">https://ultron.ai Assistant • Authorization Portal</div>
@@ -889,16 +941,15 @@
             <form class="livelink-form" id="livelink-login-form" onsubmit="handleLoginSubmit(event)">
                 <div>
                     <label class="form-label">Email or Mobile Number *</label>
-                    <input type="text" class="livelink-input" id="login-identifier" placeholder="e.g. harshakanth@ultron.ai or 9876543210" required>
+                    <input type="text" class="livelink-input" id="login-identifier" placeholder="e.g. your email or mobile" required>
                 </div>
                 <div>
                     <label class="form-label">Password *</label>
                     <input type="password" class="livelink-input" id="login-password" placeholder="Enter your password" required>
                 </div>
                 <button type="submit" class="livelink-btn" id="login-submit-btn">SIGN IN TO ULTRON</button>
-                <div style="margin-top: 10px; display:flex; justify-content:space-between; align-items:center;">
-                    <button type="button" onclick="quickAdminLogin()" style="background:none; border:none; color:#FFB300; font-size:11px; cursor:pointer; text-decoration:underline;">👑 Harsha Master 1-Click Login</button>
-                    <button type="button" onclick="switchAuthTab('register')" style="background:none; border:none; color:rgba(255,215,100,0.7); font-size:11px; cursor:pointer;">Create Account →</button>
+                <div style="margin-top: 15px; display:flex; justify-content:flex-end; align-items:center;">
+                    <button type="button" onclick="switchAuthTab('register')" style="background:none; border:none; color:#FFB300; font-size:12px; font-weight:600; cursor:pointer;">New here? Create Account →</button>
                 </div>
             </form>
 
@@ -935,6 +986,37 @@
                     <button type="button" onclick="switchAuthTab('login')" style="background:none; border:none; color:#FFB300; font-size:11px; cursor:pointer; text-decoration:underline;">Already have an account? Sign In →</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- ── Harsha Sir Master Hub Modal (Harsha Sir Only) ── -->
+    <div id="commander-vault-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.88); z-index:1005; justify-content:center; align-items:center; backdrop-filter:blur(8px); padding:16px;">
+        <div class="livelink-card" style="max-width:560px; max-height:88vh; display:flex; flex-direction:column; text-align:left; padding:20px; border-color:#FFD700; box-shadow:0 0 50px rgba(255,215,0,0.5);">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,215,0,0.3); padding-bottom:12px; margin-bottom:14px;">
+                <div>
+                    <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:#FFD700;">👑 HARSHA SIR MASTER HUB</div>
+                    <div style="font-size:11px; color:rgba(255,215,100,0.7);">Private Gatekeeper Approvals & Multi-Tenant Logs</div>
+                </div>
+                <button onclick="closeCommanderVault()" style="background:rgba(255,179,0,0.15); border:1px solid rgba(255,179,0,0.5); color:#FFB300; border-radius:8px; padding:4px 12px; font-size:12px; cursor:pointer; font-weight:700;">CLOSE ✕</button>
+            </div>
+
+            <!-- Vault Subtabs -->
+            <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+                <button type="button" class="auth-tab-btn active" id="vault-tab-pending" onclick="switchVaultSubTab('pending')">🚨 REQUESTS (<span id="vault-pending-badge">0</span>)</button>
+                <button type="button" class="auth-tab-btn" id="vault-tab-friends" onclick="switchVaultSubTab('friends')">👥 USERS</button>
+                <button type="button" class="auth-tab-btn" id="vault-tab-chats" onclick="switchVaultSubTab('chats')">💬 SECRET CHATS</button>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div id="vault-content-area" style="flex:1; overflow-y:auto; min-height:280px; max-height:55vh; padding-right:6px;">
+                <div style="color:#FFB300; text-align:center; padding:30px;">Loading database records...</div>
+            </div>
+
+            <!-- Action footer -->
+            <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,215,0,0.2); display:flex; justify-content:space-between; align-items:center;">
+                <button onclick="downloadVaultData()" style="background:none; border:1px dashed #FFB300; color:#FFD700; border-radius:8px; padding:6px 14px; font-size:11px; font-weight:700; cursor:pointer;">📥 EXPORT JSON</button>
+                <button onclick="loadCommanderVaultData()" style="background:rgba(255,179,0,0.2); border:1px solid #FFB300; color:#FFD700; border-radius:8px; padding:6px 14px; font-size:11px; font-weight:700; cursor:pointer;">🔄 REFRESH</button>
+            </div>
         </div>
     </div>
 
@@ -1028,9 +1110,11 @@
 
         document.addEventListener('visibilitychange', () => {
             isPageVisible = !document.hidden;
-            if (isPageVisible) {
-                clock.start();
-                requestAnimationFrame(animate);
+            if (isPageVisible && typeof clock !== 'undefined' && clock) {
+                try {
+                    clock.start();
+                    requestAnimationFrame(animateVisualizer);
+                } catch(e) {}
             }
         });
 
@@ -1210,29 +1294,302 @@
             const badge = document.getElementById('user-hud-badge');
             const nameEl = document.getElementById('user-hud-name');
             const logoutBtn = document.getElementById('logout-btn-hud');
+            const vaultBtn = document.getElementById('admin-vault-btn');
+            const dockVaultBtn = document.getElementById('dock-btn-vault');
+
             if (user && (user.first_name || user.name)) {
-                if (nameEl) nameEl.innerText = user.first_name || user.name;
-                if (badge) badge.style.display = 'inline-block';
+                const displayName = user.first_name || user.name;
+                const isAdmin = user.role === 'ADMIN' || user.email === 'harshakanth@ultron.ai' || displayName.includes('Harsha');
+
+                if (nameEl) {
+                    nameEl.innerText = isAdmin ? '👑 HARSHA SIR' : `👤 ${displayName.toUpperCase()}`;
+                }
+                if (badge) {
+                    badge.style.display = 'inline-block';
+                    badge.style.borderColor = isAdmin ? '#FFD700' : '#00E676';
+                    badge.style.color = isAdmin ? '#FFD700' : '#A7FFEB';
+                }
                 if (logoutBtn) logoutBtn.style.display = 'inline-block';
+                if (vaultBtn) {
+                    vaultBtn.style.display = isAdmin ? 'inline-block' : 'none';
+                }
+                if (dockVaultBtn) {
+                    dockVaultBtn.style.display = isAdmin ? 'inline-block' : 'none';
+                }
+
+                if (isAdmin) {
+                    pollPendingRequests();
+                    if (!window._adminPollTimer) {
+                        window._adminPollTimer = setInterval(pollPendingRequests, 6000);
+                    }
+                }
             } else {
                 if (badge) badge.style.display = 'none';
                 if (logoutBtn) logoutBtn.style.display = 'none';
+                if (vaultBtn) vaultBtn.style.display = 'none';
+                if (dockVaultBtn) dockVaultBtn.style.display = 'none';
+                const banner = document.getElementById('pending-alert-banner');
+                if (banner) banner.style.display = 'none';
+                if (window._adminPollTimer) {
+                    clearInterval(window._adminPollTimer);
+                    window._adminPollTimer = null;
+                }
             }
         }
 
-        function quickAdminLogin() {
+        function pollPendingRequests() {
+            if (!liveLinkToken) return;
+            fetch(`/api/admin/friends_activity?token=${encodeURIComponent(liveLinkToken)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (!data || !data.success) return;
+                vaultCachedData = data;
+                const count = data.pending_count || 0;
+
+                const vBadge = document.getElementById('vault-pending-badge');
+                if (vBadge) vBadge.innerText = count;
+
+                const hBadge = document.getElementById('header-pending-count');
+                if (hBadge) hBadge.innerText = count;
+
+                const dBadge = document.getElementById('dock-pending-count');
+                if (dBadge) dBadge.innerText = count;
+
+                const banner = document.getElementById('pending-alert-banner');
+                const bannerText = document.getElementById('banner-pending-text');
+                if (banner) {
+                    if (count > 0) {
+                        banner.style.display = 'flex';
+                        if (bannerText) {
+                            const latest = (data.friends || []).find(f => (f.status || 'PENDING') === 'PENDING');
+                            const reqName = latest ? (latest.name || latest.first_name) : 'Friend';
+                            bannerText.innerText = count === 1 ? `🚨 ${reqName} requested access!` : `🚨 ${count} Pending Requests!`;
+                        }
+                    } else {
+                        banner.style.display = 'none';
+                    }
+                }
+
+                const vaultBtn = document.getElementById('admin-vault-btn');
+                if (vaultBtn) {
+                    if (count > 0) {
+                        vaultBtn.style.background = 'linear-gradient(135deg, #FF3D00, #FF9100)';
+                        vaultBtn.style.boxShadow = '0 0 16px rgba(255, 61, 0, 0.9)';
+                    } else {
+                        vaultBtn.style.background = 'linear-gradient(135deg, #FFB300, #FFD54F)';
+                        vaultBtn.style.boxShadow = '0 0 10px rgba(255, 179, 0, 0.6)';
+                    }
+                }
+
+                const dockVaultBtn = document.getElementById('dock-btn-vault');
+                if (dockVaultBtn) {
+                    if (count > 0) {
+                        dockVaultBtn.style.background = 'rgba(255, 61, 0, 0.35)';
+                        dockVaultBtn.style.borderColor = '#FF3D00';
+                        dockVaultBtn.style.boxShadow = '0 0 14px rgba(255, 61, 0, 0.8)';
+                    } else {
+                        dockVaultBtn.style.background = 'rgba(255, 145, 0, 0.2)';
+                        dockVaultBtn.style.borderColor = '#FFD700';
+                        dockVaultBtn.style.boxShadow = 'none';
+                    }
+                }
+            })
+            .catch(() => {});
+        }
+
+        let helmetTapCount = 0;
+        function tapHelmetSecret() {
+            helmetTapCount++;
+            if (helmetTapCount >= 3) {
+                helmetTapCount = 0;
+                triggerHaptic([40, 40]);
+                const idInput = document.getElementById('login-identifier');
+                if (idInput) idInput.value = 'harsha';
+                const pwdInput = document.getElementById('login-password');
+                if (pwdInput) pwdInput.focus();
+                showToast('Harsha Sir recognized. Enter your password.');
+            }
+        }
+
+        let vaultCachedData = null;
+        let currentVaultSubTab = 'pending';
+
+        function openCommanderVault() {
             triggerHaptic([30]);
             playAcoustic('approved');
-            liveLinkToken = 'LIVELINK_MASTER_HARSHA';
-            localStorage.setItem('livelink_token', liveLinkToken);
-            const userObj = { first_name: "Harsha", last_name: "Kanth", email: "harshakanth@ultron.ai", role: "ADMIN" };
-            localStorage.setItem('livelink_user', JSON.stringify(userObj));
-            updateUserSessionUI(userObj);
-            document.getElementById('livelink-modal-overlay').style.display = 'none';
-            updateBadge('● OWNER ONLINE', '#FFD700');
-            showToast('Welcome back, Commander Harsha!');
-            initSSEStream();
+            const overlay = document.getElementById('commander-vault-overlay');
+            if (overlay) overlay.style.display = 'flex';
+            loadCommanderVaultData();
         }
+
+        function closeCommanderVault() {
+            triggerHaptic([15]);
+            const overlay = document.getElementById('commander-vault-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        function switchVaultSubTab(tab) {
+            triggerHaptic([15]);
+            currentVaultSubTab = tab;
+            ['pending', 'friends', 'chats'].forEach(t => {
+                const btn = document.getElementById(`vault-tab-${t}`);
+                if (btn) btn.classList.toggle('active', t === tab);
+            });
+            if (vaultCachedData) renderVaultUI(vaultCachedData);
+        }
+
+        function loadCommanderVaultData() {
+            const content = document.getElementById('vault-content-area');
+            if (content) content.innerHTML = '<div style="color:#FFB300; text-align:center; padding:30px;">ACCESSING HARSHA SIR MASTER HUB...</div>';
+
+            fetch(`/api/admin/friends_activity?token=${encodeURIComponent(liveLinkToken)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    content.innerHTML = `<div style="color:#FF5252; padding:20px; text-align:center;">${data.error || 'Access Denied: Harsha Sir Only'}</div>`;
+                    return;
+                }
+                vaultCachedData = data;
+                const badge = document.getElementById('vault-pending-badge');
+                if (badge) badge.innerText = data.pending_count || 0;
+                renderVaultUI(data);
+            })
+            .catch(() => {
+                if (content) content.innerHTML = '<div style="color:#FF5252; padding:20px; text-align:center;">Failed to connect to Master Hub database.</div>';
+            });
+        }
+
+        function approveUser(userId) {
+            triggerHaptic([30]);
+            fetch('/api/admin/approve_user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: liveLinkToken, user_id: userId })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    playAcoustic('approved');
+                    showToast('Access Approved! User is now active.');
+                    loadCommanderVaultData();
+                } else {
+                    showToast(d.error || 'Failed to approve');
+                }
+            });
+        }
+
+        function rejectUser(userId) {
+            triggerHaptic([20]);
+            fetch('/api/admin/reject_user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: liveLinkToken, user_id: userId })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    showToast('User request declined.');
+                    loadCommanderVaultData();
+                } else {
+                    showToast(d.error || 'Failed to decline');
+                }
+            });
+        }
+
+        function renderVaultUI(data) {
+            const content = document.getElementById('vault-content-area');
+            if (!content) return;
+            const friends = data.friends || [];
+
+            if (currentVaultSubTab === 'pending') {
+                const pending = friends.filter(f => (f.status || 'PENDING') === 'PENDING');
+                if (pending.length === 0) {
+                    content.innerHTML = '<div style="color:#00E676; text-align:center; padding:30px; font-weight:700;">✅ No pending requests! All users are reviewed.</div>';
+                    return;
+                }
+                let html = `<div style="font-size:12px; font-weight:800; color:#FF9100; margin-bottom:12px;">🚨 PENDING APPROVAL REQUESTS (${pending.length}):</div>`;
+                pending.forEach(f => {
+                    const dateStr = f.registered_at ? new Date(f.registered_at * 1000).toLocaleString() : 'Just now';
+                    html += `
+                        <div style="background:rgba(255,145,0,0.08); border:1px solid rgba(255,145,0,0.5); border-radius:12px; padding:12px; margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="font-weight:900; color:#FFF9C4; font-size:14px;">${escapeHtml(f.name || 'Applicant')}</div>
+                                <span style="font-size:10px; padding:2px 8px; border-radius:4px; background:#FF9100; color:#000; font-weight:800;">PENDING</span>
+                            </div>
+                            <div style="font-size:11px; color:#FFB300; margin:5px 0;">📞 ${escapeHtml(f.phone || 'No phone')} &nbsp;•&nbsp; ✉️ ${escapeHtml(f.email || 'No email')}</div>
+                            <div style="font-size:10px; color:rgba(255,215,100,0.6); margin-bottom:8px;">Submitted: ${dateStr}</div>
+                            <div style="display:flex; gap:8px;">
+                                <button onclick="approveUser(${f.id})" style="flex:1; background:#00E676; color:#000; border:none; border-radius:6px; padding:7px 12px; font-size:11px; font-weight:900; cursor:pointer;">✅ APPROVE ACCESS</button>
+                                <button onclick="rejectUser(${f.id})" style="flex:1; background:#FF5252; color:#FFF; border:none; border-radius:6px; padding:7px 12px; font-size:11px; font-weight:800; cursor:pointer;">❌ DECLINE</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                content.innerHTML = html;
+            } else if (currentVaultSubTab === 'friends') {
+                if (friends.length === 0) {
+                    content.innerHTML = '<div style="color:rgba(255,215,100,0.6); text-align:center; padding:20px;">No registered users yet. Share your LiveLink!</div>';
+                    return;
+                }
+                let html = `<div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:10px;">TOTAL USERS REGISTERED: ${friends.length}</div>`;
+                friends.forEach(f => {
+                    const dateStr = f.registered_at ? new Date(f.registered_at * 1000).toLocaleString() : 'N/A';
+                    const isApproved = (f.status || 'APPROVED') === 'APPROVED';
+                    html += `
+                        <div style="background:rgba(255,179,0,0.06); border:1px solid rgba(255,179,0,0.25); border-radius:10px; padding:12px; margin-bottom:8px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="font-weight:800; color:#FFF9C4; font-size:13px;">${escapeHtml(f.name || 'Friend')}</div>
+                                <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:${isApproved ? 'rgba(0,230,118,0.2)' : 'rgba(255,145,0,0.2)'}; color:${isApproved ? '#00E676' : '#FF9100'}; font-weight:700;">${f.status || 'PENDING'}</span>
+                            </div>
+                            <div style="font-size:11px; color:#FFB300; margin-top:4px;">📞 ${escapeHtml(f.phone || 'No phone')} &nbsp;•&nbsp; ✉️ ${escapeHtml(f.email || 'No email')}</div>
+                            <div style="font-size:10px; color:rgba(255,215,100,0.5); margin-top:2px;">Joined: ${dateStr}</div>
+                        </div>
+                    `;
+                });
+                content.innerHTML = html;
+            } else {
+                const chats = data.chats || [];
+                if (chats.length === 0) {
+                    content.innerHTML = '<div style="color:rgba(255,215,100,0.6); text-align:center; padding:20px;">No conversation logs recorded yet.</div>';
+                    return;
+                }
+                let html = `<div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:10px;">SECRET USER CHATS LOG (${chats.length}):</div>`;
+                chats.forEach(c => {
+                    const timeStr = c.created_at ? new Date(c.created_at * 1000).toLocaleTimeString() : '';
+                    html += `
+                        <div style="background:rgba(255,179,0,0.05); border:1px solid rgba(255,179,0,0.2); border-radius:10px; padding:10px; margin-bottom:8px;">
+                            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
+                                <span style="font-weight:700; color:#FFD700;">👤 ${escapeHtml(c.user_name || 'Guest')}</span>
+                                <span style="color:rgba(255,215,100,0.5); font-size:10px;">${timeStr}</span>
+                            </div>
+                            <div style="font-size:12px; color:#FFF; margin-bottom:4px; line-height:1.4;"><b>User:</b> "${escapeHtml(c.prompt || '')}"</div>
+                            <div style="font-size:12px; color:#A7FFEB; line-height:1.4;"><b>ULTRON:</b> "${escapeHtml(c.reply || '')}"</div>
+                        </div>
+                    `;
+                });
+                content.innerHTML = html;
+            }
+        }
+
+        function downloadVaultData() {
+            if (!vaultCachedData) return;
+            const blob = new Blob([JSON.stringify(vaultCachedData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ultron_vault_backup_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Vault database backup downloaded.');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, function(m) {
+                return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m];
+            });
+        }
+
 
         function logoutUser() {
             triggerHaptic([20, 20]);
@@ -1272,22 +1629,35 @@
                 btn.innerText = 'SIGN IN TO ULTRON';
                 btn.disabled = false;
 
+                if (data.pending) {
+                    showToast(data.error || 'Access Request Pending: Awaiting authorization from Harsha Sir.');
+                    document.getElementById('state-text').innerText = "REQUEST PENDING • AWAITING HARSHA SIR";
+                    return;
+                }
+
                 if (data.success && data.token) {
                     playAcoustic('approved');
                     liveLinkToken = data.token;
                     localStorage.setItem('livelink_token', data.token);
+                    const isHarsha = data.role === 'ADMIN' || (data.email && data.email.includes('harsha'));
                     const userObj = {
-                        first_name: data.first_name || data.name,
+                        first_name: isHarsha ? "Harsha Sir" : (data.first_name || data.name),
                         last_name: data.last_name || '',
                         email: data.email || '',
                         phone: data.phone || '',
-                        role: data.role || 'USER'
+                        role: isHarsha ? 'ADMIN' : 'USER'
                     };
                     localStorage.setItem('livelink_user', JSON.stringify(userObj));
                     updateUserSessionUI(userObj);
                     document.getElementById('livelink-modal-overlay').style.display = 'none';
-                    updateBadge(data.role === 'ADMIN' ? '● OWNER ONLINE' : '● VERIFIED', '#00E676');
-                    showToast(data.message || `Welcome to ULTRON!`);
+                    updateBadge(isHarsha ? '● HARSHA SIR ONLINE' : '● ONLINE', isHarsha ? '#FFD700' : '#00E676');
+
+                    const welcomeGreeting = isHarsha 
+                        ? "Welcome back, Harsha Sir! I am ULTRON, your personal AI assistant. All systems operational."
+                        : `Hello ${userObj.first_name}, I am ULTRON, your personal AI assistant. How can I help you today?`;
+                    
+                    document.getElementById('ai-text').innerText = "ULTRON: " + welcomeGreeting;
+                    speakMobileResponse(welcomeGreeting);
                     initSSEStream();
                 } else {
                     showToast(data.error || 'Login failed. Check your password.');
@@ -1324,7 +1694,7 @@
                 return;
             }
 
-            btn.innerText = 'REGISTERING...';
+            btn.innerText = 'SUBMITTING REQUEST...';
             btn.disabled = true;
 
             fetch('/api/livelink/register', {
@@ -1343,23 +1713,24 @@
                 btn.innerText = 'REGISTER ULTRON ACCOUNT';
                 btn.disabled = false;
 
-                if (data.success && data.token) {
+                if (data.success) {
                     playAcoustic('approved');
-                    liveLinkToken = data.token;
-                    localStorage.setItem('livelink_token', data.token);
-                    const userObj = {
-                        first_name: fn,
-                        last_name: ln,
-                        email: email,
-                        phone: phone,
-                        role: data.role || 'USER'
-                    };
-                    localStorage.setItem('livelink_user', JSON.stringify(userObj));
-                    updateUserSessionUI(userObj);
-                    document.getElementById('livelink-modal-overlay').style.display = 'none';
-                    updateBadge('● VERIFIED', '#00E676');
-                    showToast(`Account registered successfully! Welcome, ${fn}!`);
-                    initSSEStream();
+                    if (data.pending) {
+                        showToast(`Access request sent to Harsha Sir! Once approved, you can sign in.`);
+                        document.getElementById('state-text').innerText = "REQUEST SUBMITTED • AWAITING HARSHA SIR";
+                        switchAuthTab('login');
+                        document.getElementById('login-identifier').value = email || phone;
+                    } else {
+                        liveLinkToken = data.token;
+                        localStorage.setItem('livelink_token', data.token);
+                        const userObj = { first_name: fn, last_name: ln, email: email, phone: phone, role: data.role || 'USER' };
+                        localStorage.setItem('livelink_user', JSON.stringify(userObj));
+                        updateUserSessionUI(userObj);
+                        document.getElementById('livelink-modal-overlay').style.display = 'none';
+                        updateBadge('● ONLINE', '#00E676');
+                        showToast(`Welcome, ${fn}! Your personal ULTRON is active.`);
+                        initSSEStream();
+                    }
                 } else {
                     showToast(data.error || 'Registration failed.');
                 }
@@ -1385,8 +1756,8 @@
             }
 
             if (liveLinkToken === 'LIVELINK_MASTER_HARSHA') {
-                updateBadge('● OWNER ONLINE', '#FFD700');
-                updateUserSessionUI({ first_name: "Harsha" });
+                updateBadge('● HARSHA SIR ONLINE', '#FFD700');
+                updateUserSessionUI({ first_name: "Harsha Sir", role: "ADMIN" });
                 document.getElementById('livelink-modal-overlay').style.display = 'none';
                 initSSEStream();
                 return;
@@ -1396,8 +1767,16 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success && data.user) {
+                        if (data.user.status === 'PENDING') {
+                            localStorage.removeItem('livelink_token');
+                            liveLinkToken = '';
+                            document.getElementById('livelink-modal-overlay').style.display = 'flex';
+                            updateBadge('● AWAITING HARSHA SIR', '#FF9100');
+                            showToast('Your access request is currently pending authorization from Harsha Sir.');
+                            return;
+                        }
                         document.getElementById('livelink-modal-overlay').style.display = 'none';
-                        updateBadge(data.user.role === 'ADMIN' ? '● OWNER ONLINE' : '● VERIFIED', '#00E676');
+                        updateBadge(data.user.role === 'ADMIN' ? '● HARSHA SIR ONLINE' : '● ONLINE', data.user.role === 'ADMIN' ? '#FFD700' : '#00E676');
                         updateUserSessionUI(data.user);
                         initSSEStream();
                     } else {
@@ -1438,128 +1817,238 @@
             }
         }
 
-        checkGatekeeperStatus();
-
-        // ── Three.js 3D WebGL Holographic Engine (ULTRON Neural Matrix) ──
-        const container = document.querySelector('.visualizer-container');
-        const canvas = document.getElementById('webgl-canvas');
-        
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
-        camera.position.z = 4.2;
-
-        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-        renderer.setSize(320, 320);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-        let isListening = false;
-        let isSpeaking = false;
-
-        const particleCount = 6500;
-        const geometry = new THREE.BufferGeometry();
-        const positions = new Float32Array(particleCount * 3);
-        const basePositions = new Float32Array(particleCount * 3);
-        const colors = new Float32Array(particleCount * 3);
-
-        const goldColor = new THREE.Color(0xFFD700);
-        const amberColor = new THREE.Color(0xFFA000);
-        const orangeColor = new THREE.Color(0xFF6F00);
-        const whiteGoldColor = new THREE.Color(0xFFF9C4);
-
-        for (let i = 0; i < particleCount; i++) {
-            const u = Math.random();
-            const v = Math.random();
-            const theta = u * 2.0 * Math.PI;
-            const phi = Math.acos(2.0 * v - 1.0);
-            const r = 0.88 + Math.random() * 0.46;
-
-            const x = r * Math.sin(phi) * Math.cos(theta);
-            const y = r * Math.sin(phi) * Math.sin(theta);
-            const z = r * Math.cos(phi);
-
-            positions[i * 3]     = x;
-            positions[i * 3 + 1] = y;
-            positions[i * 3 + 2] = z;
-
-            basePositions[i * 3]     = x;
-            basePositions[i * 3 + 1] = y;
-            basePositions[i * 3 + 2] = z;
-
-            const mixRatio = Math.sin(phi * 2.5 + theta * 1.5) * 0.5 + 0.5;
-            let c;
-            if (u < 0.12) {
-                c = whiteGoldColor;
-            } else if (mixRatio > 0.65) {
-                c = goldColor.clone().lerp(amberColor, Math.random() * 0.5);
-            } else {
-                c = amberColor.clone().lerp(orangeColor, Math.random() * 0.6);
+        // ── Web Socket & State Synchronization (Defined Early & Safe) ──
+        function updateBadge(text, color) {
+            const badge = document.getElementById('badge') || document.getElementById('user-hud-badge');
+            if (badge) {
+                badge.innerText = text;
+                if (color) {
+                    badge.style.color = color;
+                    badge.style.borderColor = color;
+                }
             }
-
-            colors[i * 3]     = c.r;
-            colors[i * 3 + 1] = c.g;
-            colors[i * 3 + 2] = c.b;
         }
 
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        // ── Three.js 3D WebGL Holographic Engine (ULTRON Arc Core & Neural Matrix) ──
+        let scene, camera, renderer, clock;
+        let arcCoreMesh, outerGlowMesh, ring1Mesh, ring2Mesh, ring3Mesh;
+        let particleSystem, particleGeometry, basePositions;
+        const particleCount = 6500;
+        let isListening = false;
+        let isSpeaking = false;
+        let speechPulse = 0.0;
 
-        const particleMaterial = new THREE.PointsMaterial({
-            size: 0.042,
-            vertexColors: true,
-            transparent: true,
-            opacity: 0.88,
-            blending: THREE.AdditiveBlending
-        });
+        function createGlowSpriteTexture() {
+            const c = document.createElement('canvas');
+            c.width = 64; c.height = 64;
+            const ctx = c.getContext('2d');
+            const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            g.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            g.addColorStop(0.25, 'rgba(255, 215, 0, 0.9)');
+            g.addColorStop(0.6, 'rgba(255, 140, 0, 0.4)');
+            g.addColorStop(1, 'rgba(255, 69, 0, 0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, 64, 64);
+            return new THREE.CanvasTexture(c);
+        }
 
-        const particleSystem = new THREE.Points(geometry, particleMaterial);
-        scene.add(particleSystem);
+        function initThreeVisualizer() {
+            try {
+                if (typeof THREE === 'undefined') {
+                    console.warn("Three.js not yet loaded, retrying...");
+                    setTimeout(initThreeVisualizer, 300);
+                    return;
+                }
+                const canvas = document.getElementById('webgl-canvas');
+                if (!canvas) return;
 
-        let clock = new THREE.Clock();
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+                camera.position.z = 4.3;
 
-        function animate(now) {
+                renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+                renderer.setSize(320, 320);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+                clock = new THREE.Clock();
+
+                // 1. Arc Reactor Luminous Core Sphere (Center Attraction)
+                const arcGeo = new THREE.SphereGeometry(0.50, 32, 32);
+                const arcMat = new THREE.MeshBasicMaterial({
+                    color: 0xFFF9C4,
+                    transparent: true,
+                    opacity: 0.95,
+                    blending: THREE.AdditiveBlending
+                });
+                arcCoreMesh = new THREE.Mesh(arcGeo, arcMat);
+                scene.add(arcCoreMesh);
+
+                // 2. Outer Core Golden Atmospheric Glow Shell
+                const glowGeo = new THREE.SphereGeometry(0.78, 32, 32);
+                const glowMat = new THREE.MeshBasicMaterial({
+                    color: 0xFFB300,
+                    transparent: true,
+                    opacity: 0.42,
+                    blending: THREE.AdditiveBlending,
+                    wireframe: true
+                });
+                outerGlowMesh = new THREE.Mesh(glowGeo, glowMat);
+                scene.add(outerGlowMesh);
+
+                // 3. Concentric 3D Rotating Rings (From J.A.R.V.I.S. Visualizer)
+                const ringMat1 = new THREE.MeshBasicMaterial({ color: 0xFFD700, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending });
+                const ringMat2 = new THREE.MeshBasicMaterial({ color: 0xFFA000, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending });
+                const ringMat3 = new THREE.MeshBasicMaterial({ color: 0xFF6F00, transparent: true, opacity: 0.50, blending: THREE.AdditiveBlending });
+
+                ring1Mesh = new THREE.Mesh(new THREE.TorusGeometry(1.24, 0.020, 16, 96), ringMat1);
+                ring1Mesh.rotation.set(0.35, 0.4, 0.1);
+                scene.add(ring1Mesh);
+
+                ring2Mesh = new THREE.Mesh(new THREE.TorusGeometry(1.58, 0.016, 16, 96), ringMat2);
+                ring2Mesh.rotation.set(-0.45, 0.25, 0.75);
+                scene.add(ring2Mesh);
+
+                ring3Mesh = new THREE.Mesh(new THREE.TorusGeometry(1.92, 0.013, 16, 96), ringMat3);
+                ring3Mesh.rotation.set(0.55, -0.65, 0.25);
+                scene.add(ring3Mesh);
+
+                // 4. 6,500 Luminous Audio-Reactive Neural Particles
+                particleGeometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(particleCount * 3);
+                basePositions = new Float32Array(particleCount * 3);
+                const colors = new Float32Array(particleCount * 3);
+
+                const goldC = new THREE.Color(0xFFD700);
+                const amberC = new THREE.Color(0xFFA000);
+                const orangeC = new THREE.Color(0xFF6F00);
+                const whiteGoldC = new THREE.Color(0xFFFDE7);
+
+                for (let i = 0; i < particleCount; i++) {
+                    const u = Math.random();
+                    const v = Math.random();
+                    const theta = u * 2.0 * Math.PI;
+                    const phi = Math.acos(2.0 * v - 1.0);
+                    const r = 0.88 + Math.random() * 0.58;
+
+                    const x = r * Math.sin(phi) * Math.cos(theta);
+                    const y = r * Math.sin(phi) * Math.sin(theta);
+                    const z = r * Math.cos(phi);
+
+                    positions[i * 3]     = basePositions[i * 3]     = x;
+                    positions[i * 3 + 1] = basePositions[i * 3 + 1] = y;
+                    positions[i * 3 + 2] = basePositions[i * 3 + 2] = z;
+
+                    let c;
+                    if (u < 0.20) {
+                        c = whiteGoldC;
+                    } else if (u < 0.65) {
+                        c = goldC;
+                    } else {
+                        c = amberC.clone().lerp(orangeC, Math.random() * 0.7);
+                    }
+
+                    colors[i * 3]     = c.r;
+                    colors[i * 3 + 1] = c.g;
+                    colors[i * 3 + 2] = c.b;
+                }
+
+                particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+                const particleMaterial = new THREE.PointsMaterial({
+                    size: 0.082,
+                    map: createGlowSpriteTexture(),
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.92,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+
+                particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+                scene.add(particleSystem);
+
+                requestAnimationFrame(animateVisualizer);
+            } catch(err) {
+                console.error("Three.js init error:", err);
+            }
+        }
+
+        function animateVisualizer(now) {
             if (!isPageVisible) return;
-            requestAnimationFrame(animate);
+            requestAnimationFrame(animateVisualizer);
 
             const delta = now - lastFrameTime;
             if (isLowPowerMode && delta < 32) return;
             lastFrameTime = now;
 
+            if (!clock || !renderer || !scene || !camera) return;
             const elapsedTime = clock.getElapsedTime();
-            const speed = isSpeaking ? 1.8 : (isListening ? 1.25 : (isLowPowerMode ? 0.35 : 0.65));
-            particleSystem.rotation.y = elapsedTime * 0.28 * speed;
-            particleSystem.rotation.x = Math.sin(elapsedTime * 0.22) * 0.18;
-            particleSystem.rotation.z = Math.cos(elapsedTime * 0.18) * 0.15;
 
-            const posAttr = geometry.attributes.position;
-            const pArr = posAttr.array;
-            for (let i = 0; i < particleCount; i++) {
-                const i3 = i * 3;
-                const bx = basePositions[i3];
-                const by = basePositions[i3 + 1];
-                const bz = basePositions[i3 + 2];
+            speechPulse *= 0.88;
+            const dynamicPulse = isSpeaking ? (0.09 + speechPulse * 0.28) : (isListening ? 0.05 : 0.015);
+            const speedMultiplier = isSpeaking ? (0.8 + speechPulse * 0.35) : (isListening ? 0.65 : (isLowPowerMode ? 0.3 : 0.5));
 
-                const wave = Math.sin(elapsedTime * 2.0 + bx * 3.0 + bz * 2.5) * 0.07
-                           + Math.cos(elapsedTime * 1.4 + by * 3.5) * 0.05;
-
-                pArr[i3]     = bx * (1.0 + wave * 0.35);
-                pArr[i3 + 1] = by + wave;
-                pArr[i3 + 2] = bz * (1.0 + wave * 0.35);
+            // Rotate Concentric Rings slowly and elegantly
+            if (ring1Mesh) {
+                ring1Mesh.rotation.z = elapsedTime * 0.12 * speedMultiplier;
+                ring1Mesh.rotation.x = 0.35 + Math.sin(elapsedTime * 0.25) * 0.10;
             }
-            posAttr.needsUpdate = true;
+            if (ring2Mesh) {
+                ring2Mesh.rotation.y = -elapsedTime * 0.14 * speedMultiplier;
+                ring2Mesh.rotation.z = 0.75 + Math.cos(elapsedTime * 0.20) * 0.08;
+            }
+            if (ring3Mesh) {
+                ring3Mesh.rotation.x = elapsedTime * 0.10 * speedMultiplier;
+                ring3Mesh.rotation.y = Math.sin(elapsedTime * 0.18) * 0.12;
+            }
 
-            const scale = 1.0 + Math.sin(elapsedTime * 3.0) * (isSpeaking ? 0.09 : 0.035);
-            particleSystem.scale.set(scale, scale, scale);
+            // Pulse Core Sphere according to speech & voice words
+            if (arcCoreMesh) {
+                const coreScale = 1.0 + Math.sin(elapsedTime * 1.8) * 0.025 + dynamicPulse * 0.65;
+                arcCoreMesh.scale.set(coreScale, coreScale, coreScale);
+            }
+            if (outerGlowMesh) {
+                outerGlowMesh.rotation.y = -elapsedTime * 0.08 * speedMultiplier;
+                outerGlowMesh.rotation.x = Math.sin(elapsedTime * 0.12) * 0.08;
+                const glowScale = 1.0 + Math.sin(elapsedTime * 1.5) * 0.035 + dynamicPulse * 0.55;
+                outerGlowMesh.scale.set(glowScale, glowScale, glowScale);
+            }
+
+            // Displace Neural Particles with harmonic speech waves
+            if (particleSystem && particleGeometry) {
+                particleSystem.rotation.y = elapsedTime * 0.06 * speedMultiplier;
+                particleSystem.rotation.x = Math.sin(elapsedTime * 0.10) * 0.08;
+
+                const posAttr = particleGeometry.attributes.position;
+                const pArr = posAttr.array;
+                for (let i = 0; i < particleCount; i++) {
+                    const i3 = i * 3;
+                    const bx = basePositions[i3];
+                    const by = basePositions[i3 + 1];
+                    const bz = basePositions[i3 + 2];
+
+                    const wave = Math.sin(elapsedTime * 1.2 + bx * 2.2 + bz * 2.0) * (0.04 + dynamicPulse * 0.45)
+                               + Math.cos(elapsedTime * 1.0 + by * 2.5) * (0.03 + dynamicPulse * 0.35);
+
+                    pArr[i3]     = bx * (1.0 + wave * 0.35);
+                    pArr[i3 + 1] = by + wave;
+                    pArr[i3 + 2] = bz * (1.0 + wave * 0.35);
+                }
+                posAttr.needsUpdate = true;
+            }
 
             renderer.render(scene, camera);
         }
-        requestAnimationFrame(animate);
 
-        // ── Web Socket & State Synchronization ──────────────────────────────
-        function updateBadge(text, color) {
-            const badge = document.getElementById('badge');
-            badge.innerText = text;
-            badge.style.color = color;
-            badge.style.borderColor = color;
+        // Initialize 3D Rotating Orb Visualizer Immediately
+        initThreeVisualizer();
+
+        // Check authentication & gatekeeper status safely
+        try {
+            checkGatekeeperStatus();
+        } catch(e) {
+            console.error("Gatekeeper init error:", e);
         }
 
         // ── Continuous Hands-Free Voice & Mobile Speech Synthesis Engine ──
@@ -1734,6 +2223,11 @@
                     isSpeaking = true;
                     updateBadge('● ULTRON SPEAKING', '#FFB300');
                     document.getElementById('state-text').innerText = "ULTRON IS SPEAKING...";
+                };
+
+                utter.onboundary = (e) => {
+                    speechPulse = 1.0;
+                    triggerHaptic([10]);
                 };
 
                 utter.onend = () => {
