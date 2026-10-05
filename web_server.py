@@ -121,6 +121,16 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self._send_json(res)
             return
 
+        # ── LiveLink User Info Profile ──
+        if clean_path == "/api/livelink/user_info":
+            token = self._extract_token()
+            info = livelink_gatekeeper.get_user_info(token)
+            if info:
+                self._send_json({"success": True, "user": info})
+            else:
+                self._send_json({"success": False, "error": "Invalid or expired session."}, status_code=401)
+            return
+
         # ── LiveLink Requests List (Admin only) ──
         if clean_path == "/api/livelink/requests":
             client_ip = self.client_address[0]
@@ -260,6 +270,54 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self._send_json(result, status_code=status_code)
             except Exception as e:
                 self._send_json({"error": f"Request processing error: {e}"}, status_code=500)
+            return
+
+        # ── 1B. LiveLink Full User Registration ──
+        if clean_path == "/api/livelink/register":
+            try:
+                data = json.loads(raw_body.decode("utf-8")) if raw_body else {}
+                fn = data.get("first_name", "")
+                ln = data.get("last_name", "")
+                phone = data.get("phone", "")
+                email = data.get("email", "")
+                password = data.get("password", "")
+                client_ip = self.client_address[0]
+                user_agent = self.headers.get("User-Agent", "")
+
+                result = livelink_gatekeeper.register_user(
+                    first_name=fn,
+                    last_name=ln,
+                    phone=phone,
+                    email=email,
+                    password=password,
+                    client_ip=client_ip,
+                    user_agent=user_agent,
+                )
+                status_code = 200 if result.get("success") else 400
+                self._send_json(result, status_code=status_code)
+            except Exception as e:
+                self._send_json({"error": f"Registration processing error: {e}"}, status_code=500)
+            return
+
+        # ── 1C. LiveLink User Sign In ──
+        if clean_path == "/api/livelink/login":
+            try:
+                data = json.loads(raw_body.decode("utf-8")) if raw_body else {}
+                identifier = data.get("identifier", "")
+                password = data.get("password", "")
+                client_ip = self.client_address[0]
+                user_agent = self.headers.get("User-Agent", "")
+
+                result = livelink_gatekeeper.login_user(
+                    identifier=identifier,
+                    password=password,
+                    client_ip=client_ip,
+                    user_agent=user_agent,
+                )
+                status_code = 200 if result.get("success") else 401
+                self._send_json(result, status_code=status_code)
+            except Exception as e:
+                self._send_json({"error": f"Login processing error: {e}"}, status_code=500)
             return
 
         # ── 2. LiveLink Admin Action (Approve / Deny / Revoke) ──

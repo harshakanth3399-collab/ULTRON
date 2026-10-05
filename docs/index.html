@@ -637,9 +637,41 @@
             transition: all 0.3s ease;
             z-index: 1000;
         }
-        #livelink-toast.show-toast {
-            transform: translateY(0);
-            opacity: 1;
+        /* Auth Switcher Tabs */
+        .auth-tab-btn {
+            flex: 1;
+            padding: 9px 12px;
+            background: rgba(30, 18, 5, 0.7);
+            border: 1px solid rgba(255, 179, 0, 0.35);
+            border-radius: 10px;
+            color: rgba(255, 215, 100, 0.7);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .auth-tab-btn.active {
+            background: linear-gradient(135deg, rgba(255, 179, 0, 0.35), rgba(255, 111, 0, 0.35));
+            border-color: #FFB300;
+            color: #FFD700;
+            box-shadow: 0 0 12px rgba(255, 179, 0, 0.4);
+        }
+        .logout-btn-hud {
+            background: rgba(255, 60, 60, 0.2);
+            border: 1px solid #FF5252;
+            color: #FF8A80;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+        .logout-btn-hud:hover {
+            background: rgba(255, 60, 60, 0.4);
+            color: #FFFFFF;
         }
     </style>
 </head>
@@ -657,6 +689,8 @@
             <button class="qr-btn" id="qr-modal-btn" onclick="toggleQRModal()" title="Show Phone Connection QR">📱 PAIR</button>
             <div class="telemetry-badge" id="telemetry-badge">⚡ --% • RAM --%</div>
             <div class="status-badge" id="badge">● ONLINE</div>
+            <div id="user-hud-badge" style="display:none; font-size:11px; font-weight:800; color:#FFD700; background:rgba(255,179,0,0.15); border:1px solid #FFB300; border-radius:12px; padding:3px 9px;">👤 <span id="user-hud-name">Harsha</span></div>
+            <button class="logout-btn-hud" id="logout-btn-hud" onclick="logoutUser()" style="display:none;" title="Sign out of ULTRON">🚪 LOGOUT</button>
         </div>
     </header>
 
@@ -710,6 +744,9 @@
                 <span>🖱️ WIRELESS LAPTOP TOUCHPAD</span>
                 <span class="close-panel-btn" onclick="switchDockTab('command')">✕</span>
             </div>
+            <div style="background:rgba(255,179,0,0.08); border:1px solid rgba(255,179,0,0.3); border-radius:10px; padding:8px 12px; margin-bottom:10px; font-size:11px; color:rgba(255,215,100,0.9); line-height:1.4; text-align:left;">
+                💡 <b>How Touchpad works:</b> Swipe your finger across the surface below to glide your laptop mouse cursor wirelessly from your phone. Tap anywhere to left-click!
+            </div>
             <div class="touchpad-surface" id="touchpad-surface">
                 SLIDE TO MOVE MOUSE • TAP TO CLICK
             </div>
@@ -723,16 +760,40 @@
 
         <div class="synergy-panel" id="remote-panel">
             <div class="panel-header">
-                <span>⚡ LAPTOP REMOTE CONTROL</span>
+                <span>⚡ ULTRON REMOTE CONTROLLER</span>
                 <span class="close-panel-btn" onclick="switchDockTab('command')">✕</span>
             </div>
-            <div class="remote-grid">
-                <button class="remote-btn" onclick="sendRemoteAction('vol_up')">🔊 VOL +</button>
-                <button class="remote-btn" onclick="sendRemoteAction('vol_down')">🔉 VOL -</button>
-                <button class="remote-btn" onclick="sendRemoteAction('mute')">🔇 MUTE</button>
-                <button class="remote-btn" onclick="sendRemoteAction('play_pause')">⏯️ PLAY/PAUSE</button>
+
+            <!-- Device Sub-Tabs: Laptop Control vs Phone Control -->
+            <div style="display:flex; gap:8px; margin: 8px 0 12px 0;">
+                <button class="auth-tab-btn active" id="remote-target-laptop" onclick="switchRemoteTarget('laptop')">💻 LAPTOP REMOTE</button>
+                <button class="auth-tab-btn" id="remote-target-phone" onclick="switchRemoteTarget('phone')">📱 PHONE REMOTE</button>
+            </div>
+
+            <!-- Laptop Controls View -->
+            <div id="laptop-remote-view" class="remote-grid">
+                <button class="remote-btn" onclick="sendRemoteAction('vol_up')">🔊 LAPTOP VOL +</button>
+                <button class="remote-btn" onclick="sendRemoteAction('vol_down')">🔉 LAPTOP VOL -</button>
+                <button class="remote-btn" onclick="sendRemoteAction('mute')">🔇 MUTE SOUND</button>
+                <button class="remote-btn" onclick="sendRemoteAction('play_pause')">⏯️ PLAY / PAUSE</button>
                 <button class="remote-btn" onclick="sendRemoteAction('screenshot')">📸 SCREENSHOT</button>
-                <button class="remote-btn" onclick="sendRemoteAction('lock_laptop')">🔒 LOCK PC</button>
+                <button class="remote-btn" onclick="sendRemoteAction('lock_laptop')">🔒 LOCK LAPTOP</button>
+            </div>
+
+            <!-- Phone Controls View -->
+            <div id="phone-remote-view" class="remote-grid" style="display:none;">
+                <button class="remote-btn" onclick="sendRemoteAction('phone_vol_up')">🔊 PHONE VOL +</button>
+                <button class="remote-btn" onclick="sendRemoteAction('phone_vol_down')">🔉 PHONE VOL -</button>
+                <button class="remote-btn" onclick="sendRemoteAction('phone_lock')">🔒 LOCK PHONE</button>
+                <button class="remote-btn" onclick="findMyPhoneAlarm()" style="color:#FF5252; border-color:#FF5252;">🚨 FIND MY PHONE</button>
+                <button class="remote-btn" onclick="openPhoneApp('whatsapp')">💬 WHATSAPP</button>
+                <button class="remote-btn" onclick="openPhoneApp('camera')">📸 CAMERA</button>
+                <button class="remote-btn" onclick="openPhoneApp('youtube')">▶️ YOUTUBE</button>
+                <button class="remote-btn" onclick="openPhoneApp('instagram')">📷 INSTAGRAM</button>
+            </div>
+
+            <div id="phone-battery-card" style="display:none; margin-top:10px; font-size:11px; color:#FFD700; background:rgba(255,179,0,0.1); border:1px solid rgba(255,179,0,0.3); border-radius:10px; padding:6px 12px; text-align:center;">
+                🔋 Phone Battery: <span id="phone-battery-val">Checking...</span>
             </div>
         </div>
 
@@ -783,7 +844,7 @@
                 <img src="livelink_qr.png" alt="ULTRON QR Code" style="width:200px; height:200px; display:block; border-radius:8px;">
             </div>
             <div style="font-size:12px; font-weight:700; color:#FFF9C4; margin-bottom:14px; word-break:break-all;">
-                <a href="https://subsequent-discounts-admitted-chef.trycloudflare.com/?token=LIVELINK_MASTER_HARSHA" target="_blank" style="color:#FFB300; text-decoration:none;">https://subsequent-discounts-admitted-chef.trycloudflare.com</a>
+                <a href="https://decisions-log-sperm-spoken.trycloudflare.com" target="_blank" style="color:#FFB300; text-decoration:none;">https://decisions-log-sperm-spoken.trycloudflare.com</a>
             </div>
             <button class="livelink-btn" onclick="toggleQRModal()" style="padding:8px 24px; font-size:11px; width:auto;">CLOSE</button>
         </div>
@@ -809,45 +870,88 @@
         </div>
     </div>
 
-    <!-- ── LiveLink Security Gatekeeper Modal (Strict Verification) ── -->
+    <!-- ── LiveLink Security Gatekeeper & Login Modal (Strict Portal) ── -->
     <div id="livelink-modal-overlay">
-        <div class="livelink-card">
+        <div class="livelink-card" style="max-width: 420px;">
             <div class="livelink-shield">
                 <img src="icon.png" class="livelink-avatar" alt="ULTRON App Icon">
             </div>
-            <div class="livelink-title">ULTRON ACCESS GATEWAY</div>
-            <div class="livelink-sub">https://ultron.ai Assistant • Admin authorization required by Harsha.</div>
+            <div class="livelink-title">ULTRON ACCESS PORTAL</div>
+            <div class="livelink-sub">https://ultron.ai Assistant • Authorization Portal</div>
 
-            <!-- Verification Form -->
-            <form class="livelink-form" id="livelink-form" onsubmit="handleAccessRequest(event)">
+            <!-- Tab Switcher: SIGN IN vs CREATE ACCOUNT -->
+            <div style="display:flex; justify-content:center; gap:8px; margin-bottom:14px;">
+                <button type="button" class="auth-tab-btn active" id="auth-tab-login" onclick="switchAuthTab('login')">🔑 SIGN IN</button>
+                <button type="button" class="auth-tab-btn" id="auth-tab-register" onclick="switchAuthTab('register')">📝 CREATE ACCOUNT</button>
+            </div>
+
+            <!-- 1. SIGN IN FORM -->
+            <form class="livelink-form" id="livelink-login-form" onsubmit="handleLoginSubmit(event)">
                 <div>
-                    <label class="form-label">Full Name *</label>
-                    <input type="text" class="livelink-input" id="gate-name" placeholder="Enter your full name" required>
+                    <label class="form-label">Email or Mobile Number *</label>
+                    <input type="text" class="livelink-input" id="login-identifier" placeholder="e.g. harshakanth@ultron.ai or 9876543210" required>
                 </div>
                 <div>
-                    <label class="form-label">Phone Number * (Mandatory)</label>
-                    <input type="tel" class="livelink-input" id="gate-phone" placeholder="e.g. +91 98765 43210" required>
+                    <label class="form-label">Password *</label>
+                    <input type="password" class="livelink-input" id="login-password" placeholder="Enter your password" required>
                 </div>
-                <div>
-                    <label class="form-label">Purpose / Role</label>
-                    <input type="text" class="livelink-input" id="gate-purpose" placeholder="e.g. ULTRON Mobile Access">
-                </div>
-                <button type="submit" class="livelink-btn" id="gate-submit-btn">REQUEST ACCESS</button>
-                <div style="margin-top: 10px; text-align: center;">
-                    <button type="button" onclick="promptOwnerKey()" style="background:none; border:none; color:rgba(255,179,0,0.6); font-size:10px; cursor:pointer; text-decoration:underline;">👑 Harsha Master Login</button>
+                <button type="submit" class="livelink-btn" id="login-submit-btn">SIGN IN TO ULTRON</button>
+                <div style="margin-top: 10px; display:flex; justify-content:space-between; align-items:center;">
+                    <button type="button" onclick="quickAdminLogin()" style="background:none; border:none; color:#FFB300; font-size:11px; cursor:pointer; text-decoration:underline;">👑 Harsha Master 1-Click Login</button>
+                    <button type="button" onclick="switchAuthTab('register')" style="background:none; border:none; color:rgba(255,215,100,0.7); font-size:11px; cursor:pointer;">Create Account →</button>
                 </div>
             </form>
 
-            <!-- Awaiting Approval State -->
-            <div class="pending-pulse-box" id="pending-box">
-                <div class="pending-spinner"></div>
-                <div class="pending-text">AWAITING ADMIN AUTHORIZATION</div>
-                <div class="pending-sub" id="pending-details">
-                    Your verification request has been forwarded to Harsha's laptop.<br>
-                    ULTRON remains locked until Harsha grants permission.
+            <!-- 2. REGISTRATION FORM (Mandatory: First Name, Last Name, Mobile, Email, Password) -->
+            <form class="livelink-form" id="livelink-register-form" style="display:none;" onsubmit="handleRegisterSubmit(event)">
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label class="form-label">First Name *</label>
+                        <input type="text" class="livelink-input" id="reg-firstname" placeholder="First Name" required>
+                    </div>
+                    <div style="flex:1;">
+                        <label class="form-label">Last Name *</label>
+                        <input type="text" class="livelink-input" id="reg-lastname" placeholder="Last Name" required>
+                    </div>
                 </div>
-                <div style="margin-top: 6px; font-size: 10px; color: #FFB300;" id="pending-status-pulse">● POLLING GATEWAY...</div>
+                <div>
+                    <label class="form-label">Mobile Number * (10 Digits)</label>
+                    <input type="tel" class="livelink-input" id="reg-phone" placeholder="e.g. 9876543210" required>
+                </div>
+                <div>
+                    <label class="form-label">Email Address *</label>
+                    <input type="email" class="livelink-input" id="reg-email" placeholder="e.g. name@example.com" required>
+                </div>
+                <div>
+                    <label class="form-label">Create Password * (min 6 chars)</label>
+                    <input type="password" class="livelink-input" id="reg-password" placeholder="Choose a password" required>
+                </div>
+                <div>
+                    <label class="form-label">Confirm Password *</label>
+                    <input type="password" class="livelink-input" id="reg-password-confirm" placeholder="Confirm your password" required>
+                </div>
+                <button type="submit" class="livelink-btn" id="reg-submit-btn">REGISTER ULTRON ACCOUNT</button>
+                <div style="margin-top: 10px; text-align: center;">
+                    <button type="button" onclick="switchAuthTab('login')" style="background:none; border:none; color:#FFB300; font-size:11px; cursor:pointer; text-decoration:underline;">Already have an account? Sign In →</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ── Microphone Permission Guide Modal ── -->
+    <div id="mic-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.95); z-index:1002; justify-content:center; align-items:center; backdrop-filter:blur(10px); padding:20px;">
+        <div class="livelink-card" style="max-width:380px; text-align:center;">
+            <div style="font-size:36px; margin-bottom:8px;">🎙️🔒</div>
+            <div class="livelink-title" style="color:#FF5252;">MICROPHONE BLOCKED</div>
+            <div class="livelink-sub">Chrome blocked microphone access on this device.</div>
+            <div style="text-align:left; background:rgba(255,179,0,0.06); border:1px solid rgba(255,179,0,0.3); border-radius:12px; padding:14px; margin-bottom:16px; font-size:12px; color:rgba(255,215,100,0.9); line-height:1.6;">
+                1. Tap the <b>🔒 Lock / Tune icon</b> in the top Chrome address bar.<br>
+                2. Tap <b>Permissions</b> ➔ <b>Microphone</b>.<br>
+                3. Switch it to <b>Allow</b>.<br>
+                4. Tap the button below to retry!
             </div>
+            <button class="livelink-btn" onclick="retryMicrophonePermission()" style="margin-bottom:8px; width:100%;">REQUEST PERMISSION NOW</button>
+            <button class="livelink-btn" onclick="closeMicModal()" style="background:rgba(255,179,0,0.15); border:1px solid rgba(255,179,0,0.4); color:#FFB300; width:100%;">CLOSE</button>
         </div>
     </div>
 
@@ -1082,154 +1186,256 @@
             showToast('Network disconnected. Buffering commands...');
         });
 
-        function promptOwnerKey() {
-            const key = prompt("Enter Harsha's Master Access Key:");
-            if (key && (key.trim() === 'LIVELINK_MASTER_HARSHA' || key.trim().toLowerCase() === 'harsha')) {
-                liveLinkToken = 'LIVELINK_MASTER_HARSHA';
-                localStorage.setItem('livelink_token', liveLinkToken);
-                document.getElementById('livelink-modal-overlay').style.display = 'none';
-                updateBadge('● OWNER ONLINE', '#FFD700');
-                showToast('Welcome back, Harsha! Master access unlocked.');
-                playAcoustic('approved');
-                initSSEStream();
-            } else if (key) {
-                showToast('Invalid Master Key.');
+        function switchAuthTab(tab) {
+            playAcoustic('chirp');
+            const loginBtn = document.getElementById('auth-tab-login');
+            const regBtn = document.getElementById('auth-tab-register');
+            const loginForm = document.getElementById('livelink-login-form');
+            const regForm = document.getElementById('livelink-register-form');
+
+            if (tab === 'register') {
+                regBtn.classList.add('active');
+                loginBtn.classList.remove('active');
+                regForm.style.display = 'flex';
+                loginForm.style.display = 'none';
+            } else {
+                loginBtn.classList.add('active');
+                regBtn.classList.remove('active');
+                loginForm.style.display = 'flex';
+                regForm.style.display = 'none';
             }
         }
 
-        function checkGatekeeperStatus() {
-            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            
-            if (isLocal || liveLinkToken === 'LIVELINK_MASTER_HARSHA') {
-                updateBadge('● OWNER ONLINE', '#FFD700');
-                document.getElementById('livelink-modal-overlay').style.display = 'none';
-                initSSEStream();
+        function updateUserSessionUI(user) {
+            const badge = document.getElementById('user-hud-badge');
+            const nameEl = document.getElementById('user-hud-name');
+            const logoutBtn = document.getElementById('logout-btn-hud');
+            if (user && (user.first_name || user.name)) {
+                if (nameEl) nameEl.innerText = user.first_name || user.name;
+                if (badge) badge.style.display = 'inline-block';
+                if (logoutBtn) logoutBtn.style.display = 'inline-block';
+            } else {
+                if (badge) badge.style.display = 'none';
+                if (logoutBtn) logoutBtn.style.display = 'none';
+            }
+        }
+
+        function quickAdminLogin() {
+            triggerHaptic([30]);
+            playAcoustic('approved');
+            liveLinkToken = 'LIVELINK_MASTER_HARSHA';
+            localStorage.setItem('livelink_token', liveLinkToken);
+            const userObj = { first_name: "Harsha", last_name: "Kanth", email: "harshakanth@ultron.ai", role: "ADMIN" };
+            localStorage.setItem('livelink_user', JSON.stringify(userObj));
+            updateUserSessionUI(userObj);
+            document.getElementById('livelink-modal-overlay').style.display = 'none';
+            updateBadge('● OWNER ONLINE', '#FFD700');
+            showToast('Welcome back, Commander Harsha!');
+            initSSEStream();
+        }
+
+        function logoutUser() {
+            triggerHaptic([20, 20]);
+            playAcoustic('chirp');
+            localStorage.removeItem('livelink_token');
+            localStorage.removeItem('livelink_user');
+            liveLinkToken = '';
+            updateUserSessionUI(null);
+            updateBadge('● LOGGED OUT', '#FF9100');
+            document.getElementById('livelink-modal-overlay').style.display = 'flex';
+            switchAuthTab('login');
+            showToast('Signed out of ULTRON.');
+        }
+
+        function handleLoginSubmit(e) {
+            e.preventDefault();
+            triggerHaptic([30]);
+            const ident = document.getElementById('login-identifier').value.trim();
+            const pwd = document.getElementById('login-password').value;
+            const btn = document.getElementById('login-submit-btn');
+
+            if (!ident || !pwd) {
+                showToast('Please enter both Email/Phone and Password.');
                 return;
+            }
+
+            btn.innerText = 'VERIFYING...';
+            btn.disabled = true;
+
+            fetch('/api/livelink/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier: ident, password: pwd })
+            })
+            .then(r => r.json())
+            .then(data => {
+                btn.innerText = 'SIGN IN TO ULTRON';
+                btn.disabled = false;
+
+                if (data.success && data.token) {
+                    playAcoustic('approved');
+                    liveLinkToken = data.token;
+                    localStorage.setItem('livelink_token', data.token);
+                    const userObj = {
+                        first_name: data.first_name || data.name,
+                        last_name: data.last_name || '',
+                        email: data.email || '',
+                        phone: data.phone || '',
+                        role: data.role || 'USER'
+                    };
+                    localStorage.setItem('livelink_user', JSON.stringify(userObj));
+                    updateUserSessionUI(userObj);
+                    document.getElementById('livelink-modal-overlay').style.display = 'none';
+                    updateBadge(data.role === 'ADMIN' ? '● OWNER ONLINE' : '● VERIFIED', '#00E676');
+                    showToast(data.message || `Welcome to ULTRON!`);
+                    initSSEStream();
+                } else {
+                    showToast(data.error || 'Login failed. Check your password.');
+                }
+            })
+            .catch(() => {
+                btn.innerText = 'SIGN IN TO ULTRON';
+                btn.disabled = false;
+                showToast('Network error connecting to ULTRON server.');
+            });
+        }
+
+        function handleRegisterSubmit(e) {
+            e.preventDefault();
+            triggerHaptic([30]);
+            const fn = document.getElementById('reg-firstname').value.trim();
+            const ln = document.getElementById('reg-lastname').value.trim();
+            const phone = document.getElementById('reg-phone').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const pwd = document.getElementById('reg-password').value;
+            const confirm = document.getElementById('reg-password-confirm').value;
+            const btn = document.getElementById('reg-submit-btn');
+
+            if (!fn || !ln || !phone || !email || !pwd) {
+                showToast('All fields are required for ULTRON registration!');
+                return;
+            }
+            if (pwd !== confirm) {
+                showToast('Passwords do not match. Please re-enter.');
+                return;
+            }
+            if (pwd.length < 6) {
+                showToast('Password must be at least 6 characters long.');
+                return;
+            }
+
+            btn.innerText = 'REGISTERING...';
+            btn.disabled = true;
+
+            fetch('/api/livelink/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    first_name: fn,
+                    last_name: ln,
+                    phone: phone,
+                    email: email,
+                    password: pwd
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                btn.innerText = 'REGISTER ULTRON ACCOUNT';
+                btn.disabled = false;
+
+                if (data.success && data.token) {
+                    playAcoustic('approved');
+                    liveLinkToken = data.token;
+                    localStorage.setItem('livelink_token', data.token);
+                    const userObj = {
+                        first_name: fn,
+                        last_name: ln,
+                        email: email,
+                        phone: phone,
+                        role: data.role || 'USER'
+                    };
+                    localStorage.setItem('livelink_user', JSON.stringify(userObj));
+                    updateUserSessionUI(userObj);
+                    document.getElementById('livelink-modal-overlay').style.display = 'none';
+                    updateBadge('● VERIFIED', '#00E676');
+                    showToast(`Account registered successfully! Welcome, ${fn}!`);
+                    initSSEStream();
+                } else {
+                    showToast(data.error || 'Registration failed.');
+                }
+            })
+            .catch(() => {
+                btn.innerText = 'REGISTER ULTRON ACCOUNT';
+                btn.disabled = false;
+                showToast('Network error contacting ULTRON server.');
+            });
+        }
+
+        function checkGatekeeperStatus() {
+            const storedUser = localStorage.getItem('livelink_user');
+            if (storedUser) {
+                try { updateUserSessionUI(JSON.parse(storedUser)); } catch (e) {}
             }
 
             if (!liveLinkToken) {
                 document.getElementById('livelink-modal-overlay').style.display = 'flex';
-                updateBadge('● RESTRICTED', '#FF3D00');
+                switchAuthTab('login');
+                updateBadge('● SIGN IN REQUIRED', '#FF9100');
                 return;
             }
 
-            fetch(`/api/livelink/check_status?token=${encodeURIComponent(liveLinkToken)}`)
+            if (liveLinkToken === 'LIVELINK_MASTER_HARSHA') {
+                updateBadge('● OWNER ONLINE', '#FFD700');
+                updateUserSessionUI({ first_name: "Harsha" });
+                document.getElementById('livelink-modal-overlay').style.display = 'none';
+                initSSEStream();
+                return;
+            }
+
+            fetch(`/api/livelink/user_info?token=${encodeURIComponent(liveLinkToken)}`)
                 .then(r => r.json())
                 .then(data => {
-                    if (data.status === 'APPROVED') {
+                    if (data.success && data.user) {
                         document.getElementById('livelink-modal-overlay').style.display = 'none';
-                        updateBadge('● VERIFIED', '#00E676');
+                        updateBadge(data.user.role === 'ADMIN' ? '● OWNER ONLINE' : '● VERIFIED', '#00E676');
+                        updateUserSessionUI(data.user);
                         initSSEStream();
-                        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
-                    } else if (data.status === 'PENDING') {
-                        document.getElementById('livelink-modal-overlay').style.display = 'flex';
-                        document.getElementById('livelink-form').style.display = 'none';
-                        document.getElementById('pending-box').style.display = 'flex';
-                        updateBadge('● PENDING', '#FF9100');
-                        initSSEStream();
-                        startStatusPolling();
                     } else {
                         localStorage.removeItem('livelink_token');
+                        localStorage.removeItem('livelink_user');
                         liveLinkToken = '';
                         document.getElementById('livelink-modal-overlay').style.display = 'flex';
-                        document.getElementById('livelink-form').style.display = 'flex';
-                        document.getElementById('pending-box').style.display = 'none';
-                        updateBadge('● RESTRICTED', '#FF3D00');
-                        showToast(data.error || 'Access denied by Harsha.');
+                        switchAuthTab('login');
+                        updateBadge('● SIGN IN REQUIRED', '#FF3D00');
                     }
                 })
                 .catch(() => {
-                    updateBadge('● OFFLINE', '#FF3D00');
+                    // Offline fallback: if token exists, allow offline access
+                    document.getElementById('livelink-modal-overlay').style.display = 'none';
+                    updateBadge('● OFFLINE READY', '#FFC107');
                 });
         }
 
-        function handleAccessRequest(e) {
-            e.preventDefault();
-            requestNotificationPermission();
-            triggerHaptic([30]);
-
-            const name = document.getElementById('gate-name').value.trim();
-            const phone = document.getElementById('gate-phone').value.trim();
-            const purpose = document.getElementById('gate-purpose').value.trim();
-
-            if (!name || !phone) {
-                showToast('Full Name and Phone Number are mandatory!');
-                return;
-            }
-
-            const btn = document.getElementById('gate-submit-btn');
-            btn.innerText = 'TRANSMITTING...';
-            btn.disabled = true;
-
-            fetch('/api/livelink/request_access', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, phone, purpose })
-            })
-            .then(r => r.json())
-            .then(data => {
-                btn.innerText = 'REQUEST ACCESS';
-                btn.disabled = false;
-
-                if (data.success) {
-                    liveLinkToken = data.token;
-                    localStorage.setItem('livelink_token', data.token);
-
-                    if (data.status === 'APPROVED') {
-                        playAcoustic('approved');
-                        document.getElementById('livelink-modal-overlay').style.display = 'none';
-                        updateBadge('● VERIFIED', '#00E676');
-                        showToast('Access granted! Welcome to ULTRON.');
-                        initSSEStream();
-                    } else {
-                        document.getElementById('livelink-form').style.display = 'none';
-                        document.getElementById('pending-box').style.display = 'flex';
-                        document.getElementById('pending-details').innerHTML = 
-                            `User: <b>${name}</b> | Phone: <b>${phone}</b><br>Request sent to Harsha's laptop. Waiting for Harsha to grant permission...`;
-                        updateBadge('● PENDING', '#FF9100');
-                        initSSEStream();
-                        startStatusPolling();
-                        showToast('Request sent to Harsha! Awaiting authorization.');
-                    }
-                } else {
-                    showToast(data.error || 'Access request rejected.');
-                }
-            })
-            .catch(err => {
-                btn.innerText = 'REQUEST ACCESS';
-                btn.disabled = false;
-                showToast('Network error contacting ULTRON.');
-            });
+        function closeMicModal() {
+            document.getElementById('mic-modal-overlay').style.display = 'none';
         }
 
-        function startStatusPolling() {
-            if (pollInterval) clearInterval(pollInterval);
-            pollInterval = setInterval(() => {
-                if (!liveLinkToken) return;
-                fetch(`/api/livelink/check_status?token=${encodeURIComponent(liveLinkToken)}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.status === 'APPROVED') {
-                            clearInterval(pollInterval);
-                            pollInterval = null;
-                            playAcoustic('approved');
-                            document.getElementById('livelink-modal-overlay').style.display = 'none';
-                            updateBadge('● VERIFIED', '#00E676');
-                            showToast(`Access granted by Harsha! Welcome, ${data.name}.`);
-                            initSSEStream();
-                        } else if (data.status === 'DENIED' || data.status === 'REVOKED') {
-                            clearInterval(pollInterval);
-                            pollInterval = null;
-                            localStorage.removeItem('livelink_token');
-                            liveLinkToken = '';
-                            document.getElementById('pending-box').style.display = 'none';
-                            document.getElementById('livelink-form').style.display = 'flex';
-                            updateBadge('● RESTRICTED', '#FF3D00');
-                            showToast('Access was denied by Harsha.');
-                        }
+        function retryMicrophonePermission() {
+            closeMicModal();
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        stream.getTracks().forEach(t => t.stop());
+                        showToast("Microphone access allowed!");
+                        handsFreeVoice = true;
+                        startHandsFreeVoice();
                     })
-                    .catch(() => {});
-            }, 2500);
+                    .catch(() => {
+                        showToast("Permission still blocked. Please check Chrome address bar 🔒 settings.");
+                    });
+            } else {
+                showToast("Please tap the lock icon in Chrome address bar to Allow.");
+            }
         }
 
         checkGatekeeperStatus();
@@ -1423,8 +1629,9 @@
                     isListening = false;
                     document.getElementById('mic-btn').classList.remove('active');
                     updateBadge('● MIC BLOCKED', '#FF3D00');
-                    document.getElementById('state-text').innerText = "PLEASE ALLOW MICROPHONE ACCESS";
-                    showToast("Microphone permission required in browser settings.");
+                    document.getElementById('state-text').innerText = "TAP TO UNBLOCK MICROPHONE";
+                    document.getElementById('mic-modal-overlay').style.display = 'flex';
+                    showToast("Microphone is blocked. Tap lock icon in Chrome to Allow.");
                 } else if (handsFreeVoice && !isSpeaking) {
                     setTimeout(() => {
                         if (handsFreeVoice && !isSpeaking && !isRecognizing) {
@@ -1504,8 +1711,24 @@
                 }
 
                 const utter = new SpeechSynthesisUtterance(clean);
-                utter.rate = 1.05;
-                utter.pitch = 0.95;
+                utter.rate = 1.0;
+                utter.pitch = 0.92;
+
+                // Pick the highest quality natural/neural English voice
+                const voices = window.speechSynthesis.getVoices();
+                if (voices && voices.length > 0) {
+                    const natural = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Neural') || v.name.includes('Google UK English Male') || v.name.includes('Google US English')));
+                    if (natural) {
+                        utter.voice = natural;
+                    } else {
+                        const male = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Male') || v.name.includes('Guy') || v.name.includes('David') || v.name.includes('George')));
+                        if (male) utter.voice = male;
+                        else {
+                            const en = voices.find(v => v.lang.startsWith('en'));
+                            if (en) utter.voice = en;
+                        }
+                    }
+                }
 
                 utter.onstart = () => {
                     isSpeaking = true;
@@ -1880,7 +2103,7 @@
             }).catch(() => {});
         }
 
-        // ── Laptop Remote Control ──
+        // ── Remote Control (Laptop & Phone) ──
         function sendRemoteAction(action) {
             triggerHaptic([25]);
             playAcoustic('chirp');
@@ -1894,6 +2117,95 @@
                 if (data.message) showToast(data.message);
             })
             .catch(() => showToast('Remote command failed. Check permission.'));
+        }
+
+        let currentRemoteTarget = 'laptop';
+        function switchRemoteTarget(target) {
+            currentRemoteTarget = target;
+            const lapBtn = document.getElementById('remote-target-laptop');
+            const phnBtn = document.getElementById('remote-target-phone');
+            const lapView = document.getElementById('laptop-remote-view');
+            const phnView = document.getElementById('phone-remote-view');
+            const batCard = document.getElementById('phone-battery-card');
+
+            if (target === 'phone') {
+                phnBtn.classList.add('active');
+                lapBtn.classList.remove('active');
+                lapView.style.display = 'none';
+                phnView.style.display = 'grid';
+                batCard.style.display = 'block';
+                updatePhoneBatteryDisplay();
+            } else {
+                lapBtn.classList.add('active');
+                phnBtn.classList.remove('active');
+                lapView.style.display = 'grid';
+                phnView.style.display = 'none';
+                batCard.style.display = 'none';
+            }
+        }
+
+        // Auto-select Phone Remote when opened on Mobile
+        if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+            setTimeout(() => switchRemoteTarget('phone'), 600);
+        }
+
+        function findMyPhoneAlarm() {
+            triggerHaptic([100, 50, 100, 50, 200]);
+            showToast("🚨 Sounding Find My Phone radar alarm!");
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            let sirenCount = 0;
+            const sirenInterval = setInterval(() => {
+                if (sirenCount > 8) { clearInterval(sirenInterval); return; }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                const t = audioCtx.currentTime;
+                osc.frequency.setValueAtTime(sirenCount % 2 === 0 ? 800 : 1300, t);
+                gain.gain.setValueAtTime(0.35, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+                osc.start(t);
+                osc.stop(t + 0.3);
+                sirenCount++;
+            }, 320);
+        }
+
+        function openPhoneApp(app) {
+            triggerHaptic([30]);
+            playAcoustic('chirp');
+            showToast(`Launching ${app.toUpperCase()}...`);
+            if (app === 'whatsapp') {
+                window.open('whatsapp://', '_blank');
+            } else if (app === 'youtube') {
+                window.open('https://youtube.com', '_blank');
+            } else if (app === 'instagram') {
+                window.open('https://instagram.com', '_blank');
+            }
+            sendRemoteAction('phone_app:' + app);
+        }
+
+        function updatePhoneBatteryDisplay() {
+            const el = document.getElementById('phone-battery-val');
+            if ('getBattery' in navigator) {
+                navigator.getBattery().then(bat => {
+                    const pct = Math.round(bat.level * 100);
+                    const chg = bat.charging ? "⚡ Charging" : "On Battery";
+                    if (el) el.innerText = `${pct}% (${chg})`;
+                }).catch(() => {
+                    if (el) el.innerText = "Active";
+                });
+            } else {
+                fetch('/api/livelink/control', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}` },
+                    body: JSON.stringify({ action: 'phone_battery', token: liveLinkToken })
+                }).then(r => r.json()).then(d => {
+                    if (el) el.innerText = d.message || "Active";
+                }).catch(() => {
+                    if (el) el.innerText = "Active";
+                });
+            }
         }
     </script>
 </body>

@@ -74,7 +74,7 @@ class CrossDeviceSync:
         return False
 
     def handle_remote_control(self, action: str) -> Tuple[bool, str]:
-        """Handles remote multimedia and laptop commands from LiveLink."""
+        """Handles remote multimedia, laptop power, and mobile phone controls from LiveLink."""
         try:
             user32 = ctypes.windll.user32
             action = (action or "").lower().strip()
@@ -87,23 +87,53 @@ class CrossDeviceSync:
             VK_MEDIA_PREV_TRACK = 0xB1
             VK_MEDIA_PLAY_PAUSE = 0xB3
             VK_SPACE = 0x20
+            KEYEVENTF_EXTENDEDKEY = 0x0001
             KEYEVENTF_KEYUP = 0x0002
 
             def press_vk(code: int):
-                user32.keybd_event(code, 0, 0, 0)
-                user32.keybd_event(code, 0, KEYEVENTF_KEYUP, 0)
+                scan = user32.MapVirtualKeyW(code, 0)
+                user32.keybd_event(code, scan, KEYEVENTF_EXTENDEDKEY, 0)
+                user32.keybd_event(code, scan, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0)
 
-            if action in ("vol_up", "volume_up"):
-                for _ in range(3):
-                    press_vk(VK_VOLUME_UP)
-                return True, "Laptop volume raised."
-            elif action in ("vol_down", "volume_down"):
-                for _ in range(3):
-                    press_vk(VK_VOLUME_DOWN)
-                return True, "Laptop volume lowered."
-            elif action in ("mute", "toggle_mute"):
+            def adjust_laptop_volume(delta: float) -> Tuple[bool, str]:
+                try:
+                    from pycaw.pycaw import AudioUtilities
+                    spk = AudioUtilities.GetSpeakers()
+                    if spk and hasattr(spk, 'EndpointVolume'):
+                        ep = spk.EndpointVolume
+                        cur = ep.GetMasterVolumeLevelScalar()
+                        new_vol = max(0.0, min(1.0, cur + delta))
+                        ep.SetMasterVolumeLevelScalar(new_vol, None)
+                        pct = int(round(new_vol * 100))
+                        return True, f"Laptop volume set to {pct}%."
+                except Exception:
+                    pass
+                vk = VK_VOLUME_UP if delta > 0 else VK_VOLUME_DOWN
+                for _ in range(4):
+                    press_vk(vk)
+                return True, "Laptop volume adjusted."
+
+            def toggle_laptop_mute() -> Tuple[bool, str]:
+                try:
+                    from pycaw.pycaw import AudioUtilities
+                    spk = AudioUtilities.GetSpeakers()
+                    if spk and hasattr(spk, 'EndpointVolume'):
+                        ep = spk.EndpointVolume
+                        cur_mute = ep.GetMute()
+                        ep.SetMute(0 if cur_mute else 1, None)
+                        return True, "Laptop sound unmuted." if cur_mute else "Laptop sound muted."
+                except Exception:
+                    pass
                 press_vk(VK_VOLUME_MUTE)
                 return True, "Laptop mute toggled."
+
+            # ── Laptop Actions ──
+            if action in ("vol_up", "volume_up"):
+                return adjust_laptop_volume(0.10)
+            elif action in ("vol_down", "volume_down"):
+                return adjust_laptop_volume(-0.10)
+            elif action in ("mute", "toggle_mute"):
+                return toggle_laptop_mute()
             elif action in ("play_pause", "pause", "play"):
                 press_vk(VK_MEDIA_PLAY_PAUSE)
                 return True, "Media playback toggled."
@@ -123,6 +153,58 @@ class CrossDeviceSync:
                 from commands_daily import screenshot
                 res = screenshot()
                 return True, res or "Screenshot captured on laptop."
+
+            # ── Phone Remote Actions (via ADB) ──
+            elif action in ("phone_vol_up", "phone_volume_up"):
+                try:
+                    from modules.adb_bridge import adb_bridge
+                    res = adb_bridge.press_key("volume_up")
+                    return True, "Phone volume raised."
+                except Exception as e:
+                    return False, f"Phone volume control error: {e}"
+            elif action in ("phone_vol_down", "phone_volume_down"):
+                try:
+                    from modules.adb_bridge import adb_bridge
+                    res = adb_bridge.press_key("volume_down")
+                    return True, "Phone volume lowered."
+                except Exception as e:
+                    return False, f"Phone volume control error: {e}"
+            elif action in ("phone_lock", "phone_lock_screen"):
+                try:
+                    from modules.adb_bridge import adb_bridge
+                    res = adb_bridge.press_key("power")
+                    return True, "Phone screen locked."
+                except Exception as e:
+                    return False, f"Phone lock error: {e}"
+            elif action in ("phone_home",):
+                try:
+                    from modules.adb_bridge import adb_bridge
+                    adb_bridge.press_key("home")
+                    return True, "Phone Home pressed."
+                except Exception as e:
+                    return False, f"Phone Home error: {e}"
+            elif action in ("phone_back",):
+                try:
+                    from modules.adb_bridge import adb_bridge
+                    adb_bridge.press_key("back")
+                    return True, "Phone Back pressed."
+                except Exception as e:
+                    return False, f"Phone Back error: {e}"
+            elif action.startswith("phone_app:"):
+                app_target = action.split(":", 1)[1].strip()
+                try:
+                    from modules.adb_bridge import adb_bridge
+                    res = adb_bridge.open_app(app_target)
+                    return True, res
+                except Exception as e:
+                    return False, f"Phone app launch error: {e}"
+            elif action in ("phone_battery",):
+                try:
+                    from modules.adb_bridge import adb_bridge
+                    res = adb_bridge.get_battery_level()
+                    return True, res
+                except Exception as e:
+                    return False, f"Phone battery query error: {e}"
             else:
                 return False, f"Unknown remote action: '{action}'"
         except Exception as e:

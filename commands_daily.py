@@ -303,9 +303,25 @@ def open_netflix() -> str:
 
 def screenshot() -> str:
     try:
-        import pyautogui
-        path = str(Path.home() / "Pictures" / "ultron_screenshot.png")
-        pyautogui.screenshot(path)
-        return f"Screenshot saved to Pictures folder, bro."
+        import ctypes
+        from pathlib import Path
+        # Detect if workstation is currently locked
+        if ctypes.windll.user32.GetForegroundWindow() == 0:
+            return "Laptop screen is currently locked for privacy, Harsha. Please unlock your laptop to capture screenshots."
+
+        save_dir = Path.home() / "Pictures"
+        save_dir.mkdir(parents=True, exist_ok=True)
+        save_path = save_dir / "ultron_screenshot.png"
+
+        try:
+            import mss
+            with mss.MSS() as sct:
+                sct.shot(output=str(save_path))
+            return f"Screenshot saved to Pictures folder, Harsha!"
+        except Exception:
+            from PIL import ImageGrab
+            img = ImageGrab.grab()
+            img.save(str(save_path))
+            return f"Screenshot saved to Pictures folder, Harsha!"
     except Exception as e:
-        return f"Screenshot failed: {e}"
+        return f"Screenshot capture error: {e}"
