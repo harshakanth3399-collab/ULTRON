@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ULTRON 3D Holographic AI</title>
+    <title>ULTRON LiveLink | Neural Cross-Device Workstation</title>
+    
+    <!-- PWA & Mobile Web App Capabilities -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FFB300">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ULTRON LiveLink">
+
     <!-- Three.js 3D WebGL Graphics Engine -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
@@ -24,6 +33,7 @@
             align-items: center;
             padding: 16px;
             overflow: hidden;
+            position: relative;
         }
         header {
             width: 100%;
@@ -31,6 +41,7 @@
             justify-content: space-between;
             align-items: center;
             padding-top: 4px;
+            z-index: 10;
         }
         .logo {
             font-size: 22px;
@@ -38,6 +49,18 @@
             letter-spacing: 6px;
             color: #FFB300;
             text-shadow: 0 0 16px rgba(255, 179, 0, 0.85), 0 0 32px rgba(255, 111, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .logo-sub {
+            font-size: 10px;
+            letter-spacing: 2px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255, 179, 0, 0.15);
+            color: #FFC107;
+            border: 1px solid rgba(255, 179, 0, 0.4);
         }
         .status-badge {
             padding: 5px 14px;
@@ -51,6 +74,7 @@
             box-shadow: 0 0 12px rgba(255, 179, 0, 0.25);
             transition: all 0.3s ease;
         }
+
         /* 3D WebGL Matrix Container */
         .visualizer-container {
             position: relative;
@@ -60,12 +84,14 @@
             justify-content: center;
             align-items: center;
             margin: auto;
+            z-index: 5;
         }
         #webgl-canvas {
             width: 100%;
             height: 100%;
             border-radius: 50%;
         }
+
         .state-label {
             font-size: 12px;
             font-weight: 700;
@@ -73,7 +99,7 @@
             color: rgba(255, 193, 7, 0.9);
             text-shadow: 0 0 8px rgba(255, 145, 0, 0.5);
             text-transform: uppercase;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             text-align: center;
         }
         .chat-container {
@@ -82,8 +108,8 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
-            margin-bottom: 12px;
-            min-height: 45px;
+            margin-bottom: 8px;
+            min-height: 42px;
         }
         .chat-line {
             font-size: 13px;
@@ -98,6 +124,7 @@
             font-weight: 600;
             text-shadow: 0 0 10px rgba(255, 179, 0, 0.5);
         }
+
         /* Controls & Input Area */
         .controls-wrapper {
             width: 100%;
@@ -105,8 +132,9 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 12px;
-            padding-bottom: 6px;
+            gap: 10px;
+            padding-bottom: 4px;
+            z-index: 10;
         }
         .controls {
             display: flex;
@@ -149,7 +177,6 @@
         .mic-btn.active .mic-icon {
             stroke: #ffffff;
         }
-        /* Mobile Input Field Fallback */
         .input-bar {
             width: 100%;
             display: flex;
@@ -180,18 +207,377 @@
             letter-spacing: 1px;
             box-shadow: 0 0 12px rgba(255, 179, 0, 0.4);
         }
+
+        /* ── LiveLink Synergy Bottom Dock (Minimalist & Unobtrusive) ── */
+        .dock-bar {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+            max-width: 420px;
+            justify-content: space-around;
+            padding-top: 4px;
+        }
+        .dock-btn {
+            flex: 1;
+            background: rgba(30, 18, 5, 0.7);
+            border: 1px solid rgba(255, 179, 0, 0.3);
+            border-radius: 12px;
+            padding: 6px 4px;
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(255, 215, 100, 0.85);
+            cursor: pointer;
+            text-align: center;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
+        }
+        .dock-btn.active, .dock-btn:hover {
+            background: rgba(255, 179, 0, 0.2);
+            border-color: #FFB300;
+            color: #FFD700;
+            box-shadow: 0 0 10px rgba(255, 179, 0, 0.3);
+        }
+
+        /* ── LiveLink Sub-Panels (Files, Touchpad, Remote) ── */
+        .synergy-panel {
+            display: none;
+            width: 100%;
+            max-width: 420px;
+            background: rgba(14, 8, 2, 0.95);
+            border: 1px solid rgba(255, 179, 0, 0.5);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 8px;
+            box-shadow: 0 0 24px rgba(0,0,0,0.8), 0 0 16px rgba(255,179,0,0.2);
+            backdrop-filter: blur(8px);
+        }
+        .synergy-panel.active-panel {
+            display: block;
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 800;
+            color: #FFB300;
+            letter-spacing: 1.5px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 179, 0, 0.2);
+            padding-bottom: 6px;
+        }
+        .close-panel-btn {
+            cursor: pointer;
+            font-size: 14px;
+            color: rgba(255, 179, 0, 0.7);
+        }
+
+        /* File Transfer Bay */
+        .drop-zone {
+            border: 2px dashed rgba(255, 179, 0, 0.6);
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+            background: rgba(255, 179, 0, 0.05);
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+        }
+        .drop-zone.dragover {
+            background: rgba(255, 179, 0, 0.2);
+            border-color: #FFD700;
+            box-shadow: 0 0 18px rgba(255, 179, 0, 0.4);
+        }
+        .drop-text {
+            font-size: 12px;
+            color: #FFC107;
+            font-weight: 600;
+        }
+        .file-list {
+            max-height: 140px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(30, 18, 5, 0.8);
+            border: 1px solid rgba(255, 179, 0, 0.25);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 11px;
+        }
+        .file-item-name {
+            max-width: 220px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #FFF9C4;
+        }
+        .file-item-size {
+            color: rgba(255, 179, 0, 0.7);
+            font-size: 10px;
+        }
+        .file-dl-btn {
+            background: rgba(255, 179, 0, 0.2);
+            border: 1px solid rgba(255, 179, 0, 0.6);
+            color: #FFB300;
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* Touchpad Area */
+        .touchpad-surface {
+            width: 100%;
+            height: 120px;
+            background: radial-gradient(circle, rgba(40, 24, 7, 0.9) 0%, rgba(15, 9, 2, 0.95) 100%);
+            border: 1px solid rgba(255, 179, 0, 0.4);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: rgba(255, 179, 0, 0.5);
+            font-size: 11px;
+            letter-spacing: 2px;
+            touch-action: none;
+            user-select: none;
+            margin-bottom: 8px;
+        }
+        .touchpad-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        .touchpad-btn {
+            flex: 1;
+            background: rgba(255, 179, 0, 0.15);
+            border: 1px solid rgba(255, 179, 0, 0.5);
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #FFD700;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        /* Remote Controls Grid */
+        .remote-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .remote-btn {
+            background: rgba(30, 18, 5, 0.85);
+            border: 1px solid rgba(255, 179, 0, 0.35);
+            border-radius: 8px;
+            padding: 10px 4px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #FFC107;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.15s;
+        }
+        .remote-btn:active {
+            background: rgba(255, 179, 0, 0.3);
+            border-color: #FFD700;
+        }
+
+        /* ── Full Window Drag-and-Drop Holographic Overlay ── */
+        #global-drop-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(6, 4, 1, 0.88);
+            border: 4px dashed #FFB300;
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+        #global-drop-overlay.active-drop {
+            display: flex;
+        }
+        .drop-icon-large {
+            font-size: 48px;
+            filter: drop-shadow(0 0 16px #FFB300);
+        }
+        .drop-title-large {
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: #FFD700;
+            text-shadow: 0 0 12px rgba(255, 179, 0, 0.8);
+        }
+
+        /* ── LiveLink Security Gatekeeper Modal (Holographic Golden Glass) ── */
+        #livelink-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(6, 4, 1, 0.94);
+            backdrop-filter: blur(12px);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .livelink-card {
+            width: 100%;
+            max-width: 380px;
+            background: radial-gradient(circle at center, #1E1204 0%, #0A0501 100%);
+            border: 1px solid rgba(255, 179, 0, 0.7);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 0 35px rgba(255, 179, 0, 0.35), inset 0 0 15px rgba(255, 179, 0, 0.1);
+            text-align: center;
+        }
+        .livelink-shield {
+            font-size: 38px;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 0 14px rgba(255, 179, 0, 0.8));
+        }
+        .livelink-title {
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: 4px;
+            color: #FFB300;
+            text-shadow: 0 0 12px rgba(255, 179, 0, 0.7);
+            margin-bottom: 4px;
+        }
+        .livelink-sub {
+            font-size: 11px;
+            color: rgba(255, 215, 100, 0.75);
+            letter-spacing: 1px;
+            margin-bottom: 18px;
+            line-height: 1.4;
+        }
+        .livelink-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            text-align: left;
+        }
+        .form-label {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            color: #FFC107;
+            text-transform: uppercase;
+        }
+        .livelink-input {
+            width: 100%;
+            background: rgba(30, 18, 5, 0.9);
+            border: 1px solid rgba(255, 179, 0, 0.5);
+            border-radius: 12px;
+            padding: 10px 14px;
+            color: #ffffff;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .livelink-input:focus {
+            border-color: #FFD700;
+            box-shadow: 0 0 10px rgba(255, 179, 0, 0.5);
+        }
+        .livelink-btn {
+            background: linear-gradient(135deg, #FFB300 0%, #FF6F00 100%);
+            border: none;
+            border-radius: 14px;
+            padding: 12px;
+            color: #000000;
+            font-weight: 900;
+            font-size: 13px;
+            letter-spacing: 2px;
+            cursor: pointer;
+            margin-top: 8px;
+            box-shadow: 0 0 18px rgba(255, 179, 0, 0.5);
+            transition: all 0.2s;
+        }
+        .livelink-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Pending State Animation */
+        .pending-pulse-box {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 0;
+        }
+        .pending-spinner {
+            width: 42px;
+            height: 42px;
+            border: 3px solid rgba(255, 179, 0, 0.2);
+            border-top: 3px solid #FFB300;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .pending-text {
+            font-size: 13px;
+            font-weight: 700;
+            color: #FFD700;
+            letter-spacing: 1.5px;
+        }
+        .pending-sub {
+            font-size: 11px;
+            color: rgba(255, 215, 100, 0.7);
+            line-height: 1.4;
+            text-align: center;
+        }
+
+        /* Toast Popup */
+        #livelink-toast {
+            position: fixed;
+            bottom: 20px;
+            background: rgba(20, 12, 3, 0.95);
+            border: 1px solid #FFB300;
+            color: #FFD700;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            box-shadow: 0 0 16px rgba(255, 179, 0, 0.4);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        #livelink-toast.show-toast {
+            transform: translateY(0);
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
+    <!-- Top Holographic HUD Header -->
     <header>
-        <div class="logo">ULTRON</div>
+        <div class="logo">
+            ULTRON <span class="logo-sub">LIVELINK</span>
+        </div>
         <div class="status-badge" id="badge">● ONLINE</div>
     </header>
 
+    <!-- 3D Three.js Golden Particle Matrix (J.A.R.V.I.S. Core) -->
     <div class="visualizer-container">
         <canvas id="webgl-canvas"></canvas>
     </div>
 
+    <!-- Center Status & Dynamic Communication Area -->
     <div style="width:100%; text-align:center;">
         <div class="state-label" id="state-text">SAY 'HEY' OR TAP MIC</div>
 
@@ -200,7 +586,59 @@
             <div class="chat-line ai-line" id="ai-text"></div>
         </div>
 
-        <div class="controls-wrapper">
+        <!-- ── Dynamic Synergy Panel (Slide-up for Files, Touchpad, Remote) ── -->
+        <div class="synergy-panel" id="files-panel">
+            <div class="panel-header">
+                <span>📁 BI-DIRECTIONAL FILE BAY (PHONE ⇄ LAPTOP)</span>
+                <span class="close-panel-btn" onclick="switchDockTab('command')">✕</span>
+            </div>
+            <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                <div class="drop-text">⬆️ DRAG FILES HERE OR TAP TO UPLOAD</div>
+                <div style="font-size: 10px; color: rgba(255,179,0,0.6); margin-top: 4px;">Saves directly to Laptop Downloads</div>
+                <input type="file" id="file-input" style="display:none" onchange="handleFileSelect(event)">
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-size:10px; font-weight:800; color:#FFB300; letter-spacing:1px;">LAPTOP FILES (TAP TO DOWNLOAD)</span>
+                <button class="file-dl-btn" onclick="fetchLaptopFiles()">REFRESH</button>
+            </div>
+            <div class="file-list" id="laptop-file-list">
+                <div style="font-size:11px; color:rgba(255,215,100,0.6); text-align:center; padding:12px;">Loading laptop files...</div>
+            </div>
+        </div>
+
+        <div class="synergy-panel" id="touchpad-panel">
+            <div class="panel-header">
+                <span>🖱️ WIRELESS LAPTOP TOUCHPAD</span>
+                <span class="close-panel-btn" onclick="switchDockTab('command')">✕</span>
+            </div>
+            <div class="touchpad-surface" id="touchpad-surface">
+                SLIDE TO MOVE MOUSE • TAP TO CLICK
+            </div>
+            <div class="touchpad-buttons">
+                <button class="touchpad-btn" onclick="sendTouchpadAction('click')">LEFT CLICK</button>
+                <button class="touchpad-btn" onclick="sendTouchpadAction('right_click')">RIGHT CLICK</button>
+                <button class="touchpad-btn" onclick="sendTouchpadScroll(1)">SCROLL ▲</button>
+                <button class="touchpad-btn" onclick="sendTouchpadScroll(-1)">SCROLL ▼</button>
+            </div>
+        </div>
+
+        <div class="synergy-panel" id="remote-panel">
+            <div class="panel-header">
+                <span>⚡ LAPTOP REMOTE CONTROL</span>
+                <span class="close-panel-btn" onclick="switchDockTab('command')">✕</span>
+            </div>
+            <div class="remote-grid">
+                <button class="remote-btn" onclick="sendRemoteAction('vol_up')">🔊 VOL +</button>
+                <button class="remote-btn" onclick="sendRemoteAction('vol_down')">🔉 VOL -</button>
+                <button class="remote-btn" onclick="sendRemoteAction('mute')">🔇 MUTE</button>
+                <button class="remote-btn" onclick="sendRemoteAction('play_pause')">⏯️ PLAY/PAUSE</button>
+                <button class="remote-btn" onclick="sendRemoteAction('screenshot')">📸 SCREENSHOT</button>
+                <button class="remote-btn" onclick="sendRemoteAction('lock_laptop')">🔒 LOCK PC</button>
+            </div>
+        </div>
+
+        <!-- Default Pristine Controls Wrapper -->
+        <div class="controls-wrapper" id="default-controls">
             <div class="controls">
                 <button class="mic-btn" id="mic-btn" onclick="toggleMic()">
                     <svg class="mic-icon" viewBox="0 0 24 24">
@@ -217,9 +655,214 @@
                 <button class="send-btn" onclick="sendTextCommand()">SEND</button>
             </div>
         </div>
+
+        <!-- ── LiveLink Floating Synergy Dock ── -->
+        <div class="dock-bar">
+            <button class="dock-btn active" id="dock-btn-command" onclick="switchDockTab('command')">💬 AI CORE</button>
+            <button class="dock-btn" id="dock-btn-files" onclick="switchDockTab('files')">📁 FILES ⇄</button>
+            <button class="dock-btn" id="dock-btn-touchpad" onclick="switchDockTab('touchpad')">🖱️ TOUCHPAD</button>
+            <button class="dock-btn" id="dock-btn-remote" onclick="switchDockTab('remote')">⚡ REMOTE</button>
+        </div>
     </div>
 
+    <!-- ── Full-Screen Drag-and-Drop Overlay ── -->
+    <div id="global-drop-overlay">
+        <div class="drop-icon-large">⚡</div>
+        <div class="drop-title-large">DROP FILE TO SEND TO LAPTOP</div>
+        <div style="font-size: 12px; color: rgba(255,215,100,0.8);">Transfers immediately to Downloads</div>
+    </div>
+
+    <!-- ── LiveLink Security Gatekeeper Modal (Strict Verification) ── -->
+    <div id="livelink-modal-overlay">
+        <div class="livelink-card">
+            <div class="livelink-shield">🛡️</div>
+            <div class="livelink-title">LIVELINK GATEWAY</div>
+            <div class="livelink-sub">Admin permission required. Enter your details to request authorization from Harsha.</div>
+
+            <!-- Verification Form -->
+            <form class="livelink-form" id="livelink-form" onsubmit="handleAccessRequest(event)">
+                <div>
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" class="livelink-input" id="gate-name" placeholder="Enter your full name" required>
+                </div>
+                <div>
+                    <label class="form-label">Phone Number * (Mandatory)</label>
+                    <input type="tel" class="livelink-input" id="gate-phone" placeholder="e.g. +91 98765 43210" required>
+                </div>
+                <div>
+                    <label class="form-label">Purpose / Role</label>
+                    <input type="text" class="livelink-input" id="gate-purpose" placeholder="e.g. ULTRON Mobile Access">
+                </div>
+                <button type="submit" class="livelink-btn" id="gate-submit-btn">REQUEST ACCESS</button>
+            </form>
+
+            <!-- Awaiting Approval State -->
+            <div class="pending-pulse-box" id="pending-box">
+                <div class="pending-spinner"></div>
+                <div class="pending-text">AWAITING ADMIN AUTHORIZATION</div>
+                <div class="pending-sub" id="pending-details">
+                    Your verification request has been forwarded to Harsha's laptop.<br>
+                    ULTRON remains locked until Harsha grants permission.
+                </div>
+                <div style="margin-top: 6px; font-size: 10px; color: #FFB300;" id="pending-status-pulse">● POLLING GATEWAY...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="livelink-toast"></div>
+
     <script>
+        // ── PWA Service Worker Registration ──
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+
+        // ── Toast Notification Helper ──
+        function showToast(msg) {
+            const toast = document.getElementById('livelink-toast');
+            toast.innerText = msg;
+            toast.classList.add('show-toast');
+            setTimeout(() => toast.classList.remove('show-toast'), 3200);
+        }
+
+        // ── LiveLink Gatekeeper Permission & Token System ──
+        let liveLinkToken = localStorage.getItem('livelink_token') || '';
+        let pollInterval = null;
+
+        function checkGatekeeperStatus() {
+            // Check if local connection (laptop itself) or already approved
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            
+            if (isLocal) {
+                // Harsha's master laptop connection is auto-granted
+                updateBadge('● ONLINE', '#FFC107');
+                return;
+            }
+
+            if (!liveLinkToken) {
+                // Show Verification Gate Modal
+                document.getElementById('livelink-modal-overlay').style.display = 'flex';
+                updateBadge('● RESTRICTED', '#FF3D00');
+                return;
+            }
+
+            // Verify existing token with backend
+            fetch(`/api/livelink/check_status?token=${encodeURIComponent(liveLinkToken)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'APPROVED') {
+                        document.getElementById('livelink-modal-overlay').style.display = 'none';
+                        updateBadge('● VERIFIED', '#00E676');
+                        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+                    } else if (data.status === 'PENDING') {
+                        document.getElementById('livelink-modal-overlay').style.display = 'flex';
+                        document.getElementById('livelink-form').style.display = 'none';
+                        document.getElementById('pending-box').style.display = 'flex';
+                        updateBadge('● PENDING', '#FF9100');
+                        startStatusPolling();
+                    } else {
+                        // Denied, Revoked, or Unregistered
+                        localStorage.removeItem('livelink_token');
+                        liveLinkToken = '';
+                        document.getElementById('livelink-modal-overlay').style.display = 'flex';
+                        document.getElementById('livelink-form').style.display = 'flex';
+                        document.getElementById('pending-box').style.display = 'none';
+                        updateBadge('● RESTRICTED', '#FF3D00');
+                        showToast(data.error || 'Access denied by Harsha.');
+                    }
+                })
+                .catch(() => {
+                    // Fallback
+                    updateBadge('● OFFLINE', '#FF3D00');
+                });
+        }
+
+        function handleAccessRequest(e) {
+            e.preventDefault();
+            const name = document.getElementById('gate-name').value.trim();
+            const phone = document.getElementById('gate-phone').value.trim();
+            const purpose = document.getElementById('gate-purpose').value.trim();
+
+            if (!name || !phone) {
+                showToast('Full Name and Phone Number are mandatory!');
+                return;
+            }
+
+            const btn = document.getElementById('gate-submit-btn');
+            btn.innerText = 'TRANSMITTING...';
+            btn.disabled = true;
+
+            fetch('/api/livelink/request_access', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, phone, purpose })
+            })
+            .then(r => r.json())
+            .then(data => {
+                btn.innerText = 'REQUEST ACCESS';
+                btn.disabled = false;
+
+                if (data.success) {
+                    liveLinkToken = data.token;
+                    localStorage.setItem('livelink_token', data.token);
+
+                    if (data.status === 'APPROVED') {
+                        document.getElementById('livelink-modal-overlay').style.display = 'none';
+                        updateBadge('● VERIFIED', '#00E676');
+                        showToast('Access granted! Welcome to ULTRON.');
+                    } else {
+                        // Switch to Pending View
+                        document.getElementById('livelink-form').style.display = 'none';
+                        document.getElementById('pending-box').style.display = 'flex';
+                        document.getElementById('pending-details').innerHTML = 
+                            `User: <b>${name}</b> | Phone: <b>${phone}</b><br>Request sent to Harsha's laptop. Waiting for Harsha to grant permission...`;
+                        updateBadge('● PENDING', '#FF9100');
+                        startStatusPolling();
+                        showToast('Request sent to Harsha! Awaiting authorization.');
+                    }
+                } else {
+                    showToast(data.error || 'Access request rejected.');
+                }
+            })
+            .catch(err => {
+                btn.innerText = 'REQUEST ACCESS';
+                btn.disabled = false;
+                showToast('Network error contacting ULTRON.');
+            });
+        }
+
+        function startStatusPolling() {
+            if (pollInterval) clearInterval(pollInterval);
+            pollInterval = setInterval(() => {
+                if (!liveLinkToken) return;
+                fetch(`/api/livelink/check_status?token=${encodeURIComponent(liveLinkToken)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.status === 'APPROVED') {
+                            clearInterval(pollInterval);
+                            pollInterval = null;
+                            document.getElementById('livelink-modal-overlay').style.display = 'none';
+                            updateBadge('● VERIFIED', '#00E676');
+                            showToast(`Access granted by Harsha! Welcome, ${data.name}.`);
+                        } else if (data.status === 'DENIED' || data.status === 'REVOKED') {
+                            clearInterval(pollInterval);
+                            pollInterval = null;
+                            localStorage.removeItem('livelink_token');
+                            liveLinkToken = '';
+                            document.getElementById('pending-box').style.display = 'none';
+                            document.getElementById('livelink-form').style.display = 'flex';
+                            updateBadge('● RESTRICTED', '#FF3D00');
+                            showToast('Access was denied by Harsha.');
+                        }
+                    })
+                    .catch(() => {});
+            }, 2500);
+        }
+
+        // Initialize security check
+        checkGatekeeperStatus();
+
         // ── Three.js 3D WebGL Holographic Engine (J.A.R.V.I.S. Neural Matrix) ──
         const container = document.querySelector('.visualizer-container');
         const canvas = document.getElementById('webgl-canvas');
@@ -266,7 +909,6 @@
             basePositions[i * 3 + 1] = y;
             basePositions[i * 3 + 2] = z;
 
-            // Authentic J.A.R.V.I.S. movie color distribution
             const mixRatio = Math.sin(phi * 2.5 + theta * 1.5) * 0.5 + 0.5;
             let c;
             if (u < 0.12) {
@@ -308,7 +950,6 @@
             particleSystem.rotation.x = Math.sin(elapsedTime * 0.22) * 0.18;
             particleSystem.rotation.z = Math.cos(elapsedTime * 0.18) * 0.15;
 
-            // Organic undulating wave ripple across particle grid
             const posAttr = geometry.attributes.position;
             const pArr = posAttr.array;
             for (let i = 0; i < particleCount; i++) {
@@ -326,7 +967,6 @@
             }
             posAttr.needsUpdate = true;
 
-            // Pulse radius on active states
             const scale = 1.0 + Math.sin(elapsedTime * 3.0) * (isSpeaking ? 0.09 : 0.035);
             particleSystem.scale.set(scale, scale, scale);
 
@@ -361,7 +1001,7 @@
 
         function sendTextCommand() {
             const input = document.getElementById('cmd-input');
-            const val = input.value.strip ? input.value.strip() : input.value.trim();
+            const val = input.value.trim();
             if (!val) return;
 
             document.getElementById('user-text').innerText = "You: " + val;
@@ -369,16 +1009,232 @@
 
             fetch('/api/command', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ command: val })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${liveLinkToken}`,
+                    'X-LiveLink-Token': liveLinkToken
+                },
+                body: JSON.stringify({ command: val, token: liveLinkToken })
             })
-            .then(res => res.json())
+            .then(res => {
+                if (res.status === 403) {
+                    showToast('Access restricted! Awaiting permission from Harsha.');
+                    checkGatekeeperStatus();
+                    return { reply: 'Access restricted. You must be authorized by Harsha.' };
+                }
+                return res.json();
+            })
             .then(data => {
-                if (data.response) {
-                    document.getElementById('ai-text').innerText = "ULTRON: " + data.response;
+                const rep = data.reply || data.response;
+                if (rep) {
+                    document.getElementById('ai-text').innerText = "ULTRON: " + rep;
                 }
             })
             .catch(err => console.error(err));
+        }
+
+        // ── LiveLink Synergy Tabs & Panel Switching ──
+        function switchDockTab(tab) {
+            ['command', 'files', 'touchpad', 'remote'].forEach(t => {
+                const btn = document.getElementById(`dock-btn-${t}`);
+                if (btn) btn.classList.remove('active');
+            });
+
+            document.getElementById('files-panel').classList.remove('active-panel');
+            document.getElementById('touchpad-panel').classList.remove('active-panel');
+            document.getElementById('remote-panel').classList.remove('active-panel');
+
+            const activeBtn = document.getElementById(`dock-btn-${tab}`);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            if (tab === 'files') {
+                document.getElementById('files-panel').classList.add('active-panel');
+                fetchLaptopFiles();
+            } else if (tab === 'touchpad') {
+                document.getElementById('touchpad-panel').classList.add('active-panel');
+            } else if (tab === 'remote') {
+                document.getElementById('remote-panel').classList.add('active-panel');
+            }
+        }
+
+        // ── Bi-Directional Drag-and-Drop & File Transfers ──
+        function uploadFileToServer(file) {
+            if (!file) return;
+            showToast(`Uploading ${file.name} to Laptop Downloads...`);
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Data = e.target.result;
+                fetch('/api/livelink/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${liveLinkToken}`,
+                        'X-LiveLink-Token': liveLinkToken
+                    },
+                    body: JSON.stringify({
+                        filename: file.name,
+                        data: base64Data,
+                        folder: 'downloads',
+                        token: liveLinkToken
+                    })
+                })
+                .then(r => {
+                    if (r.status === 403) {
+                        showToast('Access denied. Awaiting authorization from Harsha.');
+                        return null;
+                    }
+                    return r.json();
+                })
+                .then(data => {
+                    if (data && data.success) {
+                        showToast(`Transferred: ${file.name} to Laptop!`);
+                        fetchLaptopFiles();
+                    } else if (data) {
+                        showToast(`Upload failed: ${data.message || 'error'}`);
+                    }
+                })
+                .catch(err => showToast(`Upload failed: ${err}`));
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (files && files.length > 0) {
+                uploadFileToServer(files[0]);
+            }
+        }
+
+        // Drop zone inside files panel
+        const dropZone = document.getElementById('drop-zone');
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                uploadFileToServer(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Global Drag and Drop anywhere on the window!
+        const globalOverlay = document.getElementById('global-drop-overlay');
+        window.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            globalOverlay.classList.add('active-drop');
+        });
+        window.addEventListener('dragover', (e) => { e.preventDefault(); });
+        globalOverlay.addEventListener('dragleave', (e) => {
+            if (e.target === globalOverlay) globalOverlay.classList.remove('active-drop');
+        });
+        window.addEventListener('drop', (e) => {
+            e.preventDefault();
+            globalOverlay.classList.remove('active-drop');
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                uploadFileToServer(e.dataTransfer.files[0]);
+            }
+        });
+
+        function fetchLaptopFiles() {
+            const listEl = document.getElementById('laptop-file-list');
+            listEl.innerHTML = '<div style="font-size:11px; color:rgba(255,215,100,0.6); text-align:center; padding:12px;">Fetching laptop files...</div>';
+
+            fetch(`/api/livelink/files?folder=downloads&token=${encodeURIComponent(liveLinkToken)}`, {
+                headers: { 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.files || data.files.length === 0) {
+                    listEl.innerHTML = '<div style="font-size:11px; color:rgba(255,215,100,0.6); text-align:center; padding:12px;">No recent files found in Laptop Downloads.</div>';
+                    return;
+                }
+                listEl.innerHTML = '';
+                data.files.forEach(f => {
+                    const row = document.createElement('div');
+                    row.className = 'file-item';
+                    row.innerHTML = `
+                        <div>
+                            <div class="file-item-name" title="${f.name}">${f.name}</div>
+                            <div class="file-item-size">${f.size_human} • ${f.mtime_human}</div>
+                        </div>
+                        <button class="file-dl-btn" onclick="downloadLaptopFile('${encodeURIComponent(f.name)}')">DOWNLOAD</button>
+                    `;
+                    listEl.appendChild(row);
+                });
+            })
+            .catch(() => {
+                listEl.innerHTML = '<div style="font-size:11px; color:#FF5252; text-align:center; padding:12px;">Failed to load files. Check permission.</div>';
+            });
+        }
+
+        function downloadLaptopFile(filename) {
+            window.location.href = `/api/livelink/download?file=${filename}&folder=downloads&token=${encodeURIComponent(liveLinkToken)}`;
+            showToast(`Downloading file to phone...`);
+        }
+
+        // ── Wireless Touchpad Gestures ──
+        let lastTouchX = null, lastTouchY = null;
+        const touchpad = document.getElementById('touchpad-surface');
+
+        touchpad.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        touchpad.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1 && lastTouchX !== null) {
+                const dx = (e.touches[0].clientX - lastTouchX) * 1.8;
+                const dy = (e.touches[0].clientY - lastTouchY) * 1.8;
+                lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
+                sendTouchpadCoords(dx, dy, 'move');
+            }
+        }, { passive: true });
+
+        touchpad.addEventListener('touchend', () => {
+            lastTouchX = null;
+            lastTouchY = null;
+        });
+
+        function sendTouchpadCoords(dx, dy, action) {
+            fetch('/api/touchpad', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },
+                body: JSON.stringify({ dx: Math.round(dx), dy: Math.round(dy), action, token: liveLinkToken })
+            }).catch(() => {});
+        }
+
+        function sendTouchpadAction(action) {
+            fetch('/api/touchpad', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },
+                body: JSON.stringify({ dx: 0, dy: 0, action, token: liveLinkToken })
+            }).catch(() => {});
+        }
+
+        function sendTouchpadScroll(direction) {
+            fetch('/api/touchpad', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },
+                body: JSON.stringify({ dx: 0, dy: direction, action: 'scroll', token: liveLinkToken })
+            }).catch(() => {});
+        }
+
+        // ── Laptop Remote Control ──
+        function sendRemoteAction(action) {
+            fetch('/api/livelink/control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },
+                body: JSON.stringify({ action, token: liveLinkToken })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.message) showToast(data.message);
+            })
+            .catch(() => showToast('Remote command failed. Check permission.'));
         }
     </script>
 </body>

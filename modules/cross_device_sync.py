@@ -5,20 +5,22 @@ Unifies mobile phone and laptop into a single cohesive Jarvis workstation:
 - Bi-directional instant clipboard synchronization (Phone <-> Laptop)
 - Wireless mobile touchpad & presentation remote (mouse move, click, scroll)
 - Remote phone battery sentinel & "Find My Phone" ringer via ADB
-- Instant Phone-to-Laptop AirDrop file receiver
+- Bi-directional Drag-and-Drop file transfer (Phone <-> Laptop Downloads & Desktop)
+- Remote laptop control (Volume, Media, Lock Workstation, Screenshot)
 """
 
 from __future__ import annotations
 
+import ctypes
 import os
 import subprocess
 import threading
 import time
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from modules.human_controller import human_controller
 from modules.smart_clipboard import smart_clipboard
-from modules.system_paths import get_downloads_dir
+from modules.system_paths import get_desktop_dir, get_downloads_dir
 
 
 class CrossDeviceSync:
@@ -48,7 +50,6 @@ class CrossDeviceSync:
     def handle_touchpad_input(self, dx: int, dy: int, action: str = "move") -> bool:
         """Translates mobile touchscreen gestures into laptop mouse movements."""
         try:
-            import ctypes
             user32 = ctypes.windll.user32
             if action == "move":
                 class POINT(ctypes.Structure):
@@ -72,26 +73,159 @@ class CrossDeviceSync:
             print(f"[CROSS DEVICE TOUCHPAD ERROR] {e}")
         return False
 
-    def save_file_from_phone(self, filename: str, data: bytes) -> Tuple[bool, str]:
-        """Saves a file transmitted from phone directly to laptop Downloads folder."""
-        dest_dir = str(get_downloads_dir())
+    def handle_remote_control(self, action: str) -> Tuple[bool, str]:
+        """Handles remote multimedia and laptop commands from LiveLink."""
+        try:
+            user32 = ctypes.windll.user32
+            action = (action or "").lower().strip()
+
+            # Virtual Key Constants
+            VK_VOLUME_MUTE = 0xAD
+            VK_VOLUME_DOWN = 0xAE
+            VK_VOLUME_UP = 0xAF
+            VK_MEDIA_NEXT_TRACK = 0xB0
+            VK_MEDIA_PREV_TRACK = 0xB1
+            VK_MEDIA_PLAY_PAUSE = 0xB3
+            VK_SPACE = 0x20
+            KEYEVENTF_KEYUP = 0x0002
+
+            def press_vk(code: int):
+                user32.keybd_event(code, 0, 0, 0)
+                user32.keybd_event(code, 0, KEYEVENTF_KEYUP, 0)
+
+            if action in ("vol_up", "volume_up"):
+                for _ in range(3):
+                    press_vk(VK_VOLUME_UP)
+                return True, "Laptop volume raised."
+            elif action in ("vol_down", "volume_down"):
+                for _ in range(3):
+                    press_vk(VK_VOLUME_DOWN)
+                return True, "Laptop volume lowered."
+            elif action in ("mute", "toggle_mute"):
+                press_vk(VK_VOLUME_MUTE)
+                return True, "Laptop mute toggled."
+            elif action in ("play_pause", "pause", "play"):
+                press_vk(VK_MEDIA_PLAY_PAUSE)
+                return True, "Media playback toggled."
+            elif action in ("next", "next_track"):
+                press_vk(VK_MEDIA_NEXT_TRACK)
+                return True, "Next track requested."
+            elif action in ("prev", "prev_track"):
+                press_vk(VK_MEDIA_PREV_TRACK)
+                return True, "Previous track requested."
+            elif action in ("space", "play_space"):
+                press_vk(VK_SPACE)
+                return True, "Spacebar triggered."
+            elif action in ("lock", "lock_laptop", "lock_pc"):
+                user32.LockWorkStation()
+                return True, "Laptop locked successfully."
+            elif action in ("screenshot", "take_screenshot"):
+                from commands_daily import screenshot
+                res = screenshot()
+                return True, res or "Screenshot captured on laptop."
+            else:
+                return False, f"Unknown remote action: '{action}'"
+        except Exception as e:
+            return False, f"Remote control error: {e}"
+
+    def save_file_from_phone(self, filename: str, data: bytes, target_dir_type: str = "downloads") -> Tuple[bool, str]:
+        """Saves a file transmitted from phone directly to laptop Downloads or Desktop."""
+        if target_dir_type == "desktop":
+            dest_dir = str(get_desktop_dir())
+        else:
+            dest_dir = str(get_downloads_dir())
+
         safe_name = os.path.basename(filename) or f"phone_transfer_{int(time.time())}.bin"
         target_path = os.path.join(dest_dir, safe_name)
 
         try:
             with open(target_path, "wb") as f:
                 f.write(data)
-            return True, f"Saved '{safe_name}' from your phone directly to Downloads."
+
+            # Announce arrival on laptop
+            try:
+                from speech_engine import speak
+                speak(f"LiveLink file received: {safe_name}")
+            except Exception:
+                pass
+
+            return True, f"Saved '{safe_name}' directly to laptop {target_dir_type.capitalize()} folder."
         except Exception as e:
             return False, f"Failed to save file from phone: {e}"
+
+    def list_laptop_files(self, folder_type: str = "downloads", limit: int = 30) -> List[Dict[str, Any]]:
+        """Lists files on laptop (Downloads or Desktop) available for LiveLink mobile download."""
+        if folder_type == "desktop":
+            target_dir = str(get_desktop_dir())
+        else:
+            target_dir = str(get_downloads_dir())
+
+        if not os.path.exists(target_dir):
+            return []
+
+        entries = []
+        try:
+            items = os.listdir(target_dir)
+            # Filter only files, skip hidden or temporary files
+            for item in items:
+                if item.startswith((".", "~$", "desktop.ini")):
+                    continue
+                full_path = os.path.join(target_dir, item)
+                if os.path.isfile(full_path):
+                    try:
+                        stat = os.stat(full_path)
+                        size_bytes = stat.st_size
+                        # Human readable size
+                        if size_bytes < 1024:
+                            size_str = f"{size_bytes} B"
+                        elif size_bytes < 1024 * 1024:
+                            size_str = f"{size_bytes / 1024:.1f} KB"
+                        elif size_bytes < 1024 * 1024 * 1024:
+                            size_str = f"{size_bytes / (1024 * 1024):.1f} MB"
+                        else:
+                            size_str = f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+
+                        ext = os.path.splitext(item)[1].lower()
+                        entries.append({
+                            "name": item,
+                            "size": size_bytes,
+                            "size_human": size_str,
+                            "mtime": stat.st_mtime,
+                            "mtime_human": time.strftime("%b %d, %H:%M", time.localtime(stat.st_mtime)),
+                            "folder": folder_type,
+                            "ext": ext,
+                        })
+                    except Exception:
+                        continue
+
+            # Sort by most recently modified
+            entries.sort(key=lambda x: x["mtime"], reverse=True)
+            return entries[:limit]
+        except Exception as e:
+            print(f"[CROSS DEVICE FILE LIST ERROR] {e}")
+            return []
+
+    def get_file_path(self, filename: str, folder_type: str = "downloads") -> Optional[str]:
+        """Safely resolves path for a file to download, preventing path traversal."""
+        safe_name = os.path.basename(filename)
+        if not safe_name:
+            return None
+
+        if folder_type == "desktop":
+            target_dir = str(get_desktop_dir())
+        else:
+            target_dir = str(get_downloads_dir())
+
+        candidate = os.path.join(target_dir, safe_name)
+        if os.path.isfile(candidate):
+            return candidate
+        return None
 
     def ring_phone(self) -> Tuple[bool, str]:
         """Plays an audible alarm on connected Android phone to locate it."""
         try:
-            # Check ADB devices
             res = subprocess.run(["adb", "devices"], capture_output=True, text=True, timeout=3.0)
             if "device" in res.stdout and len(res.stdout.strip().split("\n")) > 1:
-                # Dispatch alarm tone intent via ADB
                 cmd = ["adb", "shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "content://media/internal/audio/media/1"]
                 subprocess.Popen(cmd)
                 return True, "Triggering alarm on your phone, Harsha. Listen for the sound."

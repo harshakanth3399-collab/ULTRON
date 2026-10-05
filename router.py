@@ -490,6 +490,35 @@ def process(command: str) -> tuple:
         ok, msg = cross_device_sync.ring_phone()
         return _respond(ok, msg)
 
+    # ── Category H22B: LiveLink Gatekeeper Access Control & Laptop Synergy ────
+    if any(k in raw for k in ["pending livelink", "livelink requests", "livelink pending", "who requested livelink", "who wants access", "livelink status"]):
+        from modules.livelink_gatekeeper import livelink_gatekeeper
+        summary = livelink_gatekeeper.get_pending_summary()
+        return _respond(True, summary)
+
+    if any(k in raw for k in ["approve livelink", "grant livelink", "allow livelink", "accept livelink"]):
+        from modules.livelink_gatekeeper import livelink_gatekeeper
+        target = re.sub(r"^(?:approve|grant|allow|accept)\s+livelink(?:\s+access\s+to|\s+to|\s+user)?\s*", "", raw).strip()
+        ok, msg = livelink_gatekeeper.approve_user(target)
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["deny livelink", "reject livelink", "block livelink"]):
+        from modules.livelink_gatekeeper import livelink_gatekeeper
+        target = re.sub(r"^(?:deny|reject|block)\s+livelink(?:\s+access\s+to|\s+to|\s+user)?\s*", "", raw).strip()
+        ok, msg = livelink_gatekeeper.deny_user(target)
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["revoke livelink", "remove livelink"]):
+        from modules.livelink_gatekeeper import livelink_gatekeeper
+        target = re.sub(r"^(?:revoke|remove)\s+livelink(?:\s+access\s+(?:to|for)|\s+to|\s+user)?\s*", "", raw).strip()
+        ok, msg = livelink_gatekeeper.revoke_user(target)
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["lock my laptop", "lock the laptop", "lock laptop", "lock my pc", "lock the pc"]):
+        from modules.cross_device_sync import cross_device_sync
+        ok, msg = cross_device_sync.handle_remote_control("lock_laptop")
+        return _respond(ok, msg)
+
     # ── Category H23: Morning Protocol Briefing & Motivation Coach ───────────
     if any(k in raw for k in [
         "good morning ultron", "good morning", "morning briefing", "morning update",

@@ -1,0 +1,22 @@
+{
+  "name": "ULTRON LiveLink",
+  "short_name": "LiveLink",
+  "description": "ULTRON Real-World Cross-Device Mobile & Laptop Synergy",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#060401",
+  "theme_color": "#FFB300",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
