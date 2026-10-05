@@ -156,16 +156,22 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data).encode("utf-8"))
 
+    def _get_path(self):
+        parsed = urllib.parse.urlparse(self.path)
+        query = urllib.parse.parse_qs(parsed.query)
+        raw = query.get("_path", [""])[0] or self.headers.get("x-matched-path", "") or parsed.path
+        return raw.split("?")[0].rstrip("/")
+
     def do_OPTIONS(self):
         self._send_json({"status": "ok"})
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
-        path = parsed.path
         query = urllib.parse.parse_qs(parsed.query)
+        path = self._get_path()
 
         # ── Health & Cloud Status ──
-        if path == "/api/status":
+        if path.endswith("/status") or path == "/api/status" or path == "/api":
             self._send_json({
                 "status": "online",
                 "system": "ULTRON Holographic Matrix (Vercel Cloud)",
@@ -175,7 +181,7 @@ class handler(BaseHTTPRequestHandler):
             return
 
         # ── User Profile Retrieval ──
-        if path == "/api/livelink/user_info":
+        if path.endswith("/user_info"):
             token = query.get("token", [""])[0]
             if token == MASTER_TOKEN:
                 self._send_json({
@@ -209,7 +215,7 @@ class handler(BaseHTTPRequestHandler):
             return
 
         # ── Verification Check ──
-        if path == "/api/livelink/check_status":
+        if path.endswith("/check_status"):
             token = query.get("token", [""])[0]
             if token == MASTER_TOKEN:
                 self._send_json({"status": "APPROVED", "name": "Harsha Kanth", "role": "ADMIN"})
@@ -217,11 +223,10 @@ class handler(BaseHTTPRequestHandler):
             self._send_json({"status": "APPROVED", "name": "Authorized Friend", "role": "USER"})
             return
 
-        self._send_json({"error": "Not Found"}, status=404)
+        self._send_json({"error": "Not Found", "received_path": self.path, "resolved_path": path}, status=404)
 
     def do_POST(self):
-        parsed = urllib.parse.urlparse(self.path)
-        path = parsed.path
+        path = self._get_path()
         content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length) if content_length > 0 else b""
         data = {}
@@ -231,7 +236,7 @@ class handler(BaseHTTPRequestHandler):
             pass
 
         # ── 1. User Registration ──
-        if path == "/api/livelink/register":
+        if path.endswith("/register"):
             fn = data.get("first_name", "").strip()
             ln = data.get("last_name", "").strip()
             phone = re.sub(r"[^\d+]", "", data.get("phone", "").strip())
@@ -301,7 +306,7 @@ class handler(BaseHTTPRequestHandler):
             return
 
         # ── 2. User Sign In ──
-        if path == "/api/livelink/login":
+        if path.endswith("/login"):
             ident = data.get("identifier", "").strip().lower()
             pwd = data.get("password", "").strip()
 
@@ -354,7 +359,7 @@ class handler(BaseHTTPRequestHandler):
             return
 
         # ── 3. AI Chat / Voice Command ──
-        if path == "/api/command":
+        if path.endswith("/command"):
             cmd = data.get("command", "").strip()
             if not cmd:
                 self._send_json({"response": "I didn't catch that, bro. Could you repeat?"})
@@ -365,12 +370,12 @@ class handler(BaseHTTPRequestHandler):
             return
 
         # ── 4. Remote Control Stub for Cloud ──
-        if path == "/api/livelink/control":
+        if path.endswith("/control"):
             action = data.get("action", "")
             self._send_json({"success": True, "message": f"Command '{action}' recognized by ULTRON."})
             return
 
-        self._send_json({"error": "Unknown API endpoint"}, status=404)
+        self._send_json({"error": "Unknown API endpoint", "received_path": self.path, "resolved_path": path}, status=404)
 
 # Vercel top-level export
 app = handler
