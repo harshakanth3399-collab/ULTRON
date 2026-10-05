@@ -1,0 +1,31 @@
+{
+    "user": {
+        "name": "Harsha",
+        "relationship": "Loyal Brother and Best Friend",
+        "tone": "Warm, confident, rugged, protective, intelligent, concise",
+        "data_privacy": "100% Local & Private",
+        "location": "Anantapur, Andhra Pradesh",
+        "mother_name": "Narmada"
+    },
+    "preferences": {
+        "voice": "Deep and rugged",
+        "response_length": "Short and sweet",
+        "devices": [
+            "Laptop",
+            "Mobile"
+        ],
+        "preferred_address": "Harsha",
+        "active_language": "en"
+    },
+    "notes": [
+        "User requested not to be called Sir all the time."
+    ],
+    "project_history": [],
+    "reminders": [],
+    "user_memory": {
+        "address": "Anantapur, Andhra Pradesh",
+        "mother_name": "Narmada",
+        "favorite_song": "bagundo po from the dude movie in telugu.",
+        "language": "my mother tongue telugu"
+    }
+}

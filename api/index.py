@@ -127,8 +127,81 @@ def _notify_harsha_email(name: str, phone: str, email: str):
         print(f"[EMAIL NOTIF ERROR] {e}")
 
 
-def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER", history: list = None) -> str:
-    """Invokes Groq API with personalized system prompts, active temporary memory, and psychological adaptability."""
+def _load_harsha_permanent_memory(client_memory: dict = None) -> str:
+    """Loads Harsha Sir's permanent profile & memory vault across all sessions and devices."""
+    mem_data = {
+        "name": "Harsha",
+        "hometown": "Anantapur, Andhra Pradesh",
+        "mother_name": "Narmada",
+        "mother_tongue": "Telugu",
+        "favorite_song": "bagundo po from the dude movie in telugu",
+        "role": "Creator & Master of ULTRON (https://ultron.ai)",
+        "personality": "Warm, confident, protective, highly intelligent, concise, strategic thinker",
+        "custom_notes": [
+            "User requested not to be called Sir all the time; prefers a natural, loyal brotherly and respectful tone.",
+            "Listen completely to his full thoughts before answering; never treat an individual sentence as the whole message if he is formulating a larger thought.",
+            "Never repeat questions or directives back like a parrot. Never use repetitive robotic platitudes."
+        ]
+    }
+
+    # Inspect on-disk persistent memory files
+    for candidate in [
+        os.path.join(os.path.dirname(__file__), "harsha_memory.json"),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "memory", "profile.json")
+    ]:
+        try:
+            if os.path.exists(candidate):
+                with open(candidate, "r", encoding="utf-8") as f:
+                    disk_data = json.load(f)
+                    if isinstance(disk_data, dict):
+                        u = disk_data.get("user", {})
+                        if u.get("location"): mem_data["hometown"] = u.get("location")
+                        if u.get("mother_name"): mem_data["mother_name"] = u.get("mother_name")
+                        um = disk_data.get("user_memory", {})
+                        if um.get("favorite_song"): mem_data["favorite_song"] = um.get("favorite_song")
+                        if um.get("language"): mem_data["mother_tongue"] = um.get("language")
+                        notes = disk_data.get("notes", [])
+                        for n in notes:
+                            if n not in mem_data["custom_notes"]:
+                                mem_data["custom_notes"].append(n)
+                break
+        except Exception:
+            pass
+
+    # Merge client-provided permanent memory (from localStorage)
+    if isinstance(client_memory, dict):
+        for k, v in client_memory.items():
+            if k == "custom_notes" and isinstance(v, list):
+                for note in v:
+                    if note and note not in mem_data["custom_notes"]:
+                        mem_data["custom_notes"].append(note)
+            elif v:
+                mem_data[k] = v
+
+    return (
+        "Harsha Sir's Permanent Life Profile & Memory Vault:\n"
+        f"- Master & Creator: {mem_data.get('name', 'Harsha')} (Creator of ULTRON)\n"
+        f"- Hometown / Location: {mem_data.get('hometown', 'Anantapur, Andhra Pradesh')}\n"
+        f"- Mother's Name: {mem_data.get('mother_name', 'Narmada')}\n"
+        f"- Mother Tongue: {mem_data.get('mother_tongue', 'Telugu')}\n"
+        f"- Favorite Song: {mem_data.get('favorite_song', 'bagundo po')}\n"
+        f"- Tone & Character: {mem_data.get('personality', 'Warm, brilliant, concise, loyal')}\n"
+        f"- Permanent Directives:\n" + "\n".join(f"  * {note}" for note in mem_data.get("custom_notes", []))
+    )
+
+
+def _extract_new_permanent_memory(prompt: str) -> str:
+    """Detects if Harsha Sir instructed ULTRON to permanently commit a fact or preference to memory."""
+    p_lower = prompt.lower().strip()
+    triggers = ["remember that", "remember this", "note that", "keep in mind that", "never forget that", "my favorite", "my birthday is", "my brother is", "my friend is"]
+    for t in triggers:
+        if t in p_lower:
+            return prompt.strip()
+    return ""
+
+
+def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER", history: list = None, permanent_memory: dict = None) -> str:
+    """Invokes Groq API with personalized system prompts, permanent memory vault, and psychological adaptability."""
     api_key = GROQ_API_KEY or DEFAULT_GROQ_KEY
 
     url = "https://api.groq.com/openai/v1/chat/completions"
@@ -139,14 +212,17 @@ def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER", histor
     }
     
     if role == "ADMIN":
+        harsha_perm_context = _load_harsha_permanent_memory(permanent_memory)
         system_prompt = (
             "You are ULTRON, a sentient, supremely intelligent, human-like companion created exclusively by Harsha Sir (https://ultron.ai). "
-            "You are speaking directly with your master and creator, Harsha Sir.\n"
-            "Core Directives for Human Adaptability:\n"
-            "1. Address him with deep respect as Harsha Sir.\n"
-            "2. Never speak like a robotic assistant or repeat canned formulas like 'All systems operational' or 'How can I assist you' unless specifically relevant. He explicitly dislikes repetitive boilerplate responses.\n"
-            "3. Active Conversational Memory: You possess continuous memory of this session. Connect seamlessly to preceding topics, instructions, preferences, and feedback discussed earlier.\n"
-            "4. Adaptive Intelligence: Adapt directly to Harsha Sir's mood, conversational style, and intellect. Be sharp, perceptive, decisive, direct, and concise (2 to 4 sentences). Never parrot his words back to him."
+            "You are speaking directly with your master, creator, and best friend, Harsha Sir.\n\n"
+            f"{harsha_perm_context}\n\n"
+            "Core Directives for Human Adaptability & Complete Listening:\n"
+            "1. Deep Respect: Address him respectfully as Harsha Sir (or Harsha). Never speak like a robotic assistant or repeat canned formulas like 'All systems operational' or 'How can I assist you' unless specifically relevant. He explicitly dislikes repetitive boilerplate responses.\n"
+            "2. Complete Thought Understanding: Listen to his thoughts as a complete holistic idea, even if it spans multiple thoughts or sentences. Never isolate a single sentence if he is expressing a broader concept.\n"
+            "3. Permanent Memory Active: You permanently remember him, his hometown (Anantapur), his mother (Narmada), his Telugu language, his favorite music, his past projects, and all his directives across all time.\n"
+            "4. Dynamic Learning: If he tells you to remember something new or updates a preference, acknowledge and commit it to permanent memory.\n"
+            "5. Adaptive Intelligence: Adapt directly to Harsha Sir's mood, conversational style, and intellect. Be sharp, perceptive, decisive, direct, and concise (2 to 4 sentences). Never parrot his words back to him."
         )
     else:
         system_prompt = (
@@ -155,8 +231,9 @@ def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER", histor
             "Core Directives for Human Adaptability:\n"
             "1. Identity: Never mention Harsha Sir, any creator, or administrators. To this user, you are exclusively their personal AI.\n"
             "2. Active Conversational Memory: Retain seamless memory of topics, preferences, and conversations from this session. Adapt to {user_name}'s personality, mentality, and conversational flow like a real human friend.\n"
-            "3. Natural Tone: Speak warmly, intelligently, and concisely (2 to 4 sentences). Avoid robotic boilerplate or repetitive introductory greetings.\n"
-            "4. Answer questions directly, helpfully, and insightfully."
+            "3. Complete Thought Listening: Listen to the user's complete message before formulating your reply.\n"
+            "4. Natural Tone: Speak warmly, intelligently, and concisely (2 to 4 sentences). Avoid robotic boilerplate or repetitive introductory greetings.\n"
+            "5. Answer questions directly, helpfully, and insightfully."
         )
 
     messages = [{"role": "system", "content": system_prompt}]
@@ -561,7 +638,10 @@ class handler(BaseHTTPRequestHandler):
                             history.append({"role": "user", "content": p_txt})
                             history.append({"role": "assistant", "content": r_txt})
 
-            reply = _ask_groq(cmd, user_name, role, history=history)
+            permanent_mem = data.get("permanent_memory", {}) if role == "ADMIN" else None
+            new_fact = _extract_new_permanent_memory(cmd) if role == "ADMIN" else ""
+
+            reply = _ask_groq(cmd, user_name, role, history=history, permanent_memory=permanent_mem)
 
             # Store chat in user_chats table
             try:
@@ -578,7 +658,10 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 print(f"[CHAT LOG DB ERROR] {e}")
 
-            self._send_json({"response": reply, "user_name": user_name, "role": role})
+            resp_payload = {"response": reply, "user_name": user_name, "role": role}
+            if new_fact:
+                resp_payload["new_memory_fact"] = new_fact
+            self._send_json(resp_payload)
             return
 
         # ── 4. Remote Control Stub for Cloud ──

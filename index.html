@@ -2135,10 +2135,47 @@
             } catch(e) {}
         }
 
+        // ── Harsha Sir Permanent Memory (Persistent across all sessions & tabs) ──
+        function getPermanentMemory() {
+            try {
+                const raw = localStorage.getItem('ultron_harsha_permanent_memory');
+                return raw ? JSON.parse(raw) : {};
+            } catch(e) {
+                return {};
+            }
+        }
+
+        function savePermanentMemoryFact(fact) {
+            try {
+                let mem = getPermanentMemory();
+                if (!mem.custom_notes) mem.custom_notes = [];
+                if (!mem.custom_notes.includes(fact)) {
+                    mem.custom_notes.push(fact);
+                    localStorage.setItem('ultron_harsha_permanent_memory', JSON.stringify(mem));
+                }
+            } catch(e) {}
+        }
+
         function scrollChatToBottom() {
             const chatContainer = document.querySelector('.chat-container');
             if (chatContainer) {
                 chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
+
+        // ── Complete Thought Speech Engine (Listens completely without cutting off sentences) ──
+        let speechAccumulator = '';
+        let countdownTimer = null;
+        let countdownRemaining = 0;
+
+        function clearSpeechTimers() {
+            if (silenceTimer) {
+                clearTimeout(silenceTimer);
+                silenceTimer = null;
+            }
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
             }
         }
 
@@ -2155,35 +2192,50 @@
                 isListening = true;
                 playAcoustic('chirp');
                 triggerHaptic([30]);
-                updateBadge('● 🎙️ HANDS-FREE ACTIVE', '#00E676');
-                document.getElementById('state-text').innerText = "SPEAK NATURALLY • ULTRON IS LISTENING";
+                updateBadge('● 🎙️ LISTENING', '#00E676');
+                document.getElementById('state-text').innerText = "SPEAK FREELY • ULTRON IS LISTENING";
                 document.getElementById('mic-btn').classList.add('active');
             };
 
             recog.onresult = (e) => {
                 if (isSpeaking) return;
-                let interimTranscript = '';
-                let finalTranscript = '';
-                for (let i = 0; i < e.results.length; ++i) {
+                let currentInterim = '';
+                for (let i = e.resultIndex; i < e.results.length; ++i) {
                     if (e.results[i].isFinal) {
-                        finalTranscript += e.results[i][0].transcript;
+                        const chunk = e.results[i][0].transcript.trim();
+                        if (chunk) {
+                            speechAccumulator += (speechAccumulator ? ' ' : '') + chunk;
+                        }
                     } else {
-                        interimTranscript += e.results[i][0].transcript;
+                        currentInterim += e.results[i][0].transcript;
                     }
                 }
-                const spokenText = (finalTranscript + ' ' + interimTranscript).trim();
-                if (spokenText) {
-                    document.getElementById('cmd-input').value = spokenText;
-                    document.getElementById('user-text').innerText = "You: " + spokenText;
+                const currentFullText = (speechAccumulator + ' ' + currentInterim).trim();
+                if (currentFullText) {
+                    document.getElementById('cmd-input').value = currentFullText;
+                    document.getElementById('user-text').innerText = "You: " + currentFullText;
                     scrollChatToBottom();
 
-                    clearTimeout(silenceTimer);
-                    // 1.8s of silence allows user to pause and think naturally without getting cut off
-                    silenceTimer = setTimeout(() => {
-                        if (!isSpeaking && handsFreeVoice && spokenText) {
-                            sendTextCommand(spokenText);
+                    clearSpeechTimers();
+                    countdownRemaining = 4;
+                    document.getElementById('state-text').innerText = "SPEAK FREELY • ULTRON IS LISTENING";
+
+                    // Countdown ticker: gives Harsha Sir 4 full seconds to formulate multiple sentences!
+                    countdownTimer = setInterval(() => {
+                        countdownRemaining--;
+                        if (countdownRemaining <= 2 && countdownRemaining > 0) {
+                            document.getElementById('state-text').innerText = `LISTENING... (Sending in ${countdownRemaining}s • Tap mic to send)`;
                         }
-                    }, 1800);
+                    }, 1000);
+
+                    silenceTimer = setTimeout(() => {
+                        clearSpeechTimers();
+                        if (!isSpeaking && (handsFreeVoice || isRecognizing) && currentFullText) {
+                            const toSend = currentFullText;
+                            speechAccumulator = '';
+                            sendTextCommand(toSend);
+                        }
+                    }, 4000); // 4.0 seconds allows continuous multi-sentence thoughts without premature cutoff!
                 }
             };
 
@@ -2208,6 +2260,8 @@
                 if (e.error === 'not-allowed') {
                     handsFreeVoice = false;
                     isListening = false;
+                    clearSpeechTimers();
+                    speechAccumulator = '';
                     document.getElementById('mic-btn').classList.remove('active');
                     updateBadge('● MIC BLOCKED', '#FF3D00');
                     document.getElementById('state-text').innerText = "TAP TO UNBLOCK MICROPHONE";
@@ -2231,8 +2285,8 @@
             if (recognition && !isRecognizing) {
                 try {
                     recognition.start();
-                    updateBadge('● 🎙️ HANDS-FREE ACTIVE', '#00E676');
-                    document.getElementById('state-text').innerText = "SPEAK NATURALLY • ULTRON IS LISTENING";
+                    updateBadge('● 🎙️ LISTENING', '#00E676');
+                    document.getElementById('state-text').innerText = "SPEAK FREELY • ULTRON IS LISTENING";
                     document.getElementById('mic-btn').classList.add('active');
                 } catch(e) {}
             }
@@ -2251,11 +2305,22 @@
                 return;
             }
 
+            const pendingText = (document.getElementById('cmd-input').value || speechAccumulator).trim();
+
+            // If user finished talking and taps the active mic button: SEND COMPLETE THOUGHT IMMEDIATELY!
+            if (isRecognizing && pendingText) {
+                clearSpeechTimers();
+                speechAccumulator = '';
+                sendTextCommand(pendingText);
+                return;
+            }
+
             if (handsFreeVoice) {
                 // Turn OFF hands-free
                 handsFreeVoice = false;
                 isListening = false;
-                clearTimeout(silenceTimer);
+                clearSpeechTimers();
+                speechAccumulator = '';
                 try { recognition.stop(); } catch(e) {}
                 document.getElementById('mic-btn').classList.remove('active');
                 updateBadge('● ONLINE', '#FFC107');
@@ -2264,7 +2329,9 @@
             } else {
                 // Turn ON hands-free
                 handsFreeVoice = true;
-                showToast("Hands-Free Voice active! Speak naturally without tapping.");
+                speechAccumulator = '';
+                clearSpeechTimers();
+                showToast("Listening! Speak your complete thought naturally.");
                 startHandsFreeVoice();
             }
         }
@@ -2361,7 +2428,8 @@
         }
 
         function sendTextCommand(overrideVal = null) {
-            clearTimeout(silenceTimer);
+            clearSpeechTimers();
+            speechAccumulator = '';
             const input = document.getElementById('cmd-input');
             const val = overrideVal || input.value.trim();
             if (!val) return;
@@ -2396,7 +2464,8 @@
                 body: JSON.stringify({
                     command: val,
                     token: liveLinkToken,
-                    history: getSessionHistory()
+                    history: getSessionHistory(),
+                    permanent_memory: getPermanentMemory()
                 })
             })
             .then(res => {
@@ -2416,6 +2485,12 @@
 
                     // Store turn in temporary session memory buffer for continuous adaptability
                     appendSessionHistory(val, rep);
+
+                    // Save new permanent memory fact if detected for Harsha Sir
+                    if (data.new_memory_fact) {
+                        savePermanentMemoryFact(data.new_memory_fact);
+                        showToast("Committed to Permanent Memory.");
+                    }
 
                     // Mobile App Launching (e.g. WhatsApp, YouTube, Instagram)
                     if (data.mobile_url) {
