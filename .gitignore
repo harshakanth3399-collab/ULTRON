@@ -19,7 +19,9 @@ __pycache__/
 renderer_audit.log
 adb.zip
 *.tmp
+*.log
 memory/*.tmp
+memory/*.db
 data/camera_captures/
 data/screen_captures/
 
