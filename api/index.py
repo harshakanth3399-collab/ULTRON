@@ -369,3 +369,7 @@ class handler(BaseHTTPRequestHandler):
             return
 
         self._send_json({"error": "Unknown API endpoint"}, status=404)
+
+# Vercel top-level export
+app = handler
+

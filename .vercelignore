@@ -1,0 +1,15 @@
+main.py
+app.py
+run_livelink.py
+web_server.py
+ai.py
+speech.py
+router.py
+commands_daily.py
+tools/
+scratch/
+modules/
+memory/
+data/
+*.log
+*.db

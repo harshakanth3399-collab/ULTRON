@@ -11,6 +11,12 @@ import threading
 
 _SINGLE_INSTANCE_PORT = 9899
 
+# Top-level export guard for Vercel Python runtime
+try:
+    from api.index import handler as app
+except Exception:
+    app = None
+
 
 def _check_single_instance(window_holder: list) -> socket.socket | None:
     """

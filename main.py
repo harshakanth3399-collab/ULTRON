@@ -5,6 +5,12 @@ All boot prints are guarded inside __main__ to prevent re-execution on import.
 """
 import sys
 
+# Top-level export guard for Vercel Python runtime
+try:
+    from api.index import handler as app
+except Exception:
+    app = None
+
 if __name__ == "__main__":
     # Windows multiprocessing safety guard
     import multiprocessing
