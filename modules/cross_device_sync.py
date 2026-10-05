@@ -153,72 +153,98 @@ class CrossDeviceSync:
         except Exception as e:
             return False, f"Failed to save file from phone: {e}"
 
-    def list_laptop_files(self, folder_type: str = "downloads", limit: int = 30) -> List[Dict[str, Any]]:
-        """Lists files on laptop (Downloads or Desktop) available for LiveLink mobile download."""
+    def list_laptop_files(self, folder_type: str = "downloads", limit: int = 40) -> List[Dict[str, Any]]:
+        """Lists files on laptop (Downloads subfolders & Desktop) available for LiveLink mobile download."""
+        search_dirs = []
         if folder_type == "desktop":
-            target_dir = str(get_desktop_dir())
+            search_dirs.append((str(get_desktop_dir()), "desktop"))
         else:
-            target_dir = str(get_downloads_dir())
-
-        if not os.path.exists(target_dir):
-            return []
+            downloads_dir = str(get_downloads_dir())
+            search_dirs.append((downloads_dir, "downloads"))
+            # Also include Desktop so user sees all prominent laptop files
+            search_dirs.append((str(get_desktop_dir()), "desktop"))
 
         entries = []
-        try:
-            items = os.listdir(target_dir)
-            # Filter only files, skip hidden or temporary files
-            for item in items:
-                if item.startswith((".", "~$", "desktop.ini")):
-                    continue
-                full_path = os.path.join(target_dir, item)
-                if os.path.isfile(full_path):
-                    try:
-                        stat = os.stat(full_path)
-                        size_bytes = stat.st_size
-                        # Human readable size
-                        if size_bytes < 1024:
-                            size_str = f"{size_bytes} B"
-                        elif size_bytes < 1024 * 1024:
-                            size_str = f"{size_bytes / 1024:.1f} KB"
-                        elif size_bytes < 1024 * 1024 * 1024:
-                            size_str = f"{size_bytes / (1024 * 1024):.1f} MB"
-                        else:
-                            size_str = f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+        seen_paths = set()
 
-                        ext = os.path.splitext(item)[1].lower()
-                        entries.append({
-                            "name": item,
-                            "size": size_bytes,
-                            "size_human": size_str,
-                            "mtime": stat.st_mtime,
-                            "mtime_human": time.strftime("%b %d, %H:%M", time.localtime(stat.st_mtime)),
-                            "folder": folder_type,
-                            "ext": ext,
-                        })
-                    except Exception:
+        for s_dir, f_tag in search_dirs:
+            if not os.path.exists(s_dir):
+                continue
+            try:
+                # Walk up to 2 subfolder levels
+                for root, dirs, files in os.walk(s_dir):
+                    # Skip hidden, system, or project code dirs
+                    dirs[:] = [d for d in dirs if not d.startswith((".", "~$", "node_modules", "AppData", "Windows", "__pycache__", "venv")) and d != "ULTRON"]
+                    # Calculate depth
+                    rel_depth = len(os.path.relpath(root, s_dir).split(os.sep))
+                    if rel_depth > 2:
                         continue
 
-            # Sort by most recently modified
-            entries.sort(key=lambda x: x["mtime"], reverse=True)
-            return entries[:limit]
-        except Exception as e:
-            print(f"[CROSS DEVICE FILE LIST ERROR] {e}")
-            return []
+                    for item in files:
+                        if item.startswith((".", "~$", "desktop.ini")) or item.endswith(".lnk"):
+                            continue
+                        full_path = os.path.join(root, item)
+                        if full_path in seen_paths or not os.path.isfile(full_path):
+                            continue
+                        seen_paths.add(full_path)
+
+                        try:
+                            stat = os.stat(full_path)
+                            size_bytes = stat.st_size
+                            if size_bytes < 1024:
+                                size_str = f"{size_bytes} B"
+                            elif size_bytes < 1024 * 1024:
+                                size_str = f"{size_bytes / 1024:.1f} KB"
+                            elif size_bytes < 1024 * 1024 * 1024:
+                                size_str = f"{size_bytes / (1024 * 1024):.1f} MB"
+                            else:
+                                size_str = f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+
+                            ext = os.path.splitext(item)[1].lower()
+                            rel_folder = os.path.relpath(root, s_dir)
+                            display_sub = "" if rel_folder == "." else f" • {rel_folder}"
+
+                            entries.append({
+                                "name": item,
+                                "path": full_path,
+                                "size": size_bytes,
+                                "size_human": size_str,
+                                "mtime": stat.st_mtime,
+                                "mtime_human": time.strftime("%b %d, %H:%M", time.localtime(stat.st_mtime)) + display_sub,
+                                "folder": f_tag,
+                                "ext": ext,
+                            })
+                        except Exception:
+                            continue
+            except Exception as e:
+                print(f"[CROSS DEVICE FILE LIST ERROR] {e}")
+
+        # Sort by most recently modified
+        entries.sort(key=lambda x: x["mtime"], reverse=True)
+        return entries[:limit]
 
     def get_file_path(self, filename: str, folder_type: str = "downloads") -> Optional[str]:
-        """Safely resolves path for a file to download, preventing path traversal."""
+        """Safely resolves path for a file to download, checking Downloads, subfolders, and Desktop."""
         safe_name = os.path.basename(filename)
         if not safe_name:
             return None
 
-        if folder_type == "desktop":
-            target_dir = str(get_desktop_dir())
-        else:
-            target_dir = str(get_downloads_dir())
+        search_roots = [str(get_downloads_dir()), str(get_desktop_dir())]
+        for s_root in search_roots:
+            if not os.path.exists(s_root):
+                continue
+            # Direct check
+            direct = os.path.join(s_root, safe_name)
+            if os.path.isfile(direct):
+                return direct
+            # Subdirectory search
+            for root, dirs, files in os.walk(s_root):
+                dirs[:] = [d for d in dirs if not d.startswith((".", "~$", "node_modules", "AppData"))]
+                if safe_name in files:
+                    candidate = os.path.join(root, safe_name)
+                    if os.path.isfile(candidate):
+                        return candidate
 
-        candidate = os.path.join(target_dir, safe_name)
-        if os.path.isfile(candidate):
-            return candidate
         return None
 
     def ring_phone(self) -> Tuple[bool, str]:

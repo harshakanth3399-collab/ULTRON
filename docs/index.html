@@ -789,6 +789,26 @@
         </div>
     </div>
 
+    <!-- ── Phone App Install Guide Modal ── -->
+    <div id="install-guide-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.94); z-index:1002; justify-content:center; align-items:center; backdrop-filter:blur(12px);">
+        <div class="livelink-card" style="max-width:340px; text-align:center;">
+            <div style="font-size:28px; margin-bottom:6px;">📱</div>
+            <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:#FFB300; margin-bottom:6px;">INSTALL ULTRON APP</div>
+            <div style="font-size:11px; color:rgba(255,215,100,0.8); line-height:1.5; margin-bottom:14px;">
+                Install ULTRON directly to your phone home screen with the official Iron Man helmet icon!
+            </div>
+            
+            <div style="background:rgba(255,179,0,0.08); border:1px solid rgba(255,179,0,0.3); border-radius:10px; padding:12px; text-align:left; font-size:11px; color:#FFF9C4; margin-bottom:16px; line-height:1.6;">
+                <div style="font-weight:800; color:#FFB300; margin-bottom:4px;">In Android Chrome:</div>
+                1. Tap the <b>3 dots menu (⋮)</b> in top-right.<br>
+                2. Tap <b>"Add to Home screen"</b> (or <b>"Install app"</b>).<br>
+                3. Tap <b>"Add"</b> — Done! ULTRON is now installed on your phone.
+            </div>
+
+            <button class="livelink-btn" onclick="toggleInstallGuide()" style="padding:10px 24px; font-size:11px; width:100%;">GOT IT</button>
+        </div>
+    </div>
+
     <!-- ── LiveLink Security Gatekeeper Modal (Strict Verification) ── -->
     <div id="livelink-modal-overlay">
         <div class="livelink-card">
@@ -937,13 +957,25 @@
             if (pwaBtn) pwaBtn.style.display = 'block';
         });
 
+        function toggleInstallGuide() {
+            const el = document.getElementById('install-guide-overlay');
+            el.style.display = (el.style.display === 'flex') ? 'none' : 'flex';
+        }
+
         function installPWA() {
+            triggerHaptic([25]);
+            playAcoustic('chirp');
             if (deferredPrompt) {
                 deferredPrompt.prompt();
-                deferredPrompt.userChoice.then(() => {
+                deferredPrompt.userChoice.then((choice) => {
+                    if (choice && choice.outcome === 'accepted') {
+                        showToast('ULTRON installed to phone successfully!');
+                        document.getElementById('pwa-install-btn').style.display = 'none';
+                    }
                     deferredPrompt = null;
-                    document.getElementById('pwa-install-btn').style.display = 'none';
                 });
+            } else {
+                toggleInstallGuide();
             }
         }
 
@@ -1781,8 +1813,18 @@
         function downloadLaptopFile(filename) {
             triggerHaptic([20]);
             playAcoustic('transfer');
-            window.location.href = `/api/livelink/download?file=${filename}&folder=downloads&token=${encodeURIComponent(liveLinkToken)}`;
-            showToast(`Downloading file to phone...`);
+            const token = liveLinkToken || 'LIVELINK_MASTER_HARSHA';
+            const cleanName = decodeURIComponent(filename);
+            const dlUrl = `/api/livelink/download?file=${encodeURIComponent(cleanName)}&folder=downloads&token=${encodeURIComponent(token)}`;
+            
+            const link = document.createElement('a');
+            link.href = dlUrl;
+            link.download = cleanName;
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast(`Downloading ${cleanName} to phone...`);
         }
 
         // ── Wireless Touchpad Gestures ──
