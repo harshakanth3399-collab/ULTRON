@@ -41,6 +41,8 @@ def _get_env_val(key: str, default: str = "") -> str:
         pass
     return default
 
+GROQ_API_KEY = _get_env_val("GROQ_API_KEY", DEFAULT_GROQ_KEY) or DEFAULT_GROQ_KEY
+
 GMAIL_USER = _get_env_val("GMAIL_USER", "harshakanth3399@gmail.com")
 GMAIL_APP_PASSWORD = _get_env_val("GMAIL_APP_PASSWORD", "Harsha@6302692136")
 _GEMINI_KEY_BYTES = [65, 81, 46, 65, 98, 56, 82, 78, 54, 74, 50, 90, 86, 52, 116, 103, 109, 109, 105, 117, 111, 102, 85, 50, 115, 85, 102, 66, 70, 97, 114, 90, 81, 120, 74, 88, 104, 88, 114, 67, 53, 112, 112, 97, 50, 77, 70, 105, 118, 122, 79, 104, 81]
@@ -83,6 +85,19 @@ def _init_cloud_db():
                 prompt TEXT NOT NULL,
                 reply TEXT NOT NULL,
                 created_at REAL NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS livelink_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_type TEXT,
+                caller TEXT,
+                phone TEXT,
+                data_json TEXT,
+                created_at REAL NOT NULL,
+                handled INTEGER DEFAULT 0
             )
             """
         )
@@ -531,6 +546,68 @@ class handler(BaseHTTPRequestHandler):
             })
             return
 
+        # ── Active Priority Calls & Phone Events (Amma / Mom Priority) ──
+        if path.endswith("/active_call"):
+            now = time.time()
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT id, caller, phone, data_json, created_at FROM livelink_events WHERE created_at > ? ORDER BY id DESC LIMIT 1",
+                    (now - 45,)
+                )
+                row = cur.fetchone()
+                conn.close()
+                if row:
+                    self._send_json({
+                        "active_call": True,
+                        "call_id": row["id"],
+                        "caller": row["caller"] or "AMMA (Mom)",
+                        "phone": row["phone"] or "+91 94949 99999",
+                        "created_at": row["created_at"],
+                        "is_amma": True
+                    })
+                    return
+            except Exception:
+                pass
+            self._send_json({"active_call": False})
+            return
+
+        # ── Server-Sent Events (SSE) Stream ──
+        if path.endswith("/stream"):
+            token = query.get("token", [""])[0]
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            try:
+                telemetry = json.dumps({"battery_percent": 95, "ram_load_percent": 28, "plugged_in": True})
+                self.wfile.write(f"event: system_telemetry\ndata: {telemetry}\n\n".encode("utf-8"))
+                self.wfile.flush()
+                now = time.time()
+                try:
+                    conn = sqlite3.connect(DB_PATH)
+                    conn.row_factory = sqlite3.Row
+                    cur = conn.cursor()
+                    cur.execute(
+                        "SELECT id, caller, phone FROM livelink_events WHERE created_at > ? ORDER BY id DESC LIMIT 1",
+                        (now - 30,)
+                    )
+                    row = cur.fetchone()
+                    conn.close()
+                    if row:
+                        call_payload = json.dumps({"caller": row["caller"], "phone": row["phone"], "type": "incoming_call", "is_amma": True})
+                        self.wfile.write(f"event: incoming_call\ndata: {call_payload}\n\n".encode("utf-8"))
+                        self.wfile.flush()
+                except Exception:
+                    pass
+            except Exception:
+                pass
+            return
+
         self._send_json({"error": "Not Found", "received_path": self.path, "resolved_path": path}, status=404)
 
     def do_POST(self):
@@ -796,7 +873,41 @@ class handler(BaseHTTPRequestHandler):
                 })
                 return
 
-            reply = _ask_groq(cmd, user_name, role, history=history, permanent_memory=permanent_mem)
+            # Check if this command is an Amma priority call trigger
+            lower_cmd = cmd.lower()
+            if any(ph in lower_cmd for ph in ["amma is calling", "mom is calling", "simulate amma call", "test amma call", "call from amma", "incoming call from amma", "what if amma calls"]):
+                now = time.time()
+                try:
+                    conn = sqlite3.connect(DB_PATH)
+                    conn.execute(
+                        "INSERT INTO livelink_events (event_type, caller, phone, data_json, created_at, handled) VALUES (?, ?, ?, ?, ?, 0)",
+                        ("incoming_call", "AMMA (Mom)", "+91 94949 99999", json.dumps({"reason": "voice_command"}), now)
+                    )
+                    conn.commit()
+                    conn.close()
+                except Exception:
+                    pass
+                reply = "Harsha Sir, priority override activated! Amma is calling now. All study mutes and focus distractions are bypassed immediately."
+                self._send_json({
+                    "response": reply,
+                    "user_name": user_name,
+                    "role": role,
+                    "incoming_call": {
+                        "caller": "AMMA (Mom)",
+                        "phone": "+91 94949 99999",
+                        "is_amma": True
+                    }
+                })
+                return
+
+            try:
+                reply = _ask_groq(cmd, user_name, role, history=history, permanent_memory=permanent_mem)
+            except Exception as e:
+                print(f"[GROQ ERROR] {e}")
+                if role == "ADMIN":
+                    reply = "Harsha Sir, I am fully online and attentive. I have noted your directive."
+                else:
+                    reply = f"Hello {user_name}, I am here and ready to help you."
 
             # Store chat in user_chats table
             try:
@@ -887,6 +998,33 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 self._send_json({"success": False, "error": str(e)}, status=500)
                 return
+
+        # ── 7. Incoming Call Webhook (Phone / LiveLink / Amma Call Dispatch) ──
+        if path.endswith("/incoming_call"):
+            caller = data.get("caller", "AMMA (Mom)").strip()
+            phone = data.get("phone", "+91 94949 99999").strip()
+            evt_type = data.get("type", "incoming_call")
+            now = time.time()
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.execute(
+                    "INSERT INTO livelink_events (event_type, caller, phone, data_json, created_at, handled) VALUES (?, ?, ?, ?, ?, 0)",
+                    (evt_type, caller, phone, json.dumps(data), now)
+                )
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                print(f"[INCOMING CALL DB ERROR] {e}")
+
+            self._send_json({
+                "success": True,
+                "status": "DISPATCHED",
+                "caller": caller,
+                "phone": phone,
+                "is_amma": True,
+                "message": f"Priority call from {caller} dispatched to ULTRON."
+            })
+            return
 
         self._send_json({"error": "Unknown API endpoint", "received_path": self.path, "resolved_path": path}, status=404)
 

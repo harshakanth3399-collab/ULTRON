@@ -1425,8 +1425,9 @@
     <div id="amma-override-banner">
         <div class="livelink-card" style="max-width:360px; text-align:center; border:2px solid #FFD700; box-shadow:0 0 50px rgba(255,215,0,0.85); background:rgba(20,10,2,0.98);">
             <div style="font-size:42px; margin-bottom:6px; animation:bounce 1s infinite;">📞❤️</div>
-            <div style="font-size:22px; font-weight:900; color:#FFD700; letter-spacing:2px; margin-bottom:4px;">INCOMING CALL</div>
-            <div style="font-size:28px; font-weight:900; color:#FFF; text-shadow:0 0 16px #FFD700; margin-bottom:8px;">AMMA (Mom)</div>
+            <div style="font-size:12px; font-weight:800; color:#FFD700; letter-spacing:2px; margin-bottom:4px;">PRIORITY OVERRIDE • INCOMING CALL</div>
+            <div id="amma-caller-name" style="font-size:28px; font-weight:900; color:#FFF; text-shadow:0 0 16px #FFD700; margin-bottom:4px;">AMMA (Mom)</div>
+            <div id="amma-caller-phone" style="font-size:12px; color:#FFCA28; font-weight:700; margin-bottom:12px;">+91 94949 99999</div>
             <div style="background:rgba(0,230,118,0.18); border:1px solid #00E676; color:#B9F6CA; border-radius:10px; padding:8px 12px; font-size:11px; font-weight:800; margin-bottom:18px; line-height:1.4;">
                 🛡️ ZEN FOCUS OVERRIDE ACTIVE<br>
                 This call is NEVER silenced or blocked!
@@ -1813,6 +1814,23 @@
                     const d = JSON.parse(e.data);
                     showToast(`File ${d.action}: ${d.filename}`);
                     fetchLaptopFiles();
+                } catch (err) {}
+            });
+
+            sseSource.addEventListener('incoming_call', (e) => {
+                try {
+                    const d = JSON.parse(e.data);
+                    triggerAmmaPriorityCall(d.caller || 'AMMA (Mom)', d.phone || '+91 94949 99999');
+                } catch (err) {}
+            });
+
+            sseSource.addEventListener('notification', (e) => {
+                try {
+                    const d = JSON.parse(e.data);
+                    const combined = ((d.caller || '') + ' ' + (d.title || '') + ' ' + (d.body || '') + ' ' + (d.sender || '')).toLowerCase();
+                    if (combined.includes('amma') || combined.includes('mom') || combined.includes('mother') || combined.includes('narmada') || combined.includes('అమ్మ')) {
+                        triggerAmmaPriorityCall(d.caller || d.title || 'AMMA (Mom)', d.phone || '+91 94949 99999');
+                    }
                 } catch (err) {}
             });
 
@@ -2628,6 +2646,28 @@
         let handsFreeVoice = false;
         let silenceTimer = null;
         let availableVoices = [];
+        window._activeUtterances = window._activeUtterances || [];
+        window._currentUtterance = null;
+        window._speechHeartbeat = null;
+        window._browserAudioUnlocked = false;
+
+        function unlockBrowserAudio() {
+            if (window._browserAudioUnlocked) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.resume();
+                    const dummy = new SpeechSynthesisUtterance(' ');
+                    dummy.volume = 0.001;
+                    window.speechSynthesis.speak(dummy);
+                }
+                window._browserAudioUnlocked = true;
+            } catch(e) {}
+        }
+        ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(evt => {
+            document.addEventListener(evt, unlockBrowserAudio, { once: true, passive: true });
+        });
 
         function updateVoiceList() {
             if (typeof window.speechSynthesis !== 'undefined') {
@@ -2874,21 +2914,26 @@
         }
 
         function speakMobileResponse(text) {
+            unlockBrowserAudio();
+
             if (!('speechSynthesis' in window)) {
                 setTimeout(() => {
                     isSpeaking = false;
                     if (handsFreeVoice) startHandsFreeVoice();
-                }, 2500);
+                }, 2000);
                 return;
             }
 
             try {
-                window.speechSynthesis.cancel();
+                // Resume speech synthesis in case the browser suspended it
+                window.speechSynthesis.resume();
+
                 // Clean punctuation, URLs, markdown formatting for crystal-clear natural speech
                 const clean = text
                     .replace(/[*_#`~>]/g, '')
                     .replace(/\((https?:\/\/[^\)]+)\)/g, '')
                     .replace(/https?:\/\/\S+/g, '')
+                    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
                     .replace(/\s+/g, ' ')
                     .trim();
 
@@ -2898,35 +2943,60 @@
                     return;
                 }
 
+                // If speech synthesis is currently speaking or pending, cancel cleanly
+                if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+                    try { window.speechSynthesis.cancel(); } catch(e) {}
+                }
+
                 const utter = new SpeechSynthesisUtterance(clean);
                 utter.rate = 0.96; // Articulate, human cadence
-                utter.pitch = 0.92; // Deep, dignified, clear tone
+                utter.pitch = 0.94; // Dignified, calm, resonant tone
+                utter.lang = 'en-US'; // Default base language fallback
+
+                // Retain in window-level array to prevent Chromium V8 garbage collection mid-speech
+                window._activeUtterances.push(utter);
+                window._currentUtterance = utter;
 
                 if (!availableVoices.length) updateVoiceList();
 
-                // Select the highest fidelity natural voice
+                // Select high-fidelity voice (prefer Indian English if available, else Natural/Neural/Google)
                 if (availableVoices.length > 0) {
-                    const natural = availableVoices.find(v => v.lang.startsWith('en') && (
-                        v.name.includes('Natural') || 
-                        v.name.includes('Neural') || 
-                        v.name.includes('Google UK English Male') || 
-                        v.name.includes('Google US English') ||
-                        v.name.includes('Daniel') ||
-                        v.name.includes('Arthur')
-                    )) || availableVoices.find(v => v.lang.startsWith('en') && (
-                        v.name.includes('Male') || 
-                        v.name.includes('Guy') || 
-                        v.name.includes('David') || 
-                        v.name.includes('George')
-                    )) || availableVoices.find(v => v.lang.startsWith('en'));
+                    const natural = availableVoices.find(v => (v.lang === 'en-IN' || v.lang === 'en_IN')) ||
+                                    availableVoices.find(v => v.lang.startsWith('en') && (
+                                        v.name.includes('Natural') || 
+                                        v.name.includes('Neural') || 
+                                        v.name.includes('Google UK English Male') || 
+                                        v.name.includes('Google US English') ||
+                                        v.name.includes('Daniel') ||
+                                        v.name.includes('Arthur')
+                                    )) || availableVoices.find(v => v.lang.startsWith('en') && (
+                                        v.name.includes('Male') || 
+                                        v.name.includes('Guy') || 
+                                        v.name.includes('David') || 
+                                        v.name.includes('George')
+                                    )) || availableVoices.find(v => v.lang.startsWith('en'));
 
-                    if (natural) utter.voice = natural;
+                    if (natural) {
+                        utter.voice = natural;
+                        if (natural.lang) utter.lang = natural.lang;
+                    }
                 }
 
                 utter.onstart = () => {
                     isSpeaking = true;
                     updateBadge('● ULTRON SPEAKING', '#FFB300');
                     document.getElementById('state-text').innerText = "ULTRON IS SPEAKING...";
+
+                    // Chrome 15s keepalive heartbeat
+                    if (window._speechHeartbeat) clearInterval(window._speechHeartbeat);
+                    window._speechHeartbeat = setInterval(() => {
+                        if (!window.speechSynthesis.speaking) {
+                            clearInterval(window._speechHeartbeat);
+                        } else {
+                            window.speechSynthesis.pause();
+                            window.speechSynthesis.resume();
+                        }
+                    }, 8000);
                 };
 
                 utter.onboundary = (e) => {
@@ -2935,9 +3005,19 @@
                     triggerHaptic([10]);
                 };
 
-                utter.onend = () => {
+                const cleanupUtterance = () => {
                     isSpeaking = false;
                     speechPulse = 0.0;
+                    if (window._speechHeartbeat) {
+                        clearInterval(window._speechHeartbeat);
+                        window._speechHeartbeat = null;
+                    }
+                    window._activeUtterances = window._activeUtterances.filter(u => u !== utter);
+                    if (window._currentUtterance === utter) window._currentUtterance = null;
+                };
+
+                utter.onend = () => {
+                    cleanupUtterance();
                     if (handsFreeVoice) {
                         setTimeout(startHandsFreeVoice, 400);
                     } else {
@@ -2946,14 +3026,25 @@
                     }
                 };
 
-                utter.onerror = () => {
-                    isSpeaking = false;
-                    speechPulse = 0.0;
+                utter.onerror = (e) => {
+                    console.log("SpeechSynthesis error:", e);
+                    cleanupUtterance();
                     if (handsFreeVoice) setTimeout(startHandsFreeVoice, 500);
                 };
 
-                window.speechSynthesis.speak(utter);
+                // Chromium cancellation queue flush safety: wait 40ms before speaking
+                setTimeout(() => {
+                    try {
+                        window.speechSynthesis.resume();
+                        window.speechSynthesis.speak(utter);
+                    } catch(speakErr) {
+                        console.error("Speak error:", speakErr);
+                        cleanupUtterance();
+                    }
+                }, 40);
+
             } catch(e) {
+                console.error("speakMobileResponse exception:", e);
                 isSpeaking = false;
                 speechPulse = 0.0;
                 if (handsFreeVoice) setTimeout(startHandsFreeVoice, 1500);
@@ -2961,6 +3052,7 @@
         }
 
         function sendTextCommand(overrideVal = null) {
+            unlockBrowserAudio();
             clearSpeechTimers();
             speechAccumulator = '';
             const input = document.getElementById('cmd-input');
@@ -2978,6 +3070,14 @@
             scrollChatToBottom();
             appendToChatStream('user', val);
             if (!overrideVal) input.value = "";
+
+            // Immediate local check for Amma priority call trigger
+            const lowerVal = val.toLowerCase();
+            if (lowerVal.includes('amma call') || lowerVal.includes('mom call') || lowerVal.includes('amma is calling') || lowerVal.includes('simulate amma')) {
+                setTimeout(() => {
+                    triggerAmmaPriorityCall('AMMA (Mom)', '+91 94949 99999');
+                }, 300);
+            }
 
             if (!navigator.onLine) {
                 offlineCommandQueue.push(val);
@@ -3040,6 +3140,11 @@
                         } catch(appErr) {
                             console.log("App launch error:", appErr);
                         }
+                    }
+
+                    // Check if incoming priority call was dispatched by backend
+                    if (data.incoming_call) {
+                        triggerAmmaPriorityCall(data.incoming_call.caller || 'AMMA (Mom)', data.incoming_call.phone || '+91 94949 99999');
                     }
 
                     // Speak through phone speaker & automatically resume hands-free listening
@@ -3356,50 +3461,111 @@
             } catch(e) {}
         }
 
-        // ── Critical Amma / Mom Whitelist Verification Simulator ──
+        // ── Critical Amma / Mom Whitelist Verification & Priority System ──
         let ammaRingInterval = null;
-        function simulateAmmaCall() {
-            triggerHaptic([400, 150, 400, 150, 600]);
-            const banner = document.getElementById('amma-override-banner');
-            if (banner) banner.style.display = 'flex';
+        let isAmmaCallActive = false;
+        let lastHandledCallId = null;
 
-            // Sound loud priority alert ringtone
+        function playAmmaPriorityRingtone() {
+            if (ammaRingInterval) {
+                clearInterval(ammaRingInterval);
+                ammaRingInterval = null;
+            }
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if (audioCtx.state === 'suspended') audioCtx.resume();
 
             let ringBeep = 0;
             ammaRingInterval = setInterval(() => {
-                if (ringBeep > 8) { clearInterval(ammaRingInterval); return; }
+                if (!isAmmaCallActive) {
+                    clearInterval(ammaRingInterval);
+                    ammaRingInterval = null;
+                    return;
+                }
                 try {
                     const osc = audioCtx.createOscillator();
                     const gain = audioCtx.createGain();
                     osc.connect(gain);
                     gain.connect(audioCtx.destination);
                     const t = audioCtx.currentTime;
-                    osc.frequency.setValueAtTime(ringBeep % 2 === 0 ? 880 : 1046, t);
-                    gain.gain.setValueAtTime(0.35, t);
-                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+                    // Dual-frequency urgent telephone ring sequence (853Hz / 960Hz)
+                    osc.frequency.setValueAtTime(ringBeep % 2 === 0 ? 853 : 960, t);
+                    gain.gain.setValueAtTime(0.38, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
                     osc.start(t);
-                    osc.stop(t + 0.35);
+                    osc.stop(t + 0.38);
                     ringBeep++;
                 } catch(e) {}
-            }, 400);
+            }, 450);
+        }
+
+        function triggerAmmaPriorityCall(caller = "AMMA (Mom)", phone = "+91 94949 99999") {
+            isAmmaCallActive = true;
+
+            // Automatically mute the 432Hz Zen focus drone so Harsha Sir hears the call clearly!
+            stopZenAmbientDrone();
+
+            // Emergency distinctive haptic pulse
+            triggerHaptic([500, 200, 500, 200, 800, 200, 800]);
+
+            const banner = document.getElementById('amma-override-banner');
+            if (banner) {
+                const nameEl = document.getElementById('amma-caller-name');
+                if (nameEl) nameEl.innerText = caller;
+                const phoneEl = document.getElementById('amma-caller-phone');
+                if (phoneEl) phoneEl.innerText = phone;
+                banner.style.display = 'flex';
+            }
+
+            playAmmaPriorityRingtone();
+            showToast("🚨 PRIORITY OVERRIDE: Incoming call from Amma!");
+
+            // Voice announcement
+            setTimeout(() => {
+                if (isAmmaCallActive) {
+                    speakMobileResponse("Priority override. Incoming call from Amma. All study mutes have been bypassed.");
+                }
+            }, 300);
+        }
+
+        function simulateAmmaCall() {
+            triggerAmmaPriorityCall("AMMA (Mom)", "+91 94949 99999");
         }
 
         function dismissAmmaCall(accepted) {
+            isAmmaCallActive = false;
             if (ammaRingInterval) {
                 clearInterval(ammaRingInterval);
                 ammaRingInterval = null;
             }
             const banner = document.getElementById('amma-override-banner');
             if (banner) banner.style.display = 'none';
+
             if (accepted) {
                 showToast("Connected to Amma with priority override!");
                 playAcoustic('approved');
+                appendToChatStream('ai', "📞 Connected to incoming priority call from Amma (Mom).");
             } else {
                 showToast("Call dismissed.");
             }
+
+            // If Zen Focus is still active, restore calm 432Hz ambient drone
+            if (zenFocusActive) {
+                setTimeout(startZenAmbientDrone, 1200);
+            }
         }
+
+        function checkActivePriorityCalls() {
+            fetch('/api/livelink/active_call')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.active_call && data.call_id && data.call_id !== lastHandledCallId) {
+                        lastHandledCallId = data.call_id;
+                        triggerAmmaPriorityCall(data.caller || 'AMMA (Mom)', data.phone || '+91 94949 99999');
+                    }
+                })
+                .catch(() => {});
+        }
+        setInterval(checkActivePriorityCalls, 4500);
 
         function quickPromptDraw() {
             const input = document.getElementById('cmd-input');
