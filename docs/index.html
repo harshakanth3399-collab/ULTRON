@@ -62,6 +62,25 @@
             color: #FFC107;
             border: 1px solid rgba(255, 179, 0, 0.4);
         }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .telemetry-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            background: rgba(255, 179, 0, 0.08);
+            border: 1px solid rgba(255, 179, 0, 0.35);
+            color: rgba(255, 215, 100, 0.85);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 0 8px rgba(255, 179, 0, 0.15);
+        }
         .status-badge {
             padding: 5px 14px;
             border-radius: 14px;
@@ -272,7 +291,7 @@
             color: rgba(255, 179, 0, 0.7);
         }
 
-        /* File Transfer Bay */
+        /* File Transfer Bay & Progress Bar */
         .drop-zone {
             border: 2px dashed rgba(255, 179, 0, 0.6);
             border-radius: 12px;
@@ -569,7 +588,10 @@
         <div class="logo">
             ULTRON <span class="logo-sub">LIVELINK</span>
         </div>
-        <div class="status-badge" id="badge">● ONLINE</div>
+        <div class="header-right">
+            <div class="telemetry-badge" id="telemetry-badge">⚡ --% • RAM --%</div>
+            <div class="status-badge" id="badge">● ONLINE</div>
+        </div>
     </header>
 
     <!-- 3D Three.js Golden Particle Matrix (J.A.R.V.I.S. Core) -->
@@ -596,6 +618,17 @@
                 <div class="drop-text">⬆️ DRAG FILES HERE OR TAP TO UPLOAD</div>
                 <div style="font-size: 10px; color: rgba(255,179,0,0.6); margin-top: 4px;">Saves directly to Laptop Downloads</div>
                 <input type="file" id="file-input" style="display:none" onchange="handleFileSelect(event)">
+                
+                <!-- Chunked Upload Glowing Progress Ring / Bar -->
+                <div id="upload-progress-container" style="display:none; width:100%; margin-top:10px;">
+                    <div style="display:flex; justify-content:space-between; font-size:10px; color:#FFD700; margin-bottom:4px;">
+                        <span id="upload-filename">Uploading...</span>
+                        <span id="upload-percent">0%</span>
+                    </div>
+                    <div style="width:100%; height:6px; background:rgba(255,179,0,0.2); border-radius:3px; overflow:hidden;">
+                        <div id="upload-progress-fill" style="width:0%; height:100%; background:linear-gradient(90deg, #FFB300, #FF6F00); transition: width 0.15s ease;"></div>
+                    </div>
+                </div>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <span style="font-size:10px; font-weight:800; color:#FFB300; letter-spacing:1px;">LAPTOP FILES (TAP TO DOWNLOAD)</span>
@@ -713,6 +746,50 @@
     <div id="livelink-toast"></div>
 
     <script>
+        // ── Feature 1: Mobile Thermal Optimizer & Adaptive 60/120 FPS ──
+        let isPageVisible = true;
+        let lastFrameTime = performance.now();
+        let idleTimer = null;
+        let isLowPowerMode = false;
+
+        function resetIdleTimer() {
+            isLowPowerMode = false;
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                isLowPowerMode = true;
+            }, 45000); // 45s idle -> enter battery saver
+        }
+        ['touchstart', 'mousemove', 'keydown', 'click'].forEach(evt => {
+            window.addEventListener(evt, resetIdleTimer, { passive: true });
+        });
+        resetIdleTimer();
+
+        document.addEventListener('visibilitychange', () => {
+            isPageVisible = !document.hidden;
+            if (isPageVisible) {
+                clock.start();
+                requestAnimationFrame(animate);
+            }
+        });
+
+        // ── Feature 5: Mobile Haptic Feedback & Web Push Notifications ──
+        function triggerHaptic(pattern = [25]) {
+            if ('vibrate' in navigator) {
+                try { navigator.vibrate(pattern); } catch (e) {}
+            }
+        }
+
+        function requestNotificationPermission() {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+        function sendPushNotification(title, body) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                try { new Notification(title, { body, icon: '/icon.png' }); } catch (e) {}
+            }
+        }
+
         // ── PWA Service Worker Registration ──
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(() => {});
@@ -729,40 +806,119 @@
         // ── LiveLink Gatekeeper Permission & Token System ──
         let liveLinkToken = localStorage.getItem('livelink_token') || '';
         let pollInterval = null;
+        let sseSource = null;
+
+        // ── Feature 2: Low-Latency Server-Sent Events (SSE) Live Stream ──
+        function initSSEStream() {
+            if (sseSource) {
+                try { sseSource.close(); } catch (e) {}
+                sseSource = null;
+            }
+
+            const streamUrl = `/api/livelink/stream?token=${encodeURIComponent(liveLinkToken)}`;
+            sseSource = new EventSource(streamUrl);
+
+            sseSource.addEventListener('approval_event', (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    if (data.token === liveLinkToken || data.status === 'APPROVED' || 
+                        data.name === document.getElementById('gate-name').value.trim()) {
+                        triggerHaptic([40, 60, 40]);
+                        document.getElementById('livelink-modal-overlay').style.display = 'none';
+                        updateBadge('● VERIFIED', '#00E676');
+                        showToast(`Access granted by Harsha! Welcome, ${data.name}.`);
+                        sendPushNotification("ULTRON LiveLink", "Access granted by Harsha! ULTRON is unlocked.");
+                    } else if (data.status === 'DENIED' || data.status === 'REVOKED') {
+                        document.getElementById('pending-box').style.display = 'none';
+                        document.getElementById('livelink-form').style.display = 'flex';
+                        updateBadge('● RESTRICTED', '#FF3D00');
+                        showToast('Access was denied by Harsha.');
+                    }
+                } catch (err) {}
+            });
+
+            sseSource.addEventListener('system_telemetry', (e) => {
+                try {
+                    const d = JSON.parse(e.data);
+                    const badgeEl = document.getElementById('telemetry-badge');
+                    if (badgeEl) {
+                        const plugIcon = d.plugged_in ? "⚡" : "🔋";
+                        badgeEl.innerText = `${plugIcon} ${d.battery_percent}% • RAM ${d.ram_load_percent}%`;
+                    }
+                } catch (err) {}
+            });
+
+            sseSource.addEventListener('clipboard_sync', (e) => {
+                try {
+                    const d = JSON.parse(e.data);
+                    if (d.text) {
+                        showToast("Laptop clipboard synced!");
+                    }
+                } catch (err) {}
+            });
+
+            sseSource.addEventListener('file_event', (e) => {
+                try {
+                    const d = JSON.parse(e.data);
+                    showToast(`File ${d.action}: ${d.filename}`);
+                    fetchLaptopFiles();
+                } catch (err) {}
+            });
+
+            sseSource.onerror = () => {
+                // Auto-reconnect silently handled by browser
+            };
+        }
+
+        // ── Feature 3: Zero-Drop Auto-Reconnection & Offline Buffer ──
+        let offlineCommandQueue = [];
+
+        window.addEventListener('online', () => {
+            updateBadge('● ONLINE', '#FFC107');
+            showToast('Connection restored! LiveLink synchronized.');
+            initSSEStream();
+            while (offlineCommandQueue.length > 0) {
+                const cmd = offlineCommandQueue.shift();
+                sendTextCommand(cmd);
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            updateBadge('● RECONNECTING...', '#FF9100');
+            showToast('Network disconnected. Buffering commands...');
+        });
 
         function checkGatekeeperStatus() {
-            // Check if local connection (laptop itself) or already approved
             const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
             
             if (isLocal) {
-                // Harsha's master laptop connection is auto-granted
                 updateBadge('● ONLINE', '#FFC107');
+                initSSEStream();
                 return;
             }
 
             if (!liveLinkToken) {
-                // Show Verification Gate Modal
                 document.getElementById('livelink-modal-overlay').style.display = 'flex';
                 updateBadge('● RESTRICTED', '#FF3D00');
                 return;
             }
 
-            // Verify existing token with backend
             fetch(`/api/livelink/check_status?token=${encodeURIComponent(liveLinkToken)}`)
                 .then(r => r.json())
                 .then(data => {
                     if (data.status === 'APPROVED') {
                         document.getElementById('livelink-modal-overlay').style.display = 'none';
                         updateBadge('● VERIFIED', '#00E676');
+                        initSSEStream();
                         if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
                     } else if (data.status === 'PENDING') {
                         document.getElementById('livelink-modal-overlay').style.display = 'flex';
                         document.getElementById('livelink-form').style.display = 'none';
                         document.getElementById('pending-box').style.display = 'flex';
                         updateBadge('● PENDING', '#FF9100');
+                        initSSEStream();
                         startStatusPolling();
                     } else {
-                        // Denied, Revoked, or Unregistered
                         localStorage.removeItem('livelink_token');
                         liveLinkToken = '';
                         document.getElementById('livelink-modal-overlay').style.display = 'flex';
@@ -773,13 +929,15 @@
                     }
                 })
                 .catch(() => {
-                    // Fallback
                     updateBadge('● OFFLINE', '#FF3D00');
                 });
         }
 
         function handleAccessRequest(e) {
             e.preventDefault();
+            requestNotificationPermission();
+            triggerHaptic([30]);
+
             const name = document.getElementById('gate-name').value.trim();
             const phone = document.getElementById('gate-phone').value.trim();
             const purpose = document.getElementById('gate-purpose').value.trim();
@@ -811,13 +969,14 @@
                         document.getElementById('livelink-modal-overlay').style.display = 'none';
                         updateBadge('● VERIFIED', '#00E676');
                         showToast('Access granted! Welcome to ULTRON.');
+                        initSSEStream();
                     } else {
-                        // Switch to Pending View
                         document.getElementById('livelink-form').style.display = 'none';
                         document.getElementById('pending-box').style.display = 'flex';
                         document.getElementById('pending-details').innerHTML = 
                             `User: <b>${name}</b> | Phone: <b>${phone}</b><br>Request sent to Harsha's laptop. Waiting for Harsha to grant permission...`;
                         updateBadge('● PENDING', '#FF9100');
+                        initSSEStream();
                         startStatusPolling();
                         showToast('Request sent to Harsha! Awaiting authorization.');
                     }
@@ -845,6 +1004,7 @@
                             document.getElementById('livelink-modal-overlay').style.display = 'none';
                             updateBadge('● VERIFIED', '#00E676');
                             showToast(`Access granted by Harsha! Welcome, ${data.name}.`);
+                            initSSEStream();
                         } else if (data.status === 'DENIED' || data.status === 'REVOKED') {
                             clearInterval(pollInterval);
                             pollInterval = null;
@@ -860,7 +1020,6 @@
             }, 2500);
         }
 
-        // Initialize security check
         checkGatekeeperStatus();
 
         // ── Three.js 3D WebGL Holographic Engine (J.A.R.V.I.S. Neural Matrix) ──
@@ -878,17 +1037,16 @@
         let isListening = false;
         let isSpeaking = false;
 
-        // 1. J.A.R.V.I.S. Particle Core Swarm (Incandescent Gold & Amber Orange)
         const particleCount = 6500;
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
         const basePositions = new Float32Array(particleCount * 3);
         const colors = new Float32Array(particleCount * 3);
 
-        const goldColor = new THREE.Color(0xFFD700);       // Pure Incandescent Gold
-        const amberColor = new THREE.Color(0xFFA000);      // Warm Radiant Amber
-        const orangeColor = new THREE.Color(0xFF6F00);     // Molten Flame Orange
-        const whiteGoldColor = new THREE.Color(0xFFF9C4);  // Luminous Core Spark
+        const goldColor = new THREE.Color(0xFFD700);
+        const amberColor = new THREE.Color(0xFFA000);
+        const orangeColor = new THREE.Color(0xFF6F00);
+        const whiteGoldColor = new THREE.Color(0xFFF9C4);
 
         for (let i = 0; i < particleCount; i++) {
             const u = Math.random();
@@ -938,14 +1096,20 @@
         const particleSystem = new THREE.Points(geometry, particleMaterial);
         scene.add(particleSystem);
 
-        // 2. Animation Loop (Fluid Organic Neural Wave)
         let clock = new THREE.Clock();
 
-        function animate() {
+        function animate(now) {
+            // Adaptive visibility guard: 0% CPU & GPU usage when phone screen is off/hidden
+            if (!isPageVisible) return;
             requestAnimationFrame(animate);
-            const elapsedTime = clock.getElapsedTime();
 
-            const speed = isSpeaking ? 1.8 : (isListening ? 1.25 : 0.65);
+            // Adaptive low-power throttle: caps to 30 FPS when idle for 45s
+            const delta = now - lastFrameTime;
+            if (isLowPowerMode && delta < 32) return;
+            lastFrameTime = now;
+
+            const elapsedTime = clock.getElapsedTime();
+            const speed = isSpeaking ? 1.8 : (isListening ? 1.25 : (isLowPowerMode ? 0.35 : 0.65));
             particleSystem.rotation.y = elapsedTime * 0.28 * speed;
             particleSystem.rotation.x = Math.sin(elapsedTime * 0.22) * 0.18;
             particleSystem.rotation.z = Math.cos(elapsedTime * 0.18) * 0.15;
@@ -972,7 +1136,7 @@
 
             renderer.render(scene, camera);
         }
-        animate();
+        requestAnimationFrame(animate);
 
         // ── Web Socket & State Synchronization ──────────────────────────────
         function updateBadge(text, color) {
@@ -983,6 +1147,7 @@
         }
 
         function toggleMic() {
+            triggerHaptic([25]);
             const btn = document.getElementById('mic-btn');
             if (btn.classList.contains('active')) {
                 btn.classList.remove('active');
@@ -999,13 +1164,20 @@
             if (e.key === 'Enter') sendTextCommand();
         }
 
-        function sendTextCommand() {
+        function sendTextCommand(overrideVal = null) {
             const input = document.getElementById('cmd-input');
-            const val = input.value.trim();
+            const val = overrideVal || input.value.trim();
             if (!val) return;
 
+            triggerHaptic([20]);
             document.getElementById('user-text').innerText = "You: " + val;
-            input.value = "";
+            if (!overrideVal) input.value = "";
+
+            if (!navigator.onLine) {
+                offlineCommandQueue.push(val);
+                showToast("Command buffered. Will execute once reconnected.");
+                return;
+            }
 
             fetch('/api/command', {
                 method: 'POST',
@@ -1028,13 +1200,17 @@
                 const rep = data.reply || data.response;
                 if (rep) {
                     document.getElementById('ai-text').innerText = "ULTRON: " + rep;
+                    triggerHaptic([30, 20]);
                 }
             })
-            .catch(err => console.error(err));
+            .catch(err => {
+                offlineCommandQueue.push(val);
+                showToast("Connection drop. Command queued for retry.");
+            });
         }
 
-        // ── LiveLink Synergy Tabs & Panel Switching ──
         function switchDockTab(tab) {
+            triggerHaptic([15]);
             ['command', 'files', 'touchpad', 'remote'].forEach(t => {
                 const btn = document.getElementById(`dock-btn-${t}`);
                 if (btn) btn.classList.remove('active');
@@ -1057,46 +1233,113 @@
             }
         }
 
-        // ── Bi-Directional Drag-and-Drop & File Transfers ──
-        function uploadFileToServer(file) {
-            if (!file) return;
-            showToast(`Uploading ${file.name} to Laptop Downloads...`);
+        // ── Feature 4: Chunked File Engine for Large Media with Progress Bar ──
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const base64Data = e.target.result;
-                fetch('/api/livelink/upload', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${liveLinkToken}`,
-                        'X-LiveLink-Token': liveLinkToken
-                    },
-                    body: JSON.stringify({
-                        filename: file.name,
-                        data: base64Data,
-                        folder: 'downloads',
-                        token: liveLinkToken
+        async function uploadFileToServer(file) {
+            if (!file) return;
+            triggerHaptic([30]);
+
+            const progContainer = document.getElementById('upload-progress-container');
+            const progFill = document.getElementById('upload-progress-fill');
+            const progPercent = document.getElementById('upload-percent');
+            const progFilename = document.getElementById('upload-filename');
+
+            // If file <= 1.5MB, use fast single-shot upload
+            if (file.size <= 1.5 * 1024 * 1024) {
+                showToast(`Uploading ${file.name} to Laptop...`);
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    fetch('/api/livelink/upload', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${liveLinkToken}`,
+                            'X-LiveLink-Token': liveLinkToken
+                        },
+                        body: JSON.stringify({
+                            filename: file.name,
+                            data: e.target.result,
+                            folder: 'downloads',
+                            token: liveLinkToken
+                        })
                     })
-                })
-                .then(r => {
-                    if (r.status === 403) {
-                        showToast('Access denied. Awaiting authorization from Harsha.');
-                        return null;
-                    }
-                    return r.json();
-                })
-                .then(data => {
-                    if (data && data.success) {
-                        showToast(`Transferred: ${file.name} to Laptop!`);
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.success) {
+                            triggerHaptic([40, 40]);
+                            showToast(`Transferred: ${file.name} to Laptop!`);
+                            fetchLaptopFiles();
+                        } else {
+                            showToast(`Upload failed: ${data.message || 'error'}`);
+                        }
+                    })
+                    .catch(err => showToast(`Upload error: ${err}`));
+                };
+                reader.readAsDataURL(file);
+                return;
+            }
+
+            // For larger files > 1.5MB, use Chunked Upload
+            const CHUNK_SIZE = 512 * 1024; // 512 KB per chunk
+            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+            const uploadId = 'up_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+            progContainer.style.display = 'block';
+            progFilename.innerText = file.name;
+            progFill.style.width = '0%';
+            progPercent.innerText = '0%';
+
+            try {
+                for (let i = 0; i < totalChunks; i++) {
+                    const start = i * CHUNK_SIZE;
+                    const end = Math.min(start + CHUNK_SIZE, file.size);
+                    const chunkBlob = file.slice(start, end);
+                    const b64 = await blobToBase64(chunkBlob);
+
+                    const resp = await fetch('/api/livelink/upload_chunk', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${liveLinkToken}`,
+                            'X-LiveLink-Token': liveLinkToken
+                        },
+                        body: JSON.stringify({
+                            upload_id: uploadId,
+                            chunk_index: i,
+                            total_chunks: totalChunks,
+                            filename: file.name,
+                            folder: 'downloads',
+                            data: b64,
+                            token: liveLinkToken
+                        })
+                    });
+
+                    const resData = await resp.json();
+                    const pct = Math.round(((i + 1) / totalChunks) * 100);
+                    progFill.style.width = pct + '%';
+                    progPercent.innerText = pct + '%';
+
+                    if (resData.completed) {
+                        triggerHaptic([40, 40]);
+                        showToast(`Transferred ${file.name} in full!`);
                         fetchLaptopFiles();
-                    } else if (data) {
-                        showToast(`Upload failed: ${data.message || 'error'}`);
                     }
-                })
-                .catch(err => showToast(`Upload failed: ${err}`));
-            };
-            reader.readAsDataURL(file);
+                }
+            } catch (err) {
+                showToast(`Chunked upload failed: ${err}`);
+            } finally {
+                setTimeout(() => {
+                    progContainer.style.display = 'none';
+                }, 2500);
+            }
         }
 
         function handleFileSelect(e) {
@@ -1106,7 +1349,6 @@
             }
         }
 
-        // Drop zone inside files panel
         const dropZone = document.getElementById('drop-zone');
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
@@ -1118,7 +1360,6 @@
             }
         });
 
-        // Global Drag and Drop anywhere on the window!
         const globalOverlay = document.getElementById('global-drop-overlay');
         window.addEventListener('dragenter', (e) => {
             e.preventDefault();
@@ -1169,6 +1410,7 @@
         }
 
         function downloadLaptopFile(filename) {
+            triggerHaptic([20]);
             window.location.href = `/api/livelink/download?file=${filename}&folder=downloads&token=${encodeURIComponent(liveLinkToken)}`;
             showToast(`Downloading file to phone...`);
         }
@@ -1208,6 +1450,7 @@
         }
 
         function sendTouchpadAction(action) {
+            triggerHaptic([20]);
             fetch('/api/touchpad', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },
@@ -1216,6 +1459,7 @@
         }
 
         function sendTouchpadScroll(direction) {
+            triggerHaptic([15]);
             fetch('/api/touchpad', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },
@@ -1225,6 +1469,7 @@
 
         // ── Laptop Remote Control ──
         function sendRemoteAction(action) {
+            triggerHaptic([25]);
             fetch('/api/livelink/control', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },

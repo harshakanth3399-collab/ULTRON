@@ -272,10 +272,9 @@ class LiveLinkGatekeeper:
         now = time.time()
         with self._lock, self._get_connection() as conn:
             cur = conn.cursor()
-            # Match exact token, exact phone, or case-insensitive name match
             cur.execute(
                 """
-                SELECT id, name, phone, status FROM livelink_users
+                SELECT id, name, phone, access_token, status FROM livelink_users
                 WHERE access_token = ? OR phone LIKE ? OR LOWER(name) LIKE ?
                 ORDER BY requested_at DESC LIMIT 1
                 """,
@@ -288,9 +287,17 @@ class LiveLinkGatekeeper:
             user_id = row["id"]
             name = row["name"]
             phone = row["phone"]
+            token = row["access_token"]
 
             cur.execute("UPDATE livelink_users SET status = 'APPROVED', approved_at = ? WHERE id = ?", (now, user_id))
             conn.commit()
+
+        # Instant low-latency SSE broadcast
+        try:
+            from modules.livelink_stream import livelink_stream_hub
+            livelink_stream_hub.notify_approval(token, name, "APPROVED")
+        except Exception:
+            pass
 
         try:
             from speech_engine import speak
@@ -310,7 +317,7 @@ class LiveLinkGatekeeper:
             cur = conn.cursor()
             cur.execute(
                 """
-                SELECT id, name, phone FROM livelink_users
+                SELECT id, name, phone, access_token FROM livelink_users
                 WHERE access_token = ? OR phone LIKE ? OR LOWER(name) LIKE ?
                 ORDER BY requested_at DESC LIMIT 1
                 """,
@@ -322,8 +329,15 @@ class LiveLinkGatekeeper:
 
             user_id = row["id"]
             name = row["name"]
+            token = row["access_token"]
             cur.execute("UPDATE livelink_users SET status = 'DENIED' WHERE id = ?", (user_id,))
             conn.commit()
+
+        try:
+            from modules.livelink_stream import livelink_stream_hub
+            livelink_stream_hub.notify_approval(token, name, "DENIED")
+        except Exception:
+            pass
 
         return True, f"LiveLink access denied for {name}."
 
@@ -337,7 +351,7 @@ class LiveLinkGatekeeper:
             cur = conn.cursor()
             cur.execute(
                 """
-                SELECT id, name, phone FROM livelink_users
+                SELECT id, name, phone, access_token FROM livelink_users
                 WHERE access_token = ? OR phone LIKE ? OR LOWER(name) LIKE ?
                 ORDER BY requested_at DESC LIMIT 1
                 """,
@@ -349,8 +363,15 @@ class LiveLinkGatekeeper:
 
             user_id = row["id"]
             name = row["name"]
+            token = row["access_token"]
             cur.execute("UPDATE livelink_users SET status = 'REVOKED' WHERE id = ?", (user_id,))
             conn.commit()
+
+        try:
+            from modules.livelink_stream import livelink_stream_hub
+            livelink_stream_hub.notify_approval(token, name, "REVOKED")
+        except Exception:
+            pass
 
         return True, f"LiveLink access revoked for {name}."
 

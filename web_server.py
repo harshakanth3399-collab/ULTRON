@@ -10,6 +10,7 @@ import base64
 import http.server
 import json
 import os
+import queue
 import socket
 import socketserver
 import threading
@@ -18,6 +19,10 @@ from urllib.parse import parse_qs, urlparse
 
 from modules.cross_device_sync import cross_device_sync
 from modules.livelink_gatekeeper import MASTER_TOKEN, livelink_gatekeeper
+from modules.livelink_stream import livelink_stream_hub
+
+_CHUNK_STORE: dict[str, dict] = {}
+_CHUNK_LOCK = threading.Lock()
 
 PORT = 8000
 HOST = "0.0.0.0"
@@ -125,6 +130,40 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self._send_json({"success": True, "requests": requests})
             else:
                 self._send_forbidden("Only Admin Harsha can review LiveLink access requests.")
+            return
+
+        # ── LiveLink Server-Sent Events (SSE) Live Stream ──
+        if clean_path == "/api/livelink/stream":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+
+            client_q = livelink_stream_hub.add_client()
+            try:
+                while True:
+                    try:
+                        msg = client_q.get(timeout=10.0)
+                        ev = msg.get("event", "message")
+                        data_str = json.dumps(msg.get("data", {}))
+                        payload = f"event: {ev}\ndata: {data_str}\n\n".encode("utf-8")
+                        self.wfile.write(payload)
+                        self.wfile.flush()
+                    except queue.Empty:
+                        self.wfile.write(b": keepalive\n\n")
+                        self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, Exception):
+                pass
+            finally:
+                livelink_stream_hub.remove_client(client_q)
+            return
+
+        # ── LiveLink System Hardware Telemetry ──
+        if clean_path == "/api/livelink/telemetry":
+            telemetry = livelink_stream_hub.get_system_telemetry()
+            self._send_json({"success": True, "telemetry": telemetry})
             return
 
         # ── Clipboard Retrieval (Protected) ──
@@ -278,6 +317,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         b64_str = b64_str.split(",", 1)[1]
                     file_bytes = base64.b64decode(b64_str)
                     ok, msg = cross_device_sync.save_file_from_phone(filename, file_bytes, target_folder)
+                    if ok:
+                        livelink_stream_hub.notify_file_event(filename, "uploaded", target_folder)
                     self._send_json({"success": ok, "message": msg, "filename": filename})
                     return
 
@@ -285,10 +326,63 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 filename = self.headers.get("X-Filename", f"livelink_drop_{int(time.time())}.bin")
                 target_folder = self.headers.get("X-Target-Folder", "downloads")
                 ok, msg = cross_device_sync.save_file_from_phone(filename, raw_body, target_folder)
+                if ok:
+                    livelink_stream_hub.notify_file_event(filename, "uploaded", target_folder)
                 self._send_json({"success": ok, "message": msg, "filename": filename})
                 return
             except Exception as e:
                 self._send_json({"error": f"File upload failed: {e}"}, status_code=500)
+            return
+
+        # ── 3B. Chunked File Upload Engine for Large Media (Protected) ──
+        if clean_path == "/api/livelink/upload_chunk":
+            data_dict = {}
+            try:
+                data_dict = json.loads(raw_body.decode("utf-8")) if raw_body else {}
+            except Exception:
+                pass
+
+            if not self._is_authorized(data_dict):
+                self._send_forbidden()
+                return
+
+            try:
+                upload_id = data_dict.get("upload_id", "")
+                chunk_index = int(data_dict.get("chunk_index", 0))
+                total_chunks = int(data_dict.get("total_chunks", 1))
+                filename = data_dict.get("filename", f"livelink_chunk_{int(time.time())}.bin")
+                target_folder = data_dict.get("folder", "downloads")
+                b64_chunk = data_dict.get("data", "")
+                if "," in b64_chunk:
+                    b64_chunk = b64_chunk.split(",", 1)[1]
+                chunk_bytes = base64.b64decode(b64_chunk)
+
+                with _CHUNK_LOCK:
+                    if upload_id not in _CHUNK_STORE:
+                        _CHUNK_STORE[upload_id] = {
+                            "chunks": {},
+                            "total": total_chunks,
+                            "filename": filename,
+                            "folder": target_folder,
+                            "created": time.time(),
+                        }
+                    _CHUNK_STORE[upload_id]["chunks"][chunk_index] = chunk_bytes
+
+                    if len(_CHUNK_STORE[upload_id]["chunks"]) == total_chunks:
+                        full_data = bytearray()
+                        for i in range(total_chunks):
+                            full_data.extend(_CHUNK_STORE[upload_id]["chunks"][i])
+                        del _CHUNK_STORE[upload_id]
+                        ok, msg = cross_device_sync.save_file_from_phone(filename, bytes(full_data), target_folder)
+                        livelink_stream_hub.notify_file_event(filename, "uploaded", target_folder)
+                        self._send_json({"success": ok, "completed": True, "message": msg, "filename": filename})
+                        return
+
+                percent = round(((chunk_index + 1) / total_chunks) * 100)
+                self._send_json({"success": True, "completed": False, "chunk_index": chunk_index, "progress_percent": percent})
+                return
+            except Exception as e:
+                self._send_json({"error": f"Chunk upload failed: {e}"}, status_code=500)
                 return
 
         # ── 4. Remote PC Multimedia & Power Controls (Protected) ──
@@ -323,6 +417,8 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             text = data.get("text", "")
             auto_paste = data.get("auto_paste", False)
             ok, msg = cross_device_sync.set_clipboard_from_phone(text, auto_paste)
+            if ok:
+                livelink_stream_hub.notify_clipboard(text)
             self._send_json({"success": ok, "message": msg})
             return
 
