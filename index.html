@@ -2109,8 +2109,16 @@
         // ── Temporary Conversational Memory (Keeps context while UI stays clean) ──
         function getSessionHistory() {
             try {
-                const raw = sessionStorage.getItem('ultron_session_history');
-                return raw ? JSON.parse(raw) : [];
+                const raw = localStorage.getItem('ultron_temp_memory') || sessionStorage.getItem('ultron_session_history');
+                if (!raw) return [];
+                const data = JSON.parse(raw);
+                if (Array.isArray(data)) return data;
+                // Expire temporary memory after 4 hours of inactivity
+                if (data.timestamp && (Date.now() - data.timestamp > 4 * 3600 * 1000)) {
+                    localStorage.removeItem('ultron_temp_memory');
+                    return [];
+                }
+                return data.history || [];
             } catch(e) {
                 return [];
             }
@@ -2121,7 +2129,9 @@
                 let hist = getSessionHistory();
                 hist.push({ prompt: promptText, reply: replyText });
                 if (hist.length > 10) hist = hist.slice(-10);
-                sessionStorage.setItem('ultron_session_history', JSON.stringify(hist));
+                const payload = JSON.stringify({ timestamp: Date.now(), history: hist });
+                localStorage.setItem('ultron_temp_memory', payload);
+                sessionStorage.setItem('ultron_session_history', payload);
             } catch(e) {}
         }
 
