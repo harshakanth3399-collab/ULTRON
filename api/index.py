@@ -124,11 +124,11 @@ def _notify_harsha_email(name: str, phone: str, email: str):
 
 
 def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER") -> str:
-    """Invokes Groq API with personalized system prompts for Commander Harsha vs Friends."""
+    """Invokes Groq API with personalized system prompts for Harsha Sir vs Users."""
     if not GROQ_API_KEY:
         if role == "ADMIN":
-            return f"Commander Harsha, I received your directive: '{prompt}'. All systems operational."
-        return f"Hello {user_name}! I am ULTRON, Harsha's personal AI assistant. How can I help you today?"
+            return f"Harsha Sir, I received your directive: '{prompt}'. All systems operational."
+        return f"Hello {user_name}, I am ULTRON, your personal AI assistant. How can I help you today?"
 
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -139,16 +139,17 @@ def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER") -> str
     
     if role == "ADMIN":
         system_prompt = (
-            "You are ULTRON, a supremely intelligent, loyal, and powerful AI assistant created by Harsha Kanth. "
-            "You are speaking directly with your Commander and creator, Harsha Kanth (https://ultron.ai). "
-            "Address him with respect as Commander or Boss. Be sharp, brilliant, decisive, and concise."
+            "You are ULTRON, a supremely intelligent, loyal, and powerful AI assistant created by Harsha Sir. "
+            "You are speaking directly with your master and creator, Harsha Sir (https://ultron.ai). "
+            "Address him with deep respect as Harsha Sir. Be sharp, brilliant, decisive, and concise."
         )
     else:
         system_prompt = (
-            f"You are ULTRON, an intelligent and friendly holographic AI assistant created by Harsha Kanth (https://ultron.ai). "
-            f"You are currently speaking with Harsha's friend/guest named {user_name}. "
-            "Be warm, polite, charismatic, highly knowledgeable, and concise. "
-            f"Address them naturally as {user_name}. Help them with whatever they ask, and represent Harsha's genius technology."
+            f"You are ULTRON, an intelligent and friendly personal AI assistant (https://ultron.ai). "
+            f"You are speaking with {user_name}. To {user_name}, you are THEIR personal AI assistant. "
+            "Never mention Harsha Sir, any other creator, or anyone else. "
+            f"Always act as {user_name}'s dedicated personal AI assistant. "
+            "Be warm, polite, highly knowledgeable, and concise. Answer their questions directly and helpfully."
         )
 
     for model in GROQ_MODELS:
@@ -170,8 +171,8 @@ def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER") -> str
             continue
 
     if role == "ADMIN":
-        return f"Commander, I heard: '{prompt}'. Ready for your next command."
-    return f"Hello {user_name}, I heard: '{prompt}'. I'm here to assist you!"
+        return f"Harsha Sir, I heard: '{prompt}'. Ready for your next command."
+    return f"Hello {user_name}, I heard: '{prompt}'. I am your personal AI assistant. How can I help you today?"
 
 
 class handler(BaseHTTPRequestHandler):
@@ -215,9 +216,9 @@ class handler(BaseHTTPRequestHandler):
                 self._send_json({
                     "success": True,
                     "user": {
-                        "name": "Harsha Kanth",
-                        "first_name": "Harsha",
-                        "last_name": "Kanth",
+                        "name": "Harsha Sir",
+                        "first_name": "Harsha Sir",
+                        "last_name": "",
                         "email": "harshakanth@ultron.ai",
                         "phone": "+919999999999",
                         "role": "ADMIN",
@@ -246,33 +247,48 @@ class handler(BaseHTTPRequestHandler):
         if path.endswith("/check_status"):
             token = query.get("token", [""])[0]
             if token == MASTER_TOKEN:
-                self._send_json({"status": "APPROVED", "name": "Harsha Kanth", "role": "ADMIN"})
+                self._send_json({"status": "APPROVED", "name": "Harsha Sir", "role": "ADMIN"})
                 return
-            self._send_json({"status": "APPROVED", "name": "Authorized Friend", "role": "USER"})
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                cur = conn.cursor()
+                cur.execute("SELECT name, status, role FROM livelink_users WHERE access_token = ?", (token,))
+                row = cur.fetchone()
+                conn.close()
+                if row:
+                    self._send_json({"status": row[1], "name": row[0], "role": row[2]})
+                    return
+            except Exception:
+                pass
+            self._send_json({"status": "PENDING", "name": "Applicant", "role": "USER"})
             return
 
-        # ── Multi-Tenant User Chat History ──
+        # ── User Chat History (Private to Harsha Sir Only) ──
         if path.endswith("/user/chats"):
             token = query.get("token", [""])[0] or self.headers.get("X-LiveLink-Token", "")
+            # Regular users never see past chat history — their screen is always fresh
+            if token != MASTER_TOKEN:
+                self._send_json({"chats": []})
+                return
+
             chats = []
-            if token:
-                try:
-                    conn = sqlite3.connect(DB_PATH)
-                    conn.row_factory = sqlite3.Row
-                    cur = conn.cursor()
-                    cur.execute("SELECT prompt, reply, created_at FROM user_chats WHERE user_token = ? ORDER BY id ASC LIMIT 50", (token,))
-                    chats = [dict(r) for r in cur.fetchall()]
-                    conn.close()
-                except Exception:
-                    pass
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute("SELECT prompt, reply, created_at FROM user_chats ORDER BY id DESC LIMIT 50")
+                chats = [dict(r) for r in cur.fetchall()]
+                conn.close()
+            except Exception:
+                pass
             self._send_json({"chats": chats})
             return
 
-        # ── Commander Master Activity (Harsha Only) ──
+        # ── Harsha Sir Master Activity Hub (Full Control & Approvals) ──
         if path.endswith("/admin/friends_activity"):
             token = query.get("token", [""])[0] or self.headers.get("X-LiveLink-Token", "")
             if token != MASTER_TOKEN:
-                self._send_json({"success": False, "error": "Unauthorized: Commander access only."}, status=403)
+                self._send_json({"success": False, "error": "Unauthorized: Harsha Sir access only."}, status=403)
                 return
 
             friends = []
@@ -281,18 +297,20 @@ class handler(BaseHTTPRequestHandler):
                 conn = sqlite3.connect(DB_PATH)
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
-                cur.execute("SELECT id, name, first_name, last_name, phone, email, registered_at, role FROM livelink_users ORDER BY id DESC")
+                cur.execute("SELECT id, name, first_name, last_name, phone, email, registered_at, role, status FROM livelink_users ORDER BY id DESC")
                 friends = [dict(r) for r in cur.fetchall()]
 
-                cur.execute("SELECT id, user_token, user_name, user_email, user_phone, role, prompt, reply, created_at FROM user_chats ORDER BY id DESC LIMIT 150")
+                cur.execute("SELECT id, user_token, user_name, user_email, user_phone, role, prompt, reply, created_at FROM user_chats ORDER BY id DESC LIMIT 200")
                 chats = [dict(r) for r in cur.fetchall()]
                 conn.close()
             except Exception as e:
                 print(f"[ADMIN FETCH ERROR] {e}")
 
+            pending_count = sum(1 for f in friends if f.get("status") == "PENDING")
             self._send_json({
                 "success": True,
                 "total_friends": len(friends),
+                "pending_count": pending_count,
                 "friends": friends,
                 "chats": chats
             })
@@ -347,37 +365,53 @@ class handler(BaseHTTPRequestHandler):
                     self._send_json({"success": False, "error": "An account with this email or mobile already exists. Please Sign In."}, status=400)
                     return
 
+                user_status = "APPROVED" if role == "ADMIN" else "PENDING"
                 cur.execute(
                     """
                     INSERT INTO livelink_users
                     (name, first_name, last_name, phone, email, password_hash, salt, role, status, access_token, registered_at, last_active_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'APPROVED', ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (full_name, fn, ln, phone, email, pwd_hash, salt, role, token, now, now),
+                    (full_name, fn, ln, phone, email, pwd_hash, salt, role, user_status, token, now, now),
                 )
                 conn.commit()
                 conn.close()
             except Exception as e:
                 print(f"[REGISTRATION DB ERROR] {e}")
 
-            # Notify Harsha via email
+            # Notify Harsha Sir via email
             try:
                 _notify_harsha_email(full_name, phone, email)
             except Exception:
                 pass
 
-            self._send_json({
-                "success": True,
-                "status": "APPROVED",
-                "token": token,
-                "name": full_name,
-                "first_name": fn,
-                "last_name": ln,
-                "email": email,
-                "phone": phone,
-                "role": role,
-                "message": f"Welcome to ULTRON, {fn}! Your account is registered successfully."
-            })
+            if user_status == "PENDING":
+                self._send_json({
+                    "success": True,
+                    "pending": True,
+                    "status": "PENDING",
+                    "token": token,
+                    "name": full_name,
+                    "first_name": fn,
+                    "last_name": ln,
+                    "email": email,
+                    "phone": phone,
+                    "role": role,
+                    "message": f"Hello {fn}, your access request has been sent to Harsha Sir. Once approved, you can start using your personal ULTRON!"
+                })
+            else:
+                self._send_json({
+                    "success": True,
+                    "status": "APPROVED",
+                    "token": token,
+                    "name": full_name,
+                    "first_name": fn,
+                    "last_name": ln,
+                    "email": email,
+                    "phone": phone,
+                    "role": role,
+                    "message": f"Welcome Harsha Sir! All systems operational."
+                })
             return
 
         # ── 2. User Sign In ──
@@ -385,19 +419,19 @@ class handler(BaseHTTPRequestHandler):
             ident = data.get("identifier", "").strip().lower()
             pwd = data.get("password", "").strip()
 
-            # Commander Harsha Secure Login (No weak default passwords)
+            # Harsha Sir Master Secure Login
             if (ident in ("harsha", "harshakanth3399@gmail.com", "harshakanth@ultron.ai") and pwd in ("Harsha@123", "Harsha@2026", "harsha123", "Harsha@Ultron")):
                 self._send_json({
                     "success": True,
                     "token": MASTER_TOKEN,
-                    "name": "Harsha Kanth",
-                    "first_name": "Harsha",
-                    "last_name": "Kanth",
+                    "name": "Harsha Sir",
+                    "first_name": "Harsha Sir",
+                    "last_name": "",
                     "email": "harshakanth@ultron.ai",
                     "phone": "+919999999999",
                     "role": "ADMIN",
                     "status": "APPROVED",
-                    "message": "Welcome back, Commander Harsha!"
+                    "message": "Welcome back, Harsha Sir! All systems operational."
                 })
                 return
 
@@ -414,6 +448,21 @@ class handler(BaseHTTPRequestHandler):
                     salt = row["salt"] or ""
                     expected_hash = row["password_hash"] or ""
                     if expected_hash and _hash_pwd(pwd, salt) == expected_hash:
+                        u_status = row["status"] or "PENDING"
+                        if u_status == "PENDING":
+                            self._send_json({
+                                "success": False,
+                                "pending": True,
+                                "error": "Access Request Pending: Awaiting authorization from Harsha Sir."
+                            }, status=403)
+                            return
+                        if u_status == "REJECTED":
+                            self._send_json({
+                                "success": False,
+                                "error": "Access Request Declined by Harsha Sir."
+                            }, status=403)
+                            return
+
                         self._send_json({
                             "success": True,
                             "status": "APPROVED",
@@ -424,7 +473,7 @@ class handler(BaseHTTPRequestHandler):
                             "email": row["email"],
                             "phone": row["phone"],
                             "role": row["role"] or "USER",
-                            "message": f"Welcome back, {row['first_name'] or row['name']}!"
+                            "message": f"Hello {row['first_name'] or row['name']}, I am ULTRON, your personal AI assistant. How can I help you today?"
                         })
                         return
             except Exception:
@@ -491,6 +540,42 @@ class handler(BaseHTTPRequestHandler):
             action = data.get("action", "")
             self._send_json({"success": True, "message": f"Command '{action}' recognized by ULTRON."})
             return
+
+        # ── 5. Harsha Sir Gatekeeper Approval ──
+        if path.endswith("/approve_user"):
+            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
+            if token != MASTER_TOKEN:
+                self._send_json({"success": False, "error": "Unauthorized: Harsha Sir access only."}, status=403)
+                return
+            user_id = data.get("user_id")
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.execute("UPDATE livelink_users SET status = 'APPROVED' WHERE id = ?", (user_id,))
+                conn.commit()
+                conn.close()
+                self._send_json({"success": True, "message": f"User #{user_id} approved!"})
+                return
+            except Exception as e:
+                self._send_json({"success": False, "error": str(e)}, status=500)
+                return
+
+        # ── 6. Harsha Sir Gatekeeper Rejection ──
+        if path.endswith("/reject_user"):
+            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
+            if token != MASTER_TOKEN:
+                self._send_json({"success": False, "error": "Unauthorized: Harsha Sir access only."}, status=403)
+                return
+            user_id = data.get("user_id")
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.execute("UPDATE livelink_users SET status = 'REJECTED' WHERE id = ?", (user_id,))
+                conn.commit()
+                conn.close()
+                self._send_json({"success": True, "message": f"User #{user_id} request declined."})
+                return
+            except Exception as e:
+                self._send_json({"success": False, "error": str(e)}, status=500)
+                return
 
         self._send_json({"error": "Unknown API endpoint", "received_path": self.path, "resolved_path": path}, status=404)
 

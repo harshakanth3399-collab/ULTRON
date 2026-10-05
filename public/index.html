@@ -493,13 +493,41 @@
             text-shadow: 0 0 12px rgba(255, 179, 0, 0.8);
         }
 
+        /* ── Screen Resolution Optimization (Laptop vs Mobile) ── */
+        @media (min-width: 768px) {
+            /* Laptop / Desktop Screen: Hide touchpad button (laptop already has trackpad) */
+            #dock-btn-touchpad {
+                display: none !important;
+            }
+            #touchpad-panel {
+                display: none !important;
+            }
+            .container {
+                max-width: 680px;
+            }
+            .visualizer-container {
+                width: 350px;
+                height: 350px;
+            }
+        }
+        @media (max-width: 767px) {
+            /* Mobile Phone Screen: Touchpad is active & ready */
+            #dock-btn-touchpad {
+                display: flex !important;
+            }
+            .visualizer-container {
+                width: 290px;
+                height: 290px;
+            }
+        }
+
         /* ── LiveLink Security Gatekeeper Modal (Holographic Golden Glass) ── */
         #livelink-modal-overlay {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(6, 4, 1, 0.94);
-            backdrop-filter: blur(12px);
+            background: rgba(6, 4, 1, 0.40);
+            backdrop-filter: blur(2px);
             z-index: 999;
             justify-content: center;
             align-items: center;
@@ -508,12 +536,13 @@
         .livelink-card {
             width: 100%;
             max-width: 380px;
-            background: radial-gradient(circle at center, #1E1204 0%, #0A0501 100%);
+            background: rgba(18, 10, 3, 0.88);
             border: 1px solid rgba(255, 179, 0, 0.7);
             border-radius: 20px;
             padding: 24px;
-            box-shadow: 0 0 35px rgba(255, 179, 0, 0.35), inset 0 0 15px rgba(255, 179, 0, 0.1);
+            box-shadow: 0 0 40px rgba(255, 179, 0, 0.45), inset 0 0 15px rgba(255, 179, 0, 0.15);
             text-align: center;
+            backdrop-filter: blur(10px);
         }
         .livelink-shield {
             margin-bottom: 8px;
@@ -821,10 +850,10 @@
 
         <!-- ── LiveLink Floating Synergy Dock ── -->
         <div class="dock-bar">
-            <button class="dock-btn active" id="dock-btn-command" onclick="switchDockTab('command')">💬 AI CORE</button>
-            <button class="dock-btn" id="dock-btn-files" onclick="switchDockTab('files')">📁 FILES ⇄</button>
-            <button class="dock-btn" id="dock-btn-touchpad" onclick="switchDockTab('touchpad')">🖱️ TOUCHPAD</button>
+            <button class="dock-btn active" id="dock-btn-command" onclick="switchDockTab('command')">🎙️ ASSISTANT</button>
             <button class="dock-btn" id="dock-btn-remote" onclick="switchDockTab('remote')">⚡ REMOTE</button>
+            <button class="dock-btn" id="dock-btn-touchpad" onclick="switchDockTab('touchpad')">🖱️ TOUCHPAD</button>
+            <button class="dock-btn" id="dock-btn-files" onclick="switchDockTab('files')">📁 FILES ⇄</button>
         </div>
     </div>
 
@@ -937,25 +966,26 @@
         </div>
     </div>
 
-    <!-- ── Commander Master Vault Modal (Harsha Only) ── -->
-    <div id="commander-vault-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.96); z-index:1005; justify-content:center; align-items:center; backdrop-filter:blur(14px); padding:16px;">
-        <div class="livelink-card" style="max-width:540px; max-height:85vh; display:flex; flex-direction:column; text-align:left; padding:20px; border-color:#FFD700; box-shadow:0 0 45px rgba(255,215,0,0.4);">
+    <!-- ── Harsha Sir Master Hub Modal (Harsha Sir Only) ── -->
+    <div id="commander-vault-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.88); z-index:1005; justify-content:center; align-items:center; backdrop-filter:blur(8px); padding:16px;">
+        <div class="livelink-card" style="max-width:560px; max-height:88vh; display:flex; flex-direction:column; text-align:left; padding:20px; border-color:#FFD700; box-shadow:0 0 50px rgba(255,215,0,0.5);">
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,215,0,0.3); padding-bottom:12px; margin-bottom:14px;">
                 <div>
-                    <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:#FFD700;">👑 COMMANDER MASTER VAULT</div>
-                    <div style="font-size:11px; color:rgba(255,215,100,0.7);">Private Multi-Tenant Log & Friends Directory</div>
+                    <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:#FFD700;">👑 HARSHA SIR MASTER HUB</div>
+                    <div style="font-size:11px; color:rgba(255,215,100,0.7);">Private Gatekeeper Approvals & Multi-Tenant Logs</div>
                 </div>
                 <button onclick="closeCommanderVault()" style="background:rgba(255,179,0,0.15); border:1px solid rgba(255,179,0,0.5); color:#FFB300; border-radius:8px; padding:4px 12px; font-size:12px; cursor:pointer; font-weight:700;">CLOSE ✕</button>
             </div>
 
             <!-- Vault Subtabs -->
-            <div style="display:flex; gap:8px; margin-bottom:12px;">
-                <button type="button" class="auth-tab-btn active" id="vault-tab-friends" onclick="switchVaultSubTab('friends')">👥 FRIENDS DIRECTORY</button>
-                <button type="button" class="auth-tab-btn" id="vault-tab-chats" onclick="switchVaultSubTab('chats')">💬 USER CHATS LOG</button>
+            <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+                <button type="button" class="auth-tab-btn active" id="vault-tab-pending" onclick="switchVaultSubTab('pending')">🚨 REQUESTS (<span id="vault-pending-badge">0</span>)</button>
+                <button type="button" class="auth-tab-btn" id="vault-tab-friends" onclick="switchVaultSubTab('friends')">👥 USERS</button>
+                <button type="button" class="auth-tab-btn" id="vault-tab-chats" onclick="switchVaultSubTab('chats')">💬 SECRET CHATS</button>
             </div>
 
             <!-- Scrollable Content -->
-            <div id="vault-content-area" style="flex:1; overflow-y:auto; min-height:260px; max-height:55vh; padding-right:6px;">
+            <div id="vault-content-area" style="flex:1; overflow-y:auto; min-height:280px; max-height:55vh; padding-right:6px;">
                 <div style="color:#FFB300; text-align:center; padding:30px;">Loading database records...</div>
             </div>
 
@@ -1242,10 +1272,10 @@
             const vaultBtn = document.getElementById('admin-vault-btn');
             if (user && (user.first_name || user.name)) {
                 const displayName = user.first_name || user.name;
-                const isAdmin = user.role === 'ADMIN';
+                const isAdmin = user.role === 'ADMIN' || user.email === 'harshakanth@ultron.ai';
 
                 if (nameEl) {
-                    nameEl.innerText = isAdmin ? `👑 COMMANDER ${displayName.toUpperCase()}` : `👤 ${displayName}`;
+                    nameEl.innerText = isAdmin ? '👑 HARSHA SIR' : `👤 ${displayName.toUpperCase()}`;
                 }
                 if (badge) {
                     badge.style.display = 'inline-block';
@@ -1253,7 +1283,10 @@
                     badge.style.color = isAdmin ? '#FFD700' : '#A7FFEB';
                 }
                 if (logoutBtn) logoutBtn.style.display = 'inline-block';
-                if (vaultBtn) vaultBtn.style.display = isAdmin ? 'inline-block' : 'none';
+                if (vaultBtn) {
+                    vaultBtn.style.display = isAdmin ? 'inline-block' : 'none';
+                    vaultBtn.innerText = '👑 MASTER HUB';
+                }
             } else {
                 if (badge) badge.style.display = 'none';
                 if (logoutBtn) logoutBtn.style.display = 'none';
@@ -1271,12 +1304,12 @@
                 if (idInput) idInput.value = 'harsha';
                 const pwdInput = document.getElementById('login-password');
                 if (pwdInput) pwdInput.focus();
-                showToast('Commander Harsha recognized. Enter master password.');
+                showToast('Harsha Sir recognized. Enter your password.');
             }
         }
 
         let vaultCachedData = null;
-        let currentVaultSubTab = 'friends';
+        let currentVaultSubTab = 'pending';
 
         function openCommanderVault() {
             triggerHaptic([30]);
@@ -1295,55 +1328,115 @@
         function switchVaultSubTab(tab) {
             triggerHaptic([15]);
             currentVaultSubTab = tab;
-            const btnF = document.getElementById('vault-tab-friends');
-            const btnC = document.getElementById('vault-tab-chats');
-            if (tab === 'friends') {
-                if (btnF) btnF.classList.add('active');
-                if (btnC) btnC.classList.remove('active');
-            } else {
-                if (btnC) btnC.classList.add('active');
-                if (btnF) btnF.classList.remove('active');
-            }
+            ['pending', 'friends', 'chats'].forEach(t => {
+                const btn = document.getElementById(`vault-tab-${t}`);
+                if (btn) btn.classList.toggle('active', t === tab);
+            });
             if (vaultCachedData) renderVaultUI(vaultCachedData);
         }
 
         function loadCommanderVaultData() {
             const content = document.getElementById('vault-content-area');
-            if (content) content.innerHTML = '<div style="color:#FFB300; text-align:center; padding:30px;">ACCESSING QUANTUM VAULT...</div>';
+            if (content) content.innerHTML = '<div style="color:#FFB300; text-align:center; padding:30px;">ACCESSING HARSHA SIR MASTER HUB...</div>';
 
             fetch(`/api/admin/friends_activity?token=${encodeURIComponent(liveLinkToken)}`)
             .then(r => r.json())
             .then(data => {
                 if (!data.success) {
-                    content.innerHTML = `<div style="color:#FF5252; padding:20px; text-align:center;">${data.error || 'Access Denied: Commander Only'}</div>`;
+                    content.innerHTML = `<div style="color:#FF5252; padding:20px; text-align:center;">${data.error || 'Access Denied: Harsha Sir Only'}</div>`;
                     return;
                 }
                 vaultCachedData = data;
+                const badge = document.getElementById('vault-pending-badge');
+                if (badge) badge.innerText = data.pending_count || 0;
                 renderVaultUI(data);
             })
             .catch(() => {
-                if (content) content.innerHTML = '<div style="color:#FF5252; padding:20px; text-align:center;">Failed to connect to Vault database.</div>';
+                if (content) content.innerHTML = '<div style="color:#FF5252; padding:20px; text-align:center;">Failed to connect to Master Hub database.</div>';
+            });
+        }
+
+        function approveUser(userId) {
+            triggerHaptic([30]);
+            fetch('/api/admin/approve_user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: liveLinkToken, user_id: userId })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    playAcoustic('approved');
+                    showToast('Access Approved! User is now active.');
+                    loadCommanderVaultData();
+                } else {
+                    showToast(d.error || 'Failed to approve');
+                }
+            });
+        }
+
+        function rejectUser(userId) {
+            triggerHaptic([20]);
+            fetch('/api/admin/reject_user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: liveLinkToken, user_id: userId })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    showToast('User request declined.');
+                    loadCommanderVaultData();
+                } else {
+                    showToast(d.error || 'Failed to decline');
+                }
             });
         }
 
         function renderVaultUI(data) {
             const content = document.getElementById('vault-content-area');
             if (!content) return;
+            const friends = data.friends || [];
 
-            if (currentVaultSubTab === 'friends') {
-                const friends = data.friends || [];
-                if (friends.length === 0) {
-                    content.innerHTML = '<div style="color:rgba(255,215,100,0.6); text-align:center; padding:20px;">No friends registered yet. Share your LiveLink!</div>';
+            if (currentVaultSubTab === 'pending') {
+                const pending = friends.filter(f => (f.status || 'PENDING') === 'PENDING');
+                if (pending.length === 0) {
+                    content.innerHTML = '<div style="color:#00E676; text-align:center; padding:30px; font-weight:700;">✅ No pending requests! All users are reviewed.</div>';
                     return;
                 }
-                let html = `<div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:10px;">TOTAL REGISTERED FRIENDS: ${friends.length}</div>`;
+                let html = `<div style="font-size:12px; font-weight:800; color:#FF9100; margin-bottom:12px;">🚨 PENDING APPROVAL REQUESTS (${pending.length}):</div>`;
+                pending.forEach(f => {
+                    const dateStr = f.registered_at ? new Date(f.registered_at * 1000).toLocaleString() : 'Just now';
+                    html += `
+                        <div style="background:rgba(255,145,0,0.08); border:1px solid rgba(255,145,0,0.5); border-radius:12px; padding:12px; margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="font-weight:900; color:#FFF9C4; font-size:14px;">${escapeHtml(f.name || 'Applicant')}</div>
+                                <span style="font-size:10px; padding:2px 8px; border-radius:4px; background:#FF9100; color:#000; font-weight:800;">PENDING</span>
+                            </div>
+                            <div style="font-size:11px; color:#FFB300; margin:5px 0;">📞 ${escapeHtml(f.phone || 'No phone')} &nbsp;•&nbsp; ✉️ ${escapeHtml(f.email || 'No email')}</div>
+                            <div style="font-size:10px; color:rgba(255,215,100,0.6); margin-bottom:8px;">Submitted: ${dateStr}</div>
+                            <div style="display:flex; gap:8px;">
+                                <button onclick="approveUser(${f.id})" style="flex:1; background:#00E676; color:#000; border:none; border-radius:6px; padding:7px 12px; font-size:11px; font-weight:900; cursor:pointer;">✅ APPROVE ACCESS</button>
+                                <button onclick="rejectUser(${f.id})" style="flex:1; background:#FF5252; color:#FFF; border:none; border-radius:6px; padding:7px 12px; font-size:11px; font-weight:800; cursor:pointer;">❌ DECLINE</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                content.innerHTML = html;
+            } else if (currentVaultSubTab === 'friends') {
+                if (friends.length === 0) {
+                    content.innerHTML = '<div style="color:rgba(255,215,100,0.6); text-align:center; padding:20px;">No registered users yet. Share your LiveLink!</div>';
+                    return;
+                }
+                let html = `<div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:10px;">TOTAL USERS REGISTERED: ${friends.length}</div>`;
                 friends.forEach(f => {
                     const dateStr = f.registered_at ? new Date(f.registered_at * 1000).toLocaleString() : 'N/A';
+                    const isApproved = (f.status || 'APPROVED') === 'APPROVED';
                     html += `
                         <div style="background:rgba(255,179,0,0.06); border:1px solid rgba(255,179,0,0.25); border-radius:10px; padding:12px; margin-bottom:8px;">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <div style="font-weight:800; color:#FFF9C4; font-size:13px;">${escapeHtml(f.name || 'Friend')}</div>
-                                <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:${f.role === 'ADMIN' ? '#FFD700' : 'rgba(0,230,118,0.2)'}; color:${f.role === 'ADMIN' ? '#000' : '#00E676'}; font-weight:700;">${f.role || 'USER'}</span>
+                                <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:${isApproved ? 'rgba(0,230,118,0.2)' : 'rgba(255,145,0,0.2)'}; color:${isApproved ? '#00E676' : '#FF9100'}; font-weight:700;">${f.status || 'PENDING'}</span>
                             </div>
                             <div style="font-size:11px; color:#FFB300; margin-top:4px;">📞 ${escapeHtml(f.phone || 'No phone')} &nbsp;•&nbsp; ✉️ ${escapeHtml(f.email || 'No email')}</div>
                             <div style="font-size:10px; color:rgba(255,215,100,0.5); margin-top:2px;">Joined: ${dateStr}</div>
@@ -1357,7 +1450,7 @@
                     content.innerHTML = '<div style="color:rgba(255,215,100,0.6); text-align:center; padding:20px;">No conversation logs recorded yet.</div>';
                     return;
                 }
-                let html = `<div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:10px;">RECENT USER CONVERSATIONS (${chats.length}):</div>`;
+                let html = `<div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:10px;">SECRET USER CHATS LOG (${chats.length}):</div>`;
                 chats.forEach(c => {
                     const timeStr = c.created_at ? new Date(c.created_at * 1000).toLocaleTimeString() : '';
                     html += `
@@ -1433,22 +1526,35 @@
                 btn.innerText = 'SIGN IN TO ULTRON';
                 btn.disabled = false;
 
+                if (data.pending) {
+                    showToast(data.error || 'Access Request Pending: Awaiting authorization from Harsha Sir.');
+                    document.getElementById('state-text').innerText = "REQUEST PENDING • AWAITING HARSHA SIR";
+                    return;
+                }
+
                 if (data.success && data.token) {
                     playAcoustic('approved');
                     liveLinkToken = data.token;
                     localStorage.setItem('livelink_token', data.token);
+                    const isHarsha = data.role === 'ADMIN' || (data.email && data.email.includes('harsha'));
                     const userObj = {
-                        first_name: data.first_name || data.name,
+                        first_name: isHarsha ? "Harsha Sir" : (data.first_name || data.name),
                         last_name: data.last_name || '',
                         email: data.email || '',
                         phone: data.phone || '',
-                        role: data.role || 'USER'
+                        role: isHarsha ? 'ADMIN' : 'USER'
                     };
                     localStorage.setItem('livelink_user', JSON.stringify(userObj));
                     updateUserSessionUI(userObj);
                     document.getElementById('livelink-modal-overlay').style.display = 'none';
-                    updateBadge(data.role === 'ADMIN' ? '● OWNER ONLINE' : '● VERIFIED', '#00E676');
-                    showToast(data.message || `Welcome to ULTRON!`);
+                    updateBadge(isHarsha ? '● HARSHA SIR ONLINE' : '● ONLINE', isHarsha ? '#FFD700' : '#00E676');
+
+                    const welcomeGreeting = isHarsha 
+                        ? "Welcome back, Harsha Sir! I am ULTRON, your personal AI assistant. All systems operational."
+                        : `Hello ${userObj.first_name}, I am ULTRON, your personal AI assistant. How can I help you today?`;
+                    
+                    document.getElementById('ai-text').innerText = "ULTRON: " + welcomeGreeting;
+                    speakMobileResponse(welcomeGreeting);
                     initSSEStream();
                 } else {
                     showToast(data.error || 'Login failed. Check your password.');
@@ -1485,7 +1591,7 @@
                 return;
             }
 
-            btn.innerText = 'REGISTERING...';
+            btn.innerText = 'SUBMITTING REQUEST...';
             btn.disabled = true;
 
             fetch('/api/livelink/register', {
@@ -1504,23 +1610,24 @@
                 btn.innerText = 'REGISTER ULTRON ACCOUNT';
                 btn.disabled = false;
 
-                if (data.success && data.token) {
+                if (data.success) {
                     playAcoustic('approved');
-                    liveLinkToken = data.token;
-                    localStorage.setItem('livelink_token', data.token);
-                    const userObj = {
-                        first_name: fn,
-                        last_name: ln,
-                        email: email,
-                        phone: phone,
-                        role: data.role || 'USER'
-                    };
-                    localStorage.setItem('livelink_user', JSON.stringify(userObj));
-                    updateUserSessionUI(userObj);
-                    document.getElementById('livelink-modal-overlay').style.display = 'none';
-                    updateBadge('● VERIFIED', '#00E676');
-                    showToast(`Account registered successfully! Welcome, ${fn}!`);
-                    initSSEStream();
+                    if (data.pending) {
+                        showToast(`Access request sent to Harsha Sir! Once approved, you can sign in.`);
+                        document.getElementById('state-text').innerText = "REQUEST SUBMITTED • AWAITING HARSHA SIR";
+                        switchAuthTab('login');
+                        document.getElementById('login-identifier').value = email || phone;
+                    } else {
+                        liveLinkToken = data.token;
+                        localStorage.setItem('livelink_token', data.token);
+                        const userObj = { first_name: fn, last_name: ln, email: email, phone: phone, role: data.role || 'USER' };
+                        localStorage.setItem('livelink_user', JSON.stringify(userObj));
+                        updateUserSessionUI(userObj);
+                        document.getElementById('livelink-modal-overlay').style.display = 'none';
+                        updateBadge('● ONLINE', '#00E676');
+                        showToast(`Welcome, ${fn}! Your personal ULTRON is active.`);
+                        initSSEStream();
+                    }
                 } else {
                     showToast(data.error || 'Registration failed.');
                 }
@@ -1546,8 +1653,8 @@
             }
 
             if (liveLinkToken === 'LIVELINK_MASTER_HARSHA') {
-                updateBadge('● OWNER ONLINE', '#FFD700');
-                updateUserSessionUI({ first_name: "Harsha" });
+                updateBadge('● HARSHA SIR ONLINE', '#FFD700');
+                updateUserSessionUI({ first_name: "Harsha Sir", role: "ADMIN" });
                 document.getElementById('livelink-modal-overlay').style.display = 'none';
                 initSSEStream();
                 return;
@@ -1557,8 +1664,16 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success && data.user) {
+                        if (data.user.status === 'PENDING') {
+                            localStorage.removeItem('livelink_token');
+                            liveLinkToken = '';
+                            document.getElementById('livelink-modal-overlay').style.display = 'flex';
+                            updateBadge('● AWAITING HARSHA SIR', '#FF9100');
+                            showToast('Your access request is currently pending authorization from Harsha Sir.');
+                            return;
+                        }
                         document.getElementById('livelink-modal-overlay').style.display = 'none';
-                        updateBadge(data.user.role === 'ADMIN' ? '● OWNER ONLINE' : '● VERIFIED', '#00E676');
+                        updateBadge(data.user.role === 'ADMIN' ? '● HARSHA SIR ONLINE' : '● ONLINE', data.user.role === 'ADMIN' ? '#FFD700' : '#00E676');
                         updateUserSessionUI(data.user);
                         initSSEStream();
                     } else {
@@ -1676,6 +1791,7 @@
         scene.add(particleSystem);
 
         let clock = new THREE.Clock();
+        let speechPulse = 0.0;
 
         function animate(now) {
             if (!isPageVisible) return;
@@ -1686,10 +1802,12 @@
             lastFrameTime = now;
 
             const elapsedTime = clock.getElapsedTime();
-            const speed = isSpeaking ? 1.8 : (isListening ? 1.25 : (isLowPowerMode ? 0.35 : 0.65));
-            particleSystem.rotation.y = elapsedTime * 0.28 * speed;
-            particleSystem.rotation.x = Math.sin(elapsedTime * 0.22) * 0.18;
-            particleSystem.rotation.z = Math.cos(elapsedTime * 0.18) * 0.15;
+            speechPulse *= 0.88;
+            const dynamicPulse = isSpeaking ? (0.08 + speechPulse * 0.25) : (isListening ? 0.06 : 0.02);
+            const speed = isSpeaking ? (2.2 + speechPulse * 1.6) : (isListening ? 1.4 : (isLowPowerMode ? 0.35 : 0.65));
+            particleSystem.rotation.y = elapsedTime * 0.32 * speed;
+            particleSystem.rotation.x = Math.sin(elapsedTime * 0.25) * 0.2;
+            particleSystem.rotation.z = Math.cos(elapsedTime * 0.2) * 0.16;
 
             const posAttr = geometry.attributes.position;
             const pArr = posAttr.array;
@@ -1699,16 +1817,16 @@
                 const by = basePositions[i3 + 1];
                 const bz = basePositions[i3 + 2];
 
-                const wave = Math.sin(elapsedTime * 2.0 + bx * 3.0 + bz * 2.5) * 0.07
-                           + Math.cos(elapsedTime * 1.4 + by * 3.5) * 0.05;
+                const wave = Math.sin(elapsedTime * 2.2 + bx * 3.2 + bz * 2.8) * (0.06 + dynamicPulse * 0.5)
+                           + Math.cos(elapsedTime * 1.6 + by * 3.8) * (0.05 + dynamicPulse * 0.4);
 
-                pArr[i3]     = bx * (1.0 + wave * 0.35);
+                pArr[i3]     = bx * (1.0 + wave * 0.45);
                 pArr[i3 + 1] = by + wave;
-                pArr[i3 + 2] = bz * (1.0 + wave * 0.35);
+                pArr[i3 + 2] = bz * (1.0 + wave * 0.45);
             }
             posAttr.needsUpdate = true;
 
-            const scale = 1.0 + Math.sin(elapsedTime * 3.0) * (isSpeaking ? 0.09 : 0.035);
+            const scale = 1.0 + Math.sin(elapsedTime * 3.2) * (isSpeaking ? 0.08 : 0.03) + speechPulse * 0.18;
             particleSystem.scale.set(scale, scale, scale);
 
             renderer.render(scene, camera);
@@ -1895,6 +2013,11 @@
                     isSpeaking = true;
                     updateBadge('● ULTRON SPEAKING', '#FFB300');
                     document.getElementById('state-text').innerText = "ULTRON IS SPEAKING...";
+                };
+
+                utter.onboundary = (e) => {
+                    speechPulse = 1.0;
+                    triggerHaptic([10]);
                 };
 
                 utter.onend = () => {
