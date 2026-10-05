@@ -1,6 +1,9 @@
 {
   "version": 2,
   "name": "ultron-assistant",
+  "installCommand": "echo 'No dependencies to install'",
+  "buildCommand": "echo 'Static build complete'",
+  "outputDirectory": ".",
   "cleanUrls": true,
   "rewrites": [
     {

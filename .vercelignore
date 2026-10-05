@@ -1,12 +1,13 @@
-# Ignore everything by default (desktop files, test suites, virtual envs, memory)
+# Ignore everything by default
 /*
 
-# Explicitly allow cloud web app and serverless function assets
+# Allow only the cloud web app, serverless API, and config
 !api
 !api/**
 !public
 !public/**
 !vercel.json
+!pyproject.toml
 !requirements.txt
 !index.html
 !manifest.json
