@@ -1,8 +1,9 @@
 {
-  "name": "ULTRON LiveLink",
-  "short_name": "LiveLink",
-  "description": "ULTRON Real-World Cross-Device Mobile & Laptop Synergy",
+  "name": "ULTRON",
+  "short_name": "ULTRON",
+  "description": "ULTRON AI Assistant (https://ultron.ai) - Real-World Autonomous Cross-Device Workstation",
   "start_url": "/index.html",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#060401",
   "theme_color": "#FFB300",

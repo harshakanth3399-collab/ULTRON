@@ -1,7 +1,7 @@
 """
 ULTRON LiveLink Mobile & Web Cross-Device Server.
 Includes strict Gatekeeper permission enforcement, bi-directional drag-and-drop file transfers,
-touchpad remote, clipboard synchronization, and J.A.R.V.I.S. command routing.
+touchpad remote, clipboard synchronization, and ULTRON command routing.
 """
 
 from __future__ import annotations

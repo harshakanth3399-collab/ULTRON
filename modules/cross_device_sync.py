@@ -1,7 +1,7 @@
 """
 modules/cross_device_sync.py - ULTRON Mobile Phone & Laptop Cross-Device Synergy Engine
 
-Unifies mobile phone and laptop into a single cohesive Jarvis workstation:
+Unifies mobile phone and laptop into a single cohesive ULTRON workstation:
 - Bi-directional instant clipboard synchronization (Phone <-> Laptop)
 - Wireless mobile touchpad & presentation remote (mouse move, click, scroll)
 - Remote phone battery sentinel & "Find My Phone" ringer via ADB

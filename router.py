@@ -519,10 +519,23 @@ def process(command: str) -> tuple:
         ok, msg = cross_device_sync.handle_remote_control("lock_laptop")
         return _respond(ok, msg)
 
+    if any(k in raw for k in ["start tunnel", "create https link", "worldwide link", "public link", "https link"]):
+        from modules.domain_resolver import domain_resolver
+        ok, msg = domain_resolver.start_free_https_tunnel()
+        return _respond(ok, msg)
+
+    if any(k in raw for k in ["domain status", "ultron domain", "map domain"]):
+        from modules.domain_resolver import domain_resolver
+        mapped = domain_resolver.is_local_domain_mapped()
+        if mapped:
+            return _respond(True, "ultron.ai is already mapped to 127.0.0.1 on your laptop! You can open http://ultron.ai:8000 directly.")
+        ok, msg = domain_resolver.setup_local_domain()
+        return _respond(ok, msg)
+
     # ── Category H23: Morning Protocol Briefing & Motivation Coach ───────────
     if any(k in raw for k in [
         "good morning ultron", "good morning", "morning briefing", "morning update",
-        "daily briefing", "jarvis briefing"
+        "daily briefing", "ultron briefing"
     ]):
         from modules.morning_briefing import generate_morning_briefing
         ok, msg = generate_morning_briefing()
