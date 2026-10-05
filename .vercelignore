@@ -8,6 +8,7 @@
 !public/**
 !vercel.json
 !pyproject.toml
+!uv.lock
 !requirements.txt
 !index.html
 !manifest.json
