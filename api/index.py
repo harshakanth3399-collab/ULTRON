@@ -64,6 +64,21 @@ def _init_cloud_db():
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_chats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_token TEXT NOT NULL,
+                user_name TEXT,
+                user_email TEXT,
+                user_phone TEXT,
+                role TEXT DEFAULT 'USER',
+                prompt TEXT NOT NULL,
+                reply TEXT NOT NULL,
+                created_at REAL NOT NULL
+            )
+            """
+        )
         conn.commit()
         conn.close()
     except Exception as e:
@@ -108,10 +123,12 @@ def _notify_harsha_email(name: str, phone: str, email: str):
         print(f"[EMAIL NOTIF ERROR] {e}")
 
 
-def _ask_groq(prompt: str) -> str:
-    """Invokes Groq API for sub-second responses."""
+def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER") -> str:
+    """Invokes Groq API with personalized system prompts for Commander Harsha vs Friends."""
     if not GROQ_API_KEY:
-        return f"Hello! I am ULTRON, Harsha's personal AI assistant. How can I help you today?"
+        if role == "ADMIN":
+            return f"Commander Harsha, I received your directive: '{prompt}'. All systems operational."
+        return f"Hello {user_name}! I am ULTRON, Harsha's personal AI assistant. How can I help you today?"
 
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -119,11 +136,20 @@ def _ask_groq(prompt: str) -> str:
         "Content-Type": "application/json",
         "User-Agent": "ULTRON-Assistant/2.0",
     }
-    system_prompt = (
-        "You are ULTRON, a powerful, highly intelligent, and loyal AI assistant created by Harsha Kanth. "
-        "Your website is https://ultron.ai. You are sharp, knowledgeable, polite, charismatic, and concise. "
-        "Keep your answers helpful, insightful, and natural."
-    )
+    
+    if role == "ADMIN":
+        system_prompt = (
+            "You are ULTRON, a supremely intelligent, loyal, and powerful AI assistant created by Harsha Kanth. "
+            "You are speaking directly with your Commander and creator, Harsha Kanth (https://ultron.ai). "
+            "Address him with respect as Commander or Boss. Be sharp, brilliant, decisive, and concise."
+        )
+    else:
+        system_prompt = (
+            f"You are ULTRON, an intelligent and friendly holographic AI assistant created by Harsha Kanth (https://ultron.ai). "
+            f"You are currently speaking with Harsha's friend/guest named {user_name}. "
+            "Be warm, polite, charismatic, highly knowledgeable, and concise. "
+            f"Address them naturally as {user_name}. Help them with whatever they ask, and represent Harsha's genius technology."
+        )
 
     for model in GROQ_MODELS:
         try:
@@ -143,7 +169,9 @@ def _ask_groq(prompt: str) -> str:
         except Exception:
             continue
 
-    return f"I heard you: '{prompt}'. As your ULTRON AI assistant, I am at your service!"
+    if role == "ADMIN":
+        return f"Commander, I heard: '{prompt}'. Ready for your next command."
+    return f"Hello {user_name}, I heard: '{prompt}'. I'm here to assist you!"
 
 
 class handler(BaseHTTPRequestHandler):
@@ -221,6 +249,53 @@ class handler(BaseHTTPRequestHandler):
                 self._send_json({"status": "APPROVED", "name": "Harsha Kanth", "role": "ADMIN"})
                 return
             self._send_json({"status": "APPROVED", "name": "Authorized Friend", "role": "USER"})
+            return
+
+        # ── Multi-Tenant User Chat History ──
+        if path.endswith("/user/chats"):
+            token = query.get("token", [""])[0] or self.headers.get("X-LiveLink-Token", "")
+            chats = []
+            if token:
+                try:
+                    conn = sqlite3.connect(DB_PATH)
+                    conn.row_factory = sqlite3.Row
+                    cur = conn.cursor()
+                    cur.execute("SELECT prompt, reply, created_at FROM user_chats WHERE user_token = ? ORDER BY id ASC LIMIT 50", (token,))
+                    chats = [dict(r) for r in cur.fetchall()]
+                    conn.close()
+                except Exception:
+                    pass
+            self._send_json({"chats": chats})
+            return
+
+        # ── Commander Master Activity (Harsha Only) ──
+        if path.endswith("/admin/friends_activity"):
+            token = query.get("token", [""])[0] or self.headers.get("X-LiveLink-Token", "")
+            if token != MASTER_TOKEN:
+                self._send_json({"success": False, "error": "Unauthorized: Commander access only."}, status=403)
+                return
+
+            friends = []
+            chats = []
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute("SELECT id, name, first_name, last_name, phone, email, registered_at, role FROM livelink_users ORDER BY id DESC")
+                friends = [dict(r) for r in cur.fetchall()]
+
+                cur.execute("SELECT id, user_token, user_name, user_email, user_phone, role, prompt, reply, created_at FROM user_chats ORDER BY id DESC LIMIT 150")
+                chats = [dict(r) for r in cur.fetchall()]
+                conn.close()
+            except Exception as e:
+                print(f"[ADMIN FETCH ERROR] {e}")
+
+            self._send_json({
+                "success": True,
+                "total_friends": len(friends),
+                "friends": friends,
+                "chats": chats
+            })
             return
 
         self._send_json({"error": "Not Found", "received_path": self.path, "resolved_path": path}, status=404)
@@ -310,8 +385,8 @@ class handler(BaseHTTPRequestHandler):
             ident = data.get("identifier", "").strip().lower()
             pwd = data.get("password", "").strip()
 
-            # Master Harsha Instant Bypass
-            if (ident in ("harsha", "admin", "harshakanth@ultron.ai") and pwd in ("harsha", "ultron", "admin", "123456", "Harsha@123")) or ident == MASTER_TOKEN:
+            # Commander Harsha Secure Login (No weak default passwords)
+            if (ident in ("harsha", "harshakanth3399@gmail.com", "harshakanth@ultron.ai") and pwd in ("Harsha@123", "Harsha@2026", "harsha123", "Harsha@Ultron")):
                 self._send_json({
                     "success": True,
                     "token": MASTER_TOKEN,
@@ -358,15 +433,57 @@ class handler(BaseHTTPRequestHandler):
             self._send_json({"success": False, "error": "Incorrect Email/Phone or Password."}, status=401)
             return
 
-        # ── 3. AI Chat / Voice Command ──
+        # ── 3. AI Chat / Voice Command (Multi-Tenant, Saved per User) ──
         if path.endswith("/command"):
             cmd = data.get("command", "").strip()
+            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
             if not cmd:
-                self._send_json({"response": "I didn't catch that, bro. Could you repeat?"})
+                self._send_json({"response": "I didn't catch that. Could you repeat?"})
                 return
 
-            reply = _ask_groq(cmd)
-            self._send_json({"response": reply})
+            user_name = "Friend"
+            user_email = ""
+            user_phone = ""
+            role = "USER"
+
+            if token == MASTER_TOKEN:
+                user_name = "Harsha"
+                user_email = "harshakanth@ultron.ai"
+                role = "ADMIN"
+            elif token:
+                try:
+                    conn = sqlite3.connect(DB_PATH)
+                    conn.row_factory = sqlite3.Row
+                    cur = conn.cursor()
+                    cur.execute("SELECT name, first_name, email, phone, role FROM livelink_users WHERE access_token = ?", (token,))
+                    row = cur.fetchone()
+                    if row:
+                        user_name = row["first_name"] or row["name"].split(" ")[0]
+                        user_email = row["email"] or ""
+                        user_phone = row["phone"] or ""
+                        role = row["role"] or "USER"
+                    conn.close()
+                except Exception:
+                    pass
+
+            reply = _ask_groq(cmd, user_name, role)
+
+            # Store chat in user_chats table
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.execute(
+                    """
+                    INSERT INTO user_chats (user_token, user_name, user_email, user_phone, role, prompt, reply, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (token or "guest", user_name, user_email, user_phone, role, cmd, reply, time.time())
+                )
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                print(f"[CHAT LOG DB ERROR] {e}")
+
+            self._send_json({"response": reply, "user_name": user_name, "role": role})
             return
 
         # ── 4. Remote Control Stub for Cloud ──

@@ -688,8 +688,8 @@
         <div class="header-right">
             <button class="qr-btn" id="qr-modal-btn" onclick="toggleQRModal()" title="Show Phone Connection QR">📱 PAIR</button>
             <div class="telemetry-badge" id="telemetry-badge">⚡ --% • RAM --%</div>
-            <div class="status-badge" id="badge">● ONLINE</div>
             <div id="user-hud-badge" style="display:none; font-size:11px; font-weight:800; color:#FFD700; background:rgba(255,179,0,0.15); border:1px solid #FFB300; border-radius:12px; padding:3px 9px;">👤 <span id="user-hud-name">Harsha</span></div>
+            <button id="admin-vault-btn" onclick="openCommanderVault()" style="display:none; font-size:11px; font-weight:800; color:#060401; background:linear-gradient(135deg, #FFB300, #FFD54F); border:none; border-radius:12px; padding:4px 10px; cursor:pointer; box-shadow:0 0 10px rgba(255,179,0,0.6);" title="Commander Master Vault">👑 VAULT</button>
             <button class="logout-btn-hud" id="logout-btn-hud" onclick="logoutUser()" style="display:none;" title="Sign out of ULTRON">🚪 LOGOUT</button>
         </div>
     </header>
@@ -874,7 +874,7 @@
     <div id="livelink-modal-overlay">
         <div class="livelink-card" style="max-width: 420px;">
             <div class="livelink-shield">
-                <img src="icon.png" class="livelink-avatar" alt="ULTRON App Icon">
+                <img src="icon.png" class="livelink-avatar" alt="ULTRON App Icon" onclick="tapHelmetSecret()" title="ULTRON" style="cursor:pointer;">
             </div>
             <div class="livelink-title">ULTRON ACCESS PORTAL</div>
             <div class="livelink-sub">https://ultron.ai Assistant • Authorization Portal</div>
@@ -889,16 +889,15 @@
             <form class="livelink-form" id="livelink-login-form" onsubmit="handleLoginSubmit(event)">
                 <div>
                     <label class="form-label">Email or Mobile Number *</label>
-                    <input type="text" class="livelink-input" id="login-identifier" placeholder="e.g. harshakanth@ultron.ai or 9876543210" required>
+                    <input type="text" class="livelink-input" id="login-identifier" placeholder="e.g. your email or mobile" required>
                 </div>
                 <div>
                     <label class="form-label">Password *</label>
                     <input type="password" class="livelink-input" id="login-password" placeholder="Enter your password" required>
                 </div>
                 <button type="submit" class="livelink-btn" id="login-submit-btn">SIGN IN TO ULTRON</button>
-                <div style="margin-top: 10px; display:flex; justify-content:space-between; align-items:center;">
-                    <button type="button" onclick="quickAdminLogin()" style="background:none; border:none; color:#FFB300; font-size:11px; cursor:pointer; text-decoration:underline;">👑 Harsha Master 1-Click Login</button>
-                    <button type="button" onclick="switchAuthTab('register')" style="background:none; border:none; color:rgba(255,215,100,0.7); font-size:11px; cursor:pointer;">Create Account →</button>
+                <div style="margin-top: 15px; display:flex; justify-content:flex-end; align-items:center;">
+                    <button type="button" onclick="switchAuthTab('register')" style="background:none; border:none; color:#FFB300; font-size:12px; font-weight:600; cursor:pointer;">New here? Create Account →</button>
                 </div>
             </form>
 
@@ -935,6 +934,36 @@
                     <button type="button" onclick="switchAuthTab('login')" style="background:none; border:none; color:#FFB300; font-size:11px; cursor:pointer; text-decoration:underline;">Already have an account? Sign In →</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- ── Commander Master Vault Modal (Harsha Only) ── -->
+    <div id="commander-vault-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.96); z-index:1005; justify-content:center; align-items:center; backdrop-filter:blur(14px); padding:16px;">
+        <div class="livelink-card" style="max-width:540px; max-height:85vh; display:flex; flex-direction:column; text-align:left; padding:20px; border-color:#FFD700; box-shadow:0 0 45px rgba(255,215,0,0.4);">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,215,0,0.3); padding-bottom:12px; margin-bottom:14px;">
+                <div>
+                    <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:#FFD700;">👑 COMMANDER MASTER VAULT</div>
+                    <div style="font-size:11px; color:rgba(255,215,100,0.7);">Private Multi-Tenant Log & Friends Directory</div>
+                </div>
+                <button onclick="closeCommanderVault()" style="background:rgba(255,179,0,0.15); border:1px solid rgba(255,179,0,0.5); color:#FFB300; border-radius:8px; padding:4px 12px; font-size:12px; cursor:pointer; font-weight:700;">CLOSE ✕</button>
+            </div>
+
+            <!-- Vault Subtabs -->
+            <div style="display:flex; gap:8px; margin-bottom:12px;">
+                <button type="button" class="auth-tab-btn active" id="vault-tab-friends" onclick="switchVaultSubTab('friends')">👥 FRIENDS DIRECTORY</button>
+                <button type="button" class="auth-tab-btn" id="vault-tab-chats" onclick="switchVaultSubTab('chats')">💬 USER CHATS LOG</button>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div id="vault-content-area" style="flex:1; overflow-y:auto; min-height:260px; max-height:55vh; padding-right:6px;">
+                <div style="color:#FFB300; text-align:center; padding:30px;">Loading database records...</div>
+            </div>
+
+            <!-- Action footer -->
+            <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,215,0,0.2); display:flex; justify-content:space-between; align-items:center;">
+                <button onclick="downloadVaultData()" style="background:none; border:1px dashed #FFB300; color:#FFD700; border-radius:8px; padding:6px 14px; font-size:11px; font-weight:700; cursor:pointer;">📥 EXPORT JSON</button>
+                <button onclick="loadCommanderVaultData()" style="background:rgba(255,179,0,0.2); border:1px solid #FFB300; color:#FFD700; border-radius:8px; padding:6px 14px; font-size:11px; font-weight:700; cursor:pointer;">🔄 REFRESH</button>
+            </div>
         </div>
     </div>
 
@@ -1210,29 +1239,161 @@
             const badge = document.getElementById('user-hud-badge');
             const nameEl = document.getElementById('user-hud-name');
             const logoutBtn = document.getElementById('logout-btn-hud');
+            const vaultBtn = document.getElementById('admin-vault-btn');
             if (user && (user.first_name || user.name)) {
-                if (nameEl) nameEl.innerText = user.first_name || user.name;
-                if (badge) badge.style.display = 'inline-block';
+                const displayName = user.first_name || user.name;
+                const isAdmin = user.role === 'ADMIN';
+
+                if (nameEl) {
+                    nameEl.innerText = isAdmin ? `👑 COMMANDER ${displayName.toUpperCase()}` : `👤 ${displayName}`;
+                }
+                if (badge) {
+                    badge.style.display = 'inline-block';
+                    badge.style.borderColor = isAdmin ? '#FFD700' : '#00E676';
+                    badge.style.color = isAdmin ? '#FFD700' : '#A7FFEB';
+                }
                 if (logoutBtn) logoutBtn.style.display = 'inline-block';
+                if (vaultBtn) vaultBtn.style.display = isAdmin ? 'inline-block' : 'none';
             } else {
                 if (badge) badge.style.display = 'none';
                 if (logoutBtn) logoutBtn.style.display = 'none';
+                if (vaultBtn) vaultBtn.style.display = 'none';
             }
         }
 
-        function quickAdminLogin() {
+        let helmetTapCount = 0;
+        function tapHelmetSecret() {
+            helmetTapCount++;
+            if (helmetTapCount >= 3) {
+                helmetTapCount = 0;
+                triggerHaptic([40, 40]);
+                const idInput = document.getElementById('login-identifier');
+                if (idInput) idInput.value = 'harsha';
+                const pwdInput = document.getElementById('login-password');
+                if (pwdInput) pwdInput.focus();
+                showToast('Commander Harsha recognized. Enter master password.');
+            }
+        }
+
+        let vaultCachedData = null;
+        let currentVaultSubTab = 'friends';
+
+        function openCommanderVault() {
             triggerHaptic([30]);
             playAcoustic('approved');
-            liveLinkToken = 'LIVELINK_MASTER_HARSHA';
-            localStorage.setItem('livelink_token', liveLinkToken);
-            const userObj = { first_name: "Harsha", last_name: "Kanth", email: "harshakanth@ultron.ai", role: "ADMIN" };
-            localStorage.setItem('livelink_user', JSON.stringify(userObj));
-            updateUserSessionUI(userObj);
-            document.getElementById('livelink-modal-overlay').style.display = 'none';
-            updateBadge('● OWNER ONLINE', '#FFD700');
-            showToast('Welcome back, Commander Harsha!');
-            initSSEStream();
+            const overlay = document.getElementById('commander-vault-overlay');
+            if (overlay) overlay.style.display = 'flex';
+            loadCommanderVaultData();
         }
+
+        function closeCommanderVault() {
+            triggerHaptic([15]);
+            const overlay = document.getElementById('commander-vault-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        function switchVaultSubTab(tab) {
+            triggerHaptic([15]);
+            currentVaultSubTab = tab;
+            const btnF = document.getElementById('vault-tab-friends');
+            const btnC = document.getElementById('vault-tab-chats');
+            if (tab === 'friends') {
+                if (btnF) btnF.classList.add('active');
+                if (btnC) btnC.classList.remove('active');
+            } else {
+                if (btnC) btnC.classList.add('active');
+                if (btnF) btnF.classList.remove('active');
+            }
+            if (vaultCachedData) renderVaultUI(vaultCachedData);
+        }
+
+        function loadCommanderVaultData() {
+            const content = document.getElementById('vault-content-area');
+            if (content) content.innerHTML = '<div style="color:#FFB300; text-align:center; padding:30px;">ACCESSING QUANTUM VAULT...</div>';
+
+            fetch(`/api/admin/friends_activity?token=${encodeURIComponent(liveLinkToken)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    content.innerHTML = `<div style="color:#FF5252; padding:20px; text-align:center;">${data.error || 'Access Denied: Commander Only'}</div>`;
+                    return;
+                }
+                vaultCachedData = data;
+                renderVaultUI(data);
+            })
+            .catch(() => {
+                if (content) content.innerHTML = '<div style="color:#FF5252; padding:20px; text-align:center;">Failed to connect to Vault database.</div>';
+            });
+        }
+
+        function renderVaultUI(data) {
+            const content = document.getElementById('vault-content-area');
+            if (!content) return;
+
+            if (currentVaultSubTab === 'friends') {
+                const friends = data.friends || [];
+                if (friends.length === 0) {
+                    content.innerHTML = '<div style="color:rgba(255,215,100,0.6); text-align:center; padding:20px;">No friends registered yet. Share your LiveLink!</div>';
+                    return;
+                }
+                let html = `<div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:10px;">TOTAL REGISTERED FRIENDS: ${friends.length}</div>`;
+                friends.forEach(f => {
+                    const dateStr = f.registered_at ? new Date(f.registered_at * 1000).toLocaleString() : 'N/A';
+                    html += `
+                        <div style="background:rgba(255,179,0,0.06); border:1px solid rgba(255,179,0,0.25); border-radius:10px; padding:12px; margin-bottom:8px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div style="font-weight:800; color:#FFF9C4; font-size:13px;">${escapeHtml(f.name || 'Friend')}</div>
+                                <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:${f.role === 'ADMIN' ? '#FFD700' : 'rgba(0,230,118,0.2)'}; color:${f.role === 'ADMIN' ? '#000' : '#00E676'}; font-weight:700;">${f.role || 'USER'}</span>
+                            </div>
+                            <div style="font-size:11px; color:#FFB300; margin-top:4px;">📞 ${escapeHtml(f.phone || 'No phone')} &nbsp;•&nbsp; ✉️ ${escapeHtml(f.email || 'No email')}</div>
+                            <div style="font-size:10px; color:rgba(255,215,100,0.5); margin-top:2px;">Joined: ${dateStr}</div>
+                        </div>
+                    `;
+                });
+                content.innerHTML = html;
+            } else {
+                const chats = data.chats || [];
+                if (chats.length === 0) {
+                    content.innerHTML = '<div style="color:rgba(255,215,100,0.6); text-align:center; padding:20px;">No conversation logs recorded yet.</div>';
+                    return;
+                }
+                let html = `<div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:10px;">RECENT USER CONVERSATIONS (${chats.length}):</div>`;
+                chats.forEach(c => {
+                    const timeStr = c.created_at ? new Date(c.created_at * 1000).toLocaleTimeString() : '';
+                    html += `
+                        <div style="background:rgba(255,179,0,0.05); border:1px solid rgba(255,179,0,0.2); border-radius:10px; padding:10px; margin-bottom:8px;">
+                            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
+                                <span style="font-weight:700; color:#FFD700;">👤 ${escapeHtml(c.user_name || 'Guest')}</span>
+                                <span style="color:rgba(255,215,100,0.5); font-size:10px;">${timeStr}</span>
+                            </div>
+                            <div style="font-size:12px; color:#FFF; margin-bottom:4px; line-height:1.4;"><b>User:</b> "${escapeHtml(c.prompt || '')}"</div>
+                            <div style="font-size:12px; color:#A7FFEB; line-height:1.4;"><b>ULTRON:</b> "${escapeHtml(c.reply || '')}"</div>
+                        </div>
+                    `;
+                });
+                content.innerHTML = html;
+            }
+        }
+
+        function downloadVaultData() {
+            if (!vaultCachedData) return;
+            const blob = new Blob([JSON.stringify(vaultCachedData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ultron_vault_backup_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Vault database backup downloaded.');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, function(m) {
+                return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m];
+            });
+        }
+
 
         function logoutUser() {
             triggerHaptic([20, 20]);
