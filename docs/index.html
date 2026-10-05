@@ -667,7 +667,7 @@
 
     <!-- Center Status & Dynamic Communication Area -->
     <div style="width:100%; text-align:center;">
-        <div class="state-label" id="state-text">SAY 'HEY' OR TAP MIC</div>
+        <div class="state-label" id="state-text">TAP MIC FOR HANDS-FREE VOICE</div>
 
         <div class="chat-container">
             <div class="chat-line user-line" id="user-text"></div>
@@ -1324,15 +1324,17 @@
             badge.style.borderColor = color;
         }
 
-        // ── Wireless Phone Speech Recognition Core ──
+        // ── Continuous Hands-Free Voice & Mobile Speech Synthesis Engine ──
         let recognition = null;
         let isRecognizing = false;
+        let handsFreeVoice = false;
+        let silenceTimer = null;
 
         function initSpeechRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) return null;
             const recog = new SpeechRecognition();
-            recog.continuous = false;
+            recog.continuous = true;
             recog.interimResults = true;
             recog.lang = 'en-US';
 
@@ -1341,71 +1343,109 @@
                 isListening = true;
                 playAcoustic('chirp');
                 triggerHaptic([30]);
-                updateBadge('● LISTENING', '#FF6F00');
-                document.getElementById('state-text').innerText = "LISTENING FOR SIR...";
+                updateBadge('● 🎙️ HANDS-FREE ACTIVE', '#00E676');
+                document.getElementById('state-text').innerText = "SPEAK NATURALLY • ULTRON IS LISTENING";
                 document.getElementById('mic-btn').classList.add('active');
             };
 
             recog.onresult = (e) => {
-                let transcript = '';
+                if (isSpeaking) return;
+                let currentSentence = '';
                 for (let i = e.resultIndex; i < e.results.length; i++) {
-                    transcript += e.results[i][0].transcript;
+                    currentSentence += e.results[i][0].transcript;
                 }
-                document.getElementById('cmd-input').value = transcript;
-                document.getElementById('user-text').innerText = "You: " + transcript;
+                const trimmed = currentSentence.trim();
+                if (trimmed) {
+                    document.getElementById('cmd-input').value = trimmed;
+                    document.getElementById('user-text').innerText = "You: " + trimmed;
+                    clearTimeout(silenceTimer);
+                    // Automatically execute after 1.2s of natural pause
+                    silenceTimer = setTimeout(() => {
+                        if (!isSpeaking && handsFreeVoice && trimmed) {
+                            sendTextCommand(trimmed);
+                        }
+                    }, 1200);
+                }
             };
 
             recog.onend = () => {
                 isRecognizing = false;
-                isListening = false;
-                document.getElementById('mic-btn').classList.remove('active');
-                updateBadge('● ONLINE', '#FFC107');
-                document.getElementById('state-text').innerText = "SAY 'HEY' OR TAP MIC";
-                const finalCmd = document.getElementById('cmd-input').value.trim();
-                if (finalCmd) {
-                    sendTextCommand(finalCmd);
+                if (handsFreeVoice && !isSpeaking) {
+                    setTimeout(() => {
+                        if (handsFreeVoice && !isSpeaking && !isRecognizing) {
+                            try { recog.start(); } catch(e) {}
+                        }
+                    }, 300);
+                } else if (!handsFreeVoice) {
+                    isListening = false;
+                    document.getElementById('mic-btn').classList.remove('active');
+                    updateBadge('● ONLINE', '#FFC107');
+                    document.getElementById('state-text').innerText = "TAP MIC FOR HANDS-FREE VOICE";
                 }
             };
 
-            recog.onerror = () => {
+            recog.onerror = (e) => {
                 isRecognizing = false;
-                isListening = false;
-                document.getElementById('mic-btn').classList.remove('active');
-                updateBadge('● ONLINE', '#FFC107');
-                document.getElementById('state-text').innerText = "SAY 'HEY' OR TAP MIC";
+                if (e.error === 'not-allowed') {
+                    handsFreeVoice = false;
+                    isListening = false;
+                    document.getElementById('mic-btn').classList.remove('active');
+                    updateBadge('● MIC BLOCKED', '#FF3D00');
+                    document.getElementById('state-text').innerText = "PLEASE ALLOW MICROPHONE ACCESS";
+                    showToast("Microphone permission required in browser settings.");
+                } else if (handsFreeVoice && !isSpeaking) {
+                    setTimeout(() => {
+                        if (handsFreeVoice && !isSpeaking && !isRecognizing) {
+                            try { recog.start(); } catch(err) {}
+                        }
+                    }, 500);
+                }
             };
 
             return recog;
         }
 
+        function startHandsFreeVoice() {
+            if (!handsFreeVoice || isSpeaking) return;
+            if (!recognition) recognition = initSpeechRecognition();
+            if (recognition && !isRecognizing) {
+                try {
+                    recognition.start();
+                    updateBadge('● 🎙️ HANDS-FREE ACTIVE', '#00E676');
+                    document.getElementById('state-text').innerText = "SPEAK NATURALLY • ULTRON IS LISTENING";
+                    document.getElementById('mic-btn').classList.add('active');
+                } catch(e) {}
+            }
+        }
+
         function toggleMic() {
             triggerHaptic([25]);
+            playAcoustic('chirp');
+
             if (!recognition) {
                 recognition = initSpeechRecognition();
             }
 
-            if (recognition) {
-                if (isRecognizing) {
-                    recognition.stop();
-                } else {
-                    try {
-                        recognition.start();
-                    } catch (err) {}
-                }
+            if (!recognition) {
+                showToast("Speech recognition not supported in this browser. Please use Chrome.");
+                return;
+            }
+
+            if (handsFreeVoice) {
+                // Turn OFF hands-free
+                handsFreeVoice = false;
+                isListening = false;
+                clearTimeout(silenceTimer);
+                try { recognition.stop(); } catch(e) {}
+                document.getElementById('mic-btn').classList.remove('active');
+                updateBadge('● ONLINE', '#FFC107');
+                document.getElementById('state-text').innerText = "TAP MIC FOR HANDS-FREE VOICE";
+                showToast("Hands-Free Voice deactivated.");
             } else {
-                playAcoustic('chirp');
-                const btn = document.getElementById('mic-btn');
-                if (btn.classList.contains('active')) {
-                    btn.classList.remove('active');
-                    isListening = false;
-                    updateBadge('● ONLINE', '#FFC107');
-                    document.getElementById('state-text').innerText = "SAY 'HEY' OR TAP MIC";
-                } else {
-                    btn.classList.add('active');
-                    isListening = true;
-                    updateBadge('● LISTENING', '#FF6F00');
-                    document.getElementById('state-text').innerText = "LISTENING FOR SIR...";
-                }
+                // Turn ON hands-free
+                handsFreeVoice = true;
+                showToast("Hands-Free Voice active! Speak naturally without tapping.");
+                startHandsFreeVoice();
             }
         }
 
@@ -1413,10 +1453,66 @@
             if (e.key === 'Enter') sendTextCommand();
         }
 
+        function speakMobileResponse(text) {
+            if (!('speechSynthesis' in window)) {
+                setTimeout(() => {
+                    isSpeaking = false;
+                    if (handsFreeVoice) startHandsFreeVoice();
+                }, 2500);
+                return;
+            }
+
+            try {
+                window.speechSynthesis.cancel();
+                const clean = text.replace(/[*_#`~>]/g, '').trim();
+                if (!clean) {
+                    isSpeaking = false;
+                    if (handsFreeVoice) startHandsFreeVoice();
+                    return;
+                }
+
+                const utter = new SpeechSynthesisUtterance(clean);
+                utter.rate = 1.05;
+                utter.pitch = 0.95;
+
+                utter.onstart = () => {
+                    isSpeaking = true;
+                    updateBadge('● ULTRON SPEAKING', '#FFB300');
+                    document.getElementById('state-text').innerText = "ULTRON IS SPEAKING...";
+                };
+
+                utter.onend = () => {
+                    isSpeaking = false;
+                    if (handsFreeVoice) {
+                        setTimeout(startHandsFreeVoice, 400);
+                    } else {
+                        updateBadge('● ONLINE', '#FFC107');
+                        document.getElementById('state-text').innerText = "TAP MIC FOR HANDS-FREE VOICE";
+                    }
+                };
+
+                utter.onerror = () => {
+                    isSpeaking = false;
+                    if (handsFreeVoice) setTimeout(startHandsFreeVoice, 500);
+                };
+
+                window.speechSynthesis.speak(utter);
+            } catch(e) {
+                isSpeaking = false;
+                if (handsFreeVoice) setTimeout(startHandsFreeVoice, 1500);
+            }
+        }
+
         function sendTextCommand(overrideVal = null) {
+            clearTimeout(silenceTimer);
             const input = document.getElementById('cmd-input');
             const val = overrideVal || input.value.trim();
             if (!val) return;
+
+            // Pause mic listening while command processes and responds
+            if (recognition && isRecognizing) {
+                try { recognition.abort(); } catch(e) {}
+            }
 
             triggerHaptic([20]);
             playAcoustic('chirp');
@@ -1428,6 +1524,9 @@
                 showToast("Command buffered. Will execute once reconnected.");
                 return;
             }
+
+            updateBadge('● PROCESSING...', '#FF9100');
+            document.getElementById('state-text').innerText = "PROCESSING COMMAND...";
 
             fetch('/api/command', {
                 method: 'POST',
@@ -1451,13 +1550,27 @@
                 if (rep) {
                     document.getElementById('ai-text').innerText = "ULTRON: " + rep;
                     triggerHaptic([30, 20]);
-                    isSpeaking = true;
-                    setTimeout(() => { isSpeaking = false; }, 3500);
+
+                    // Mobile App Launching (e.g. WhatsApp, YouTube, Instagram)
+                    if (data.mobile_url) {
+                        showToast(`Launching ${data.mobile_app || 'App'} on phone...`);
+                        try {
+                            window.location.href = data.mobile_url;
+                        } catch(appErr) {
+                            console.log("App launch error:", appErr);
+                        }
+                    }
+
+                    // Speak through phone speaker & automatically resume hands-free listening
+                    speakMobileResponse(rep);
+                } else {
+                    if (handsFreeVoice) startHandsFreeVoice();
                 }
             })
             .catch(err => {
                 offlineCommandQueue.push(val);
                 showToast("Connection drop. Command queued for retry.");
+                if (handsFreeVoice) setTimeout(startHandsFreeVoice, 2000);
             });
         }
 

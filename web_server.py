@@ -464,7 +464,41 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as sp_err:
                 print(f"[LIVELINK ROUTER] Speech error: {sp_err}")
 
-            self._send_json({"reply": reply, "response": reply})
+            # Mobile deep-linking & ADB execution
+            mobile_app = None
+            mobile_url = None
+            cmd_lower = (cmd or "").lower()
+
+            app_schemes = {
+                "whatsapp": ("com.whatsapp", "whatsapp://"),
+                "youtube": ("com.google.android.youtube", "vnd.youtube://"),
+                "instagram": ("com.instagram.android", "instagram://"),
+                "camera": ("com.android.camera", None),
+                "spotify": ("com.spotify.music", "spotify://"),
+                "settings": ("com.android.settings", None),
+                "gallery": ("com.google.android.apps.photos", None),
+                "photos": ("com.google.android.apps.photos", None),
+                "maps": ("com.google.android.apps.maps", "geo:0,0?q="),
+                "chrome": ("com.android.chrome", "googlechrome://"),
+            }
+
+            for app_key, (pkg, url_scheme) in app_schemes.items():
+                if app_key in cmd_lower:
+                    mobile_app = app_key
+                    mobile_url = url_scheme
+                    try:
+                        from modules.adb_bridge import adb_bridge
+                        adb_bridge.open_app(app_key)
+                    except Exception:
+                        pass
+                    break
+
+            self._send_json({
+                "reply": reply,
+                "response": reply,
+                "mobile_app": mobile_app,
+                "mobile_url": mobile_url,
+            })
             return
 
         super().do_POST()
