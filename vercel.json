@@ -2,6 +2,11 @@
   "version": 2,
   "name": "ultron-assistant",
   "cleanUrls": true,
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",

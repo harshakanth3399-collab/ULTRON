@@ -46,7 +46,7 @@ GMAIL_APP_PASSWORD = _get_env_val("GMAIL_APP_PASSWORD", "Harsha@6302692136")
 _GEMINI_KEY_BYTES = [65, 81, 46, 65, 98, 56, 82, 78, 54, 74, 50, 90, 86, 52, 116, 103, 109, 109, 105, 117, 111, 102, 85, 50, 115, 85, 102, 66, 70, 97, 114, 90, 81, 120, 74, 88, 104, 88, 114, 67, 53, 112, 112, 97, 50, 77, 70, 105, 118, 122, 79, 104, 81]
 DEFAULT_GEMINI_KEY = "".join(chr(b) for b in _GEMINI_KEY_BYTES)
 GEMINI_API_KEY = _get_env_val("GEMINI_API_KEY", DEFAULT_GEMINI_KEY) or DEFAULT_GEMINI_KEY
-GEMINI_MODELS = ["gemini-flash-lite-latest", "gemini-3.1-flash-lite-preview", "gemini-3.1-flash-lite", "gemini-2.5-flash"]
+GEMINI_MODELS = ["gemini-flash-lite-latest", "gemini-3.1-flash-lite-preview"]
 
 
 def _init_cloud_db():
@@ -295,7 +295,7 @@ def _analyze_food_image(image_data: str) -> dict:
                 data=json.dumps(payload).encode("utf-8"),
                 headers={"Content-Type": "application/json"}
             )
-            with urllib.request.urlopen(req, timeout=14) as r:
+            with urllib.request.urlopen(req, timeout=6.0) as r:
                 res = json.loads(r.read())
                 raw_text = res["candidates"][0]["content"]["parts"][0]["text"]
                 if "```json" in raw_text:
