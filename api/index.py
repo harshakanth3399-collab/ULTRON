@@ -15,7 +15,9 @@ import urllib.request
 import uuid
 from email.mime.text import MIMEText
 
-DB_PATH = "/tmp/livelink_access.db"
+import tempfile
+
+DB_PATH = os.path.join(tempfile.gettempdir(), "livelink_access.db")
 MASTER_TOKEN = "LIVELINK_MASTER_HARSHA"
 GROQ_MODELS = ["llama-3.1-8b-instant", "llama3-8b-8192"]
 

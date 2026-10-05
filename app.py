@@ -11,11 +11,22 @@ import threading
 
 _SINGLE_INSTANCE_PORT = 9899
 
+from http.server import BaseHTTPRequestHandler
+
+class _VercelFallback(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK")
+    def do_POST(self):
+        self.do_GET()
+
 # Top-level export guard for Vercel Python runtime
 try:
     from api.index import handler as app
 except Exception:
-    app = None
+    app = _VercelFallback
+handler = app
 
 
 def _check_single_instance(window_holder: list) -> socket.socket | None:
