@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ULTRON LiveLink | Neural Cross-Device Workstation</title>
     
-    <!-- PWA & Mobile Web App Capabilities -->
+    <!-- PWA & Mobile Web App Capabilities with Iron Man Icon -->
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="theme-color" content="#FFB300">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -53,6 +55,13 @@
             align-items: center;
             gap: 6px;
         }
+        .logo-img {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 179, 0, 0.5);
+            box-shadow: 0 0 8px rgba(255, 179, 0, 0.3);
+        }
         .logo-sub {
             font-size: 10px;
             letter-spacing: 2px;
@@ -80,6 +89,22 @@
             align-items: center;
             gap: 4px;
             box-shadow: 0 0 8px rgba(255, 179, 0, 0.15);
+        }
+        .qr-btn {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            background: rgba(255, 179, 0, 0.15);
+            border: 1px solid rgba(255, 179, 0, 0.5);
+            color: #FFD700;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(255, 179, 0, 0.2);
+            transition: all 0.2s ease;
+        }
+        .qr-btn:active {
+            transform: scale(0.96);
         }
         .status-badge {
             padding: 5px 14px;
@@ -255,6 +280,18 @@
             border-color: #FFB300;
             color: #FFD700;
             box-shadow: 0 0 10px rgba(255, 179, 0, 0.3);
+        }
+        .pwa-badge-btn {
+            display: none;
+            background: linear-gradient(135deg, rgba(255,179,0,0.25), rgba(255,111,0,0.25));
+            border: 1px solid #FFB300;
+            color: #FFD700;
+            border-radius: 10px;
+            padding: 4px 8px;
+            font-size: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            margin-top: 4px;
         }
 
         /* ── LiveLink Sub-Panels (Files, Touchpad, Remote) ── */
@@ -460,9 +497,14 @@
             text-align: center;
         }
         .livelink-shield {
-            font-size: 38px;
             margin-bottom: 8px;
-            filter: drop-shadow(0 0 14px rgba(255, 179, 0, 0.8));
+        }
+        .livelink-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 2px solid #FFB300;
+            box-shadow: 0 0 18px rgba(255, 179, 0, 0.6);
         }
         .livelink-title {
             font-size: 18px;
@@ -586,9 +628,11 @@
     <!-- Top Holographic HUD Header -->
     <header>
         <div class="logo">
+            <img src="icon.png" class="logo-img" alt="Iron Man Mask">
             ULTRON <span class="logo-sub">LIVELINK</span>
         </div>
         <div class="header-right">
+            <button class="qr-btn" id="qr-modal-btn" onclick="toggleQRModal()" title="Show Phone Connection QR">📱 PAIR</button>
             <div class="telemetry-badge" id="telemetry-badge">⚡ --% • RAM --%</div>
             <div class="status-badge" id="badge">● ONLINE</div>
         </div>
@@ -687,6 +731,9 @@
                 <input type="text" class="cmd-input" id="cmd-input" placeholder="Type command here..." onkeypress="handleKeyPress(event)">
                 <button class="send-btn" onclick="sendTextCommand()">SEND</button>
             </div>
+
+            <!-- 1-Tap PWA Install Button -->
+            <button class="pwa-badge-btn" id="pwa-install-btn" onclick="installPWA()">⬇️ INSTALL LIVELINK TO PHONE</button>
         </div>
 
         <!-- ── LiveLink Floating Synergy Dock ── -->
@@ -705,10 +752,27 @@
         <div style="font-size: 12px; color: rgba(255,215,100,0.8);">Transfers immediately to Downloads</div>
     </div>
 
+    <!-- ── QR Code Pairing Modal ── -->
+    <div id="qr-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.92); z-index:1001; justify-content:center; align-items:center; backdrop-filter:blur(10px);">
+        <div class="livelink-card" style="max-width:320px; text-align:center;">
+            <div style="font-size:16px; font-weight:900; letter-spacing:3px; color:#FFB300; margin-bottom:4px;">CONNECT PHONE</div>
+            <div style="font-size:11px; color:rgba(255,215,100,0.7); margin-bottom:12px;">Scan with phone camera or open link</div>
+            <div style="background:#060401; padding:12px; border-radius:14px; border:1px solid rgba(255,179,0,0.4); display:inline-block; margin-bottom:12px;">
+                <img src="livelink_qr.png" alt="LiveLink QR Code" style="width:200px; height:200px; display:block; border-radius:8px;">
+            </div>
+            <div style="font-size:12px; font-weight:700; color:#FFF9C4; margin-bottom:14px; word-break:break-all;">
+                <a href="http://10.90.228.102:8000" target="_blank" style="color:#FFB300; text-decoration:none;">http://10.90.228.102:8000</a>
+            </div>
+            <button class="livelink-btn" onclick="toggleQRModal()" style="padding:8px 24px; font-size:11px; width:auto;">CLOSE</button>
+        </div>
+    </div>
+
     <!-- ── LiveLink Security Gatekeeper Modal (Strict Verification) ── -->
     <div id="livelink-modal-overlay">
         <div class="livelink-card">
-            <div class="livelink-shield">🛡️</div>
+            <div class="livelink-shield">
+                <img src="icon.png" class="livelink-avatar" alt="Iron Man App Icon">
+            </div>
             <div class="livelink-title">LIVELINK GATEWAY</div>
             <div class="livelink-sub">Admin permission required. Enter your details to request authorization from Harsha.</div>
 
@@ -746,6 +810,55 @@
     <div id="livelink-toast"></div>
 
     <script>
+        // ── Stark Acoustic Sound Synthesizer (Web Audio API) ──
+        let audioCtx = null;
+        function playAcoustic(type = 'chirp') {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+                if (type === 'chirp') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(540, now);
+                    osc.frequency.exponentialRampToValueAtTime(920, now + 0.12);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                } else if (type === 'approved') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(554.37, now + 0.1);
+                    osc.frequency.setValueAtTime(659.25, now + 0.2);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+                    osc.start(now);
+                    osc.stop(now + 0.45);
+                } else if (type === 'transfer') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.exponentialRampToValueAtTime(1280, now + 0.2);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                }
+            } catch (e) {}
+        }
+
+        // ── QR Modal Toggle ──
+        function toggleQRModal() {
+            playAcoustic('chirp');
+            const el = document.getElementById('qr-modal-overlay');
+            el.style.display = (el.style.display === 'flex') ? 'none' : 'flex';
+        }
+
         // ── Feature 1: Mobile Thermal Optimizer & Adaptive 60/120 FPS ──
         let isPageVisible = true;
         let lastFrameTime = performance.now();
@@ -790,7 +903,25 @@
             }
         }
 
-        // ── PWA Service Worker Registration ──
+        // ── PWA 1-Tap Home Screen Installation ──
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const pwaBtn = document.getElementById('pwa-install-btn');
+            if (pwaBtn) pwaBtn.style.display = 'block';
+        });
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(() => {
+                    deferredPrompt = null;
+                    document.getElementById('pwa-install-btn').style.display = 'none';
+                });
+            }
+        }
+
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
@@ -823,6 +954,7 @@
                     const data = JSON.parse(e.data);
                     if (data.token === liveLinkToken || data.status === 'APPROVED' || 
                         data.name === document.getElementById('gate-name').value.trim()) {
+                        playAcoustic('approved');
                         triggerHaptic([40, 60, 40]);
                         document.getElementById('livelink-modal-overlay').style.display = 'none';
                         updateBadge('● VERIFIED', '#00E676');
@@ -966,6 +1098,7 @@
                     localStorage.setItem('livelink_token', data.token);
 
                     if (data.status === 'APPROVED') {
+                        playAcoustic('approved');
                         document.getElementById('livelink-modal-overlay').style.display = 'none';
                         updateBadge('● VERIFIED', '#00E676');
                         showToast('Access granted! Welcome to ULTRON.');
@@ -1001,6 +1134,7 @@
                         if (data.status === 'APPROVED') {
                             clearInterval(pollInterval);
                             pollInterval = null;
+                            playAcoustic('approved');
                             document.getElementById('livelink-modal-overlay').style.display = 'none';
                             updateBadge('● VERIFIED', '#00E676');
                             showToast(`Access granted by Harsha! Welcome, ${data.name}.`);
@@ -1099,11 +1233,9 @@
         let clock = new THREE.Clock();
 
         function animate(now) {
-            // Adaptive visibility guard: 0% CPU & GPU usage when phone screen is off/hidden
             if (!isPageVisible) return;
             requestAnimationFrame(animate);
 
-            // Adaptive low-power throttle: caps to 30 FPS when idle for 45s
             const delta = now - lastFrameTime;
             if (isLowPowerMode && delta < 32) return;
             lastFrameTime = now;
@@ -1146,17 +1278,88 @@
             badge.style.borderColor = color;
         }
 
-        function toggleMic() {
-            triggerHaptic([25]);
-            const btn = document.getElementById('mic-btn');
-            if (btn.classList.contains('active')) {
-                btn.classList.remove('active');
-                updateBadge('● ONLINE', '#FFC107');
-                document.getElementById('state-text').innerText = "SAY 'HEY' OR TAP MIC";
-            } else {
-                btn.classList.add('active');
+        // ── Wireless Phone Speech Recognition Core ──
+        let recognition = null;
+        let isRecognizing = false;
+
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return null;
+            const recog = new SpeechRecognition();
+            recog.continuous = false;
+            recog.interimResults = true;
+            recog.lang = 'en-US';
+
+            recog.onstart = () => {
+                isRecognizing = true;
+                isListening = true;
+                playAcoustic('chirp');
+                triggerHaptic([30]);
                 updateBadge('● LISTENING', '#FF6F00');
                 document.getElementById('state-text').innerText = "LISTENING FOR SIR...";
+                document.getElementById('mic-btn').classList.add('active');
+            };
+
+            recog.onresult = (e) => {
+                let transcript = '';
+                for (let i = e.resultIndex; i < e.results.length; i++) {
+                    transcript += e.results[i][0].transcript;
+                }
+                document.getElementById('cmd-input').value = transcript;
+                document.getElementById('user-text').innerText = "You: " + transcript;
+            };
+
+            recog.onend = () => {
+                isRecognizing = false;
+                isListening = false;
+                document.getElementById('mic-btn').classList.remove('active');
+                updateBadge('● ONLINE', '#FFC107');
+                document.getElementById('state-text').innerText = "SAY 'HEY' OR TAP MIC";
+                const finalCmd = document.getElementById('cmd-input').value.trim();
+                if (finalCmd) {
+                    sendTextCommand(finalCmd);
+                }
+            };
+
+            recog.onerror = () => {
+                isRecognizing = false;
+                isListening = false;
+                document.getElementById('mic-btn').classList.remove('active');
+                updateBadge('● ONLINE', '#FFC107');
+                document.getElementById('state-text').innerText = "SAY 'HEY' OR TAP MIC";
+            };
+
+            return recog;
+        }
+
+        function toggleMic() {
+            triggerHaptic([25]);
+            if (!recognition) {
+                recognition = initSpeechRecognition();
+            }
+
+            if (recognition) {
+                if (isRecognizing) {
+                    recognition.stop();
+                } else {
+                    try {
+                        recognition.start();
+                    } catch (err) {}
+                }
+            } else {
+                playAcoustic('chirp');
+                const btn = document.getElementById('mic-btn');
+                if (btn.classList.contains('active')) {
+                    btn.classList.remove('active');
+                    isListening = false;
+                    updateBadge('● ONLINE', '#FFC107');
+                    document.getElementById('state-text').innerText = "SAY 'HEY' OR TAP MIC";
+                } else {
+                    btn.classList.add('active');
+                    isListening = true;
+                    updateBadge('● LISTENING', '#FF6F00');
+                    document.getElementById('state-text').innerText = "LISTENING FOR SIR...";
+                }
             }
         }
 
@@ -1170,6 +1373,7 @@
             if (!val) return;
 
             triggerHaptic([20]);
+            playAcoustic('chirp');
             document.getElementById('user-text').innerText = "You: " + val;
             if (!overrideVal) input.value = "";
 
@@ -1201,6 +1405,8 @@
                 if (rep) {
                     document.getElementById('ai-text').innerText = "ULTRON: " + rep;
                     triggerHaptic([30, 20]);
+                    isSpeaking = true;
+                    setTimeout(() => { isSpeaking = false; }, 3500);
                 }
             })
             .catch(err => {
@@ -1211,6 +1417,7 @@
 
         function switchDockTab(tab) {
             triggerHaptic([15]);
+            playAcoustic('chirp');
             ['command', 'files', 'touchpad', 'remote'].forEach(t => {
                 const btn = document.getElementById(`dock-btn-${t}`);
                 if (btn) btn.classList.remove('active');
@@ -1246,6 +1453,7 @@
         async function uploadFileToServer(file) {
             if (!file) return;
             triggerHaptic([30]);
+            playAcoustic('transfer');
 
             const progContainer = document.getElementById('upload-progress-container');
             const progFill = document.getElementById('upload-progress-fill');
@@ -1275,6 +1483,7 @@
                     .then(data => {
                         if (data && data.success) {
                             triggerHaptic([40, 40]);
+                            playAcoustic('approved');
                             showToast(`Transferred: ${file.name} to Laptop!`);
                             fetchLaptopFiles();
                         } else {
@@ -1329,6 +1538,7 @@
 
                     if (resData.completed) {
                         triggerHaptic([40, 40]);
+                        playAcoustic('approved');
                         showToast(`Transferred ${file.name} in full!`);
                         fetchLaptopFiles();
                     }
@@ -1411,6 +1621,7 @@
 
         function downloadLaptopFile(filename) {
             triggerHaptic([20]);
+            playAcoustic('transfer');
             window.location.href = `/api/livelink/download?file=${filename}&folder=downloads&token=${encodeURIComponent(liveLinkToken)}`;
             showToast(`Downloading file to phone...`);
         }
@@ -1451,6 +1662,7 @@
 
         function sendTouchpadAction(action) {
             triggerHaptic([20]);
+            playAcoustic('chirp');
             fetch('/api/touchpad', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },
@@ -1470,6 +1682,7 @@
         // ── Laptop Remote Control ──
         function sendRemoteAction(action) {
             triggerHaptic([25]);
+            playAcoustic('chirp');
             fetch('/api/livelink/control', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },

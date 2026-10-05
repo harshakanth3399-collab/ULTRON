@@ -88,6 +88,9 @@ def main() -> int:
         try:
             from modules.memory.vector_memory import vector_memory
             threading.Thread(target=vector_memory.index_workspace, args=(".",), daemon=True).start()
+        except Exception as e:
+            print(f"[VECTOR MEMORY BOOT] Note: {e}", flush=True)
+
         # Auto-start Autonomous System Guardian (Battery & Memory)
         try:
             from modules.system_guardian import system_guardian
