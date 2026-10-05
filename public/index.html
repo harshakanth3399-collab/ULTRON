@@ -573,6 +573,421 @@
             }
         }
 
+        /* ── Slide-Out Session Chat Panel & Smooth Orb Shift ── */
+        .visualizer-container {
+            transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        body.chat-panel-open .visualizer-container {
+            transform: translateX(180px);
+        }
+        @media (max-width: 767px) {
+            body.chat-panel-open .visualizer-container {
+                transform: translateX(95px) scale(0.72);
+            }
+        }
+
+        #session-chat-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: min(430px, 86vw);
+            height: 100vh;
+            background: rgba(12, 7, 2, 0.95);
+            border-right: 1.5px solid rgba(255, 179, 0, 0.5);
+            box-shadow: 12px 0 45px rgba(0, 0, 0, 0.9), inset -1px 0 20px rgba(255, 179, 0, 0.12);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            z-index: 150;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(-105%);
+            transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        #session-chat-panel.active {
+            transform: translateX(0);
+        }
+        .chat-drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255, 179, 0, 0.25);
+            background: rgba(25, 14, 3, 0.85);
+            flex-shrink: 0;
+        }
+        .chat-drawer-title-group {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+        .chat-drawer-title {
+            font-size: 14px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: #FFB300;
+            text-shadow: 0 0 10px rgba(255, 179, 0, 0.6);
+        }
+        .chat-drawer-sub {
+            font-size: 9px;
+            color: rgba(255, 215, 100, 0.7);
+            letter-spacing: 1px;
+        }
+        .chat-drawer-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chat-action-btn {
+            background: rgba(255, 179, 0, 0.15);
+            border: 1px solid rgba(255, 179, 0, 0.45);
+            color: #FFD700;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .chat-action-btn:hover {
+            background: rgba(255, 179, 0, 0.3);
+            border-color: #FFD700;
+        }
+        .chat-stream-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 179, 0, 0.35) transparent;
+        }
+        .chat-stream-body::-webkit-scrollbar {
+            width: 4px;
+        }
+        .chat-stream-body::-webkit-scrollbar-thumb {
+            background: rgba(255, 179, 0, 0.35);
+            border-radius: 4px;
+        }
+        .stream-msg {
+            display: flex;
+            flex-direction: column;
+            max-width: 92%;
+            animation: fadeIn 0.25s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .stream-user {
+            align-self: flex-end;
+            background: rgba(45, 26, 6, 0.85);
+            border: 1px solid rgba(255, 179, 0, 0.35);
+            border-radius: 14px 14px 2px 14px;
+            padding: 9px 13px;
+            color: #FFF9C4;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .stream-ai {
+            align-self: flex-start;
+            background: rgba(22, 12, 3, 0.9);
+            border: 1px solid rgba(255, 179, 0, 0.55);
+            border-radius: 14px 14px 14px 2px;
+            padding: 10px 14px;
+            color: #FFD54F;
+            font-size: 13px;
+            line-height: 1.45;
+            box-shadow: 0 0 12px rgba(255, 179, 0, 0.15);
+        }
+        .stream-sender {
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: rgba(255, 179, 0, 0.7);
+            margin-bottom: 3px;
+            text-transform: uppercase;
+        }
+        .stream-timestamp {
+            font-size: 8px;
+            color: rgba(255, 215, 100, 0.45);
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        /* Inline AI Image Card in Chat */
+        .chat-image-card {
+            margin-top: 8px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 179, 0, 0.6);
+            background: #000;
+            box-shadow: 0 0 18px rgba(255, 179, 0, 0.3);
+        }
+        .chat-image-preview {
+            width: 100%;
+            height: auto;
+            max-height: 240px;
+            object-fit: cover;
+            display: block;
+            cursor: pointer;
+            transition: transform 0.25s;
+        }
+        .chat-image-preview:hover {
+            transform: scale(1.02);
+        }
+        .chat-image-footer {
+            padding: 8px 10px;
+            background: rgba(20, 11, 2, 0.95);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid rgba(255, 179, 0, 0.25);
+        }
+        .chat-image-prompt {
+            font-size: 10px;
+            color: rgba(255, 215, 100, 0.85);
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 180px;
+        }
+
+        /* Calorie Vision Nutrition Card */
+        .calorie-card {
+            margin-top: 8px;
+            background: linear-gradient(135deg, rgba(35, 20, 5, 0.95), rgba(16, 9, 2, 0.95));
+            border: 1.5px solid rgba(255, 179, 0, 0.65);
+            border-radius: 14px;
+            padding: 12px;
+            box-shadow: 0 0 20px rgba(255, 179, 0, 0.25);
+        }
+        .calorie-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 179, 0, 0.25);
+            padding-bottom: 6px;
+        }
+        .calorie-dish-name {
+            font-size: 13px;
+            font-weight: 900;
+            color: #FFD700;
+            letter-spacing: 0.5px;
+        }
+        .calorie-total-badge {
+            background: linear-gradient(135deg, #FF9100, #FF3D00);
+            color: #FFF;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            box-shadow: 0 0 10px rgba(255, 61, 0, 0.6);
+        }
+        .macro-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .macro-pill {
+            background: rgba(255, 179, 0, 0.08);
+            border: 1px solid rgba(255, 179, 0, 0.35);
+            border-radius: 8px;
+            padding: 6px 2px;
+            text-align: center;
+        }
+        .macro-label {
+            font-size: 8px;
+            font-weight: 800;
+            color: rgba(255, 215, 100, 0.7);
+            text-transform: uppercase;
+        }
+        .macro-val {
+            font-size: 11px;
+            font-weight: 800;
+            color: #FFF9C4;
+            margin-top: 2px;
+        }
+        .calorie-verdict {
+            font-size: 10px;
+            color: rgba(255, 215, 100, 0.85);
+            line-height: 1.4;
+            font-style: italic;
+        }
+
+        /* Quick Drawer Footer Action Bar */
+        .chat-drawer-footer {
+            padding: 10px 14px;
+            border-top: 1px solid rgba(255, 179, 0, 0.25);
+            background: rgba(20, 11, 2, 0.95);
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+        .quick-action-pill {
+            flex: 1;
+            background: rgba(255, 179, 0, 0.12);
+            border: 1px solid rgba(255, 179, 0, 0.4);
+            border-radius: 12px;
+            color: #FFD700;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 6px 8px;
+            cursor: pointer;
+            text-align: center;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .quick-action-pill:hover {
+            background: rgba(255, 179, 0, 0.25);
+            border-color: #FFB300;
+        }
+
+        /* Cam Button in Main Input */
+        .calorie-cam-btn {
+            background: rgba(255, 179, 0, 0.15);
+            border: 1px solid rgba(255, 179, 0, 0.5);
+            border-radius: 20px;
+            padding: 0 14px;
+            font-size: 15px;
+            cursor: pointer;
+            color: #FFD700;
+            transition: all 0.2s;
+            flex-shrink: 0 !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .calorie-cam-btn:hover {
+            background: rgba(255, 179, 0, 0.3);
+            border-color: #FFD700;
+            box-shadow: 0 0 10px rgba(255, 179, 0, 0.4);
+        }
+
+        /* ── ZEN FOCUS Bottom-Right Shield Button & Overlay ── */
+        .zen-focus-btn {
+            position: fixed;
+            bottom: 18px;
+            right: 18px;
+            z-index: 95;
+            background: linear-gradient(135deg, rgba(35, 20, 5, 0.95), rgba(15, 8, 2, 0.95));
+            border: 1.5px solid #FFB300;
+            color: #FFD700;
+            border-radius: 24px;
+            padding: 8px 16px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            cursor: pointer;
+            box-shadow: 0 0 18px rgba(255, 179, 0, 0.35);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.25s ease;
+        }
+        .zen-focus-btn.zen-active {
+            background: linear-gradient(135deg, #00C853, #1B5E20);
+            border-color: #69F0AE;
+            color: #FFFFFF;
+            box-shadow: 0 0 24px rgba(0, 230, 118, 0.65);
+            animation: zen-pulse 2s infinite;
+        }
+        @keyframes zen-pulse {
+            0% { box-shadow: 0 0 10px rgba(0, 230, 118, 0.4); }
+            50% { box-shadow: 0 0 26px rgba(0, 230, 118, 0.85); }
+            100% { box-shadow: 0 0 10px rgba(0, 230, 118, 0.4); }
+        }
+        .zen-status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #FF9100;
+            display: inline-block;
+        }
+        .zen-focus-btn.zen-active .zen-status-dot {
+            background: #69F0AE;
+            box-shadow: 0 0 8px #69F0AE;
+        }
+        @media (max-width: 767px) {
+            .zen-focus-btn {
+                bottom: 58px;
+                right: 12px;
+                padding: 6px 12px;
+                font-size: 10px;
+            }
+        }
+
+        /* Zen Whitelist Card inside Zen Modal */
+        .zen-whitelist-card {
+            background: rgba(255, 145, 0, 0.1);
+            border: 1.5px solid #FF9100;
+            border-radius: 14px;
+            padding: 12px;
+            margin: 12px 0;
+            text-align: left;
+            box-shadow: 0 0 20px rgba(255, 145, 0, 0.25);
+        }
+        .zen-whitelist-title {
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            color: #FFD700;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .zen-whitelist-contacts {
+            font-size: 14px;
+            font-weight: 900;
+            color: #FFF9C4;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        .zen-whitelist-desc {
+            font-size: 11px;
+            color: rgba(255, 215, 100, 0.85);
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+        .zen-whitelist-tag {
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #00E676;
+            background: rgba(0, 230, 118, 0.15);
+            border: 1px solid rgba(0, 230, 118, 0.4);
+            padding: 3px 8px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        /* Priority Amma Incoming Call Simulator Banner */
+        #amma-override-banner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 4, 1, 0.95);
+            z-index: 1050;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            backdrop-filter: blur(12px);
+            animation: amma-ring 1s infinite alternate;
+        }
+        @keyframes amma-ring {
+            from { background: rgba(20, 8, 2, 0.94); }
+            to { background: rgba(45, 15, 2, 0.96); }
+        }
+
         /* ── LiveLink Security Gatekeeper Modal (Holographic Golden Glass) ── */
         #livelink-modal-overlay {
             display: none;
@@ -772,6 +1187,7 @@
             </div>
         </div>
         <div class="header-right">
+            <button class="qr-btn" id="header-chat-btn" onclick="toggleSessionChatPanel()" title="Open Session Chat & Transcriptions">💬 CHAT</button>
             <button class="qr-btn" id="qr-modal-btn" onclick="toggleQRModal()" title="Show Phone Connection QR">📱 PAIR</button>
             <div class="status-badge" id="badge">● ONLINE</div>
             <div class="telemetry-badge" id="telemetry-badge">⚡ --% • RAM --%</div>
@@ -782,7 +1198,7 @@
     </header>
 
     <!-- 3D Three.js Golden Particle Matrix (ULTRON Neural Core) -->
-    <div class="visualizer-container">
+    <div class="visualizer-container" id="visualizer-container">
         <canvas id="webgl-canvas"></canvas>
     </div>
 
@@ -898,6 +1314,8 @@
             </div>
 
             <div class="input-bar">
+                <button type="button" class="calorie-cam-btn" onclick="triggerCalorieScan()" title="Snap My Food - Calorie Vision Scanner">📸</button>
+                <input type="file" id="calorie-file-input" accept="image/*" capture="environment" style="display:none;" onchange="handleCalorieFileSelected(event)">
                 <input type="text" class="cmd-input" id="cmd-input" placeholder="Type command here..." onkeypress="handleKeyPress(event)">
                 <button class="send-btn" onclick="sendTextCommand()">SEND</button>
             </div>
@@ -913,6 +1331,121 @@
             <button class="dock-btn" id="dock-btn-remote" onclick="switchDockTab('remote')">⚡ REMOTE</button>
             <button class="dock-btn" id="dock-btn-touchpad" onclick="switchDockTab('touchpad')">🖱️ TOUCHPAD</button>
             <button class="dock-btn" id="dock-btn-files" onclick="switchDockTab('files')">📁 FILES ⇄</button>
+        </div>
+    </div>
+
+    <!-- ── Slide-Out Session Chat Panel (Dynamic Orb Shift) ── -->
+    <div id="session-chat-panel">
+        <div class="chat-drawer-header">
+            <div class="chat-drawer-title-group">
+                <div class="chat-drawer-title">💬 SESSION CHAT</div>
+                <div class="chat-drawer-sub">Active Session Stream • Live Transcription</div>
+            </div>
+            <div class="chat-drawer-actions">
+                <button class="chat-action-btn" onclick="clearSessionChatStream()" title="Clear Session Chat">🧹 CLEAR</button>
+                <button class="chat-action-btn" onclick="toggleSessionChatPanel()" title="Close Panel">✕</button>
+            </div>
+        </div>
+
+        <div class="chat-stream-body" id="session-chat-stream">
+            <div style="font-size:11px; color:rgba(255,215,100,0.6); text-align:center; padding:18px 12px; line-height:1.5;">
+                ⚡ <b>ULTRON Live Session Transcripts</b><br>
+                Voice, text commands, food calorie scans, and generated AI images appear here in real-time.
+            </div>
+        </div>
+
+        <div class="chat-drawer-footer">
+            <button class="quick-action-pill" onclick="triggerCalorieScan()">📸 Snap Food</button>
+            <button class="quick-action-pill" onclick="quickPromptDraw()">🎨 Draw Image</button>
+            <button class="quick-action-pill" onclick="quickPromptTutor()">🎓 Exam Tutor</button>
+        </div>
+    </div>
+
+    <!-- ── Bottom-Right ZEN FOCUS Study Shield Floating Button ── -->
+    <button id="zen-focus-btn" class="zen-focus-btn" onclick="toggleZenFocusModal()" title="Zen Focus - Deep Study Shield">
+        <span class="zen-icon">🛡️</span>
+        <span class="zen-label">ZEN FOCUS</span>
+        <span class="zen-status-dot" id="zen-dot"></span>
+    </button>
+
+    <!-- ── ZEN FOCUS Controller Modal ── -->
+    <div id="zen-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.92); z-index:1003; justify-content:center; align-items:center; backdrop-filter:blur(12px); padding:16px;">
+        <div class="livelink-card" style="max-width:420px; border-color:#FFB300; box-shadow:0 0 45px rgba(255,179,0,0.45); text-align:left;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,179,0,0.3); padding-bottom:10px; margin-bottom:12px;">
+                <div>
+                    <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:#FFD700; display:flex; align-items:center; gap:6px;">
+                        🛡️ ZEN FOCUS PROTOCOL
+                    </div>
+                    <div style="font-size:10px; color:rgba(255,215,100,0.7); letter-spacing:1px;">Study Shield & Distraction Silencer</div>
+                </div>
+                <button onclick="toggleZenFocusModal()" style="background:rgba(255,179,0,0.15); border:1px solid rgba(255,179,0,0.5); color:#FFB300; border-radius:8px; padding:4px 10px; font-size:11px; cursor:pointer;">✕</button>
+            </div>
+
+            <!-- Zen Mode Power Toggle -->
+            <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(30,18,5,0.85); border:1px solid rgba(255,179,0,0.3); border-radius:12px; padding:12px; margin-bottom:12px;">
+                <div>
+                    <div style="font-size:12px; font-weight:800; color:#FFF9C4;">Deep Study Shield</div>
+                    <div style="font-size:10px; color:rgba(255,215,100,0.6);" id="zen-status-desc">Distractions & non-priority alerts silenced</div>
+                </div>
+                <button id="zen-toggle-switch" onclick="toggleZenFocusState()" style="background:linear-gradient(135deg, #FFB300, #FF6F00); border:none; border-radius:20px; padding:8px 16px; color:#000; font-weight:900; font-size:11px; cursor:pointer; letter-spacing:1px; box-shadow:0 0 14px rgba(255,179,0,0.5);">ENGAGE</button>
+            </div>
+
+            <!-- Unbreakable Amma / Mom Whitelist Guarantee -->
+            <div class="zen-whitelist-card">
+                <div class="zen-whitelist-title">
+                    <span>👑 UNBREAKABLE EMERGENCY WHITELIST</span>
+                </div>
+                <div class="zen-whitelist-contacts">📞 AMMA • MOM (Telugu: అమ్మ)</div>
+                <div class="zen-whitelist-desc">
+                    Calls and messages from <b>Amma</b> or <b>Mom</b> are <b>NEVER</b> blocked or silenced. Priority override is permanently armed with loud ringing and intense vibration.
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="zen-whitelist-tag">STATUS: 100% UNMUTED & EXEMPT</div>
+                    <button onclick="simulateAmmaCall()" style="background:rgba(255,61,0,0.2); border:1px solid #FF5252; color:#FF8A80; border-radius:8px; padding:4px 8px; font-size:10px; font-weight:800; cursor:pointer;" title="Simulate incoming call to verify zero silencing">🧪 TEST CALL</button>
+                </div>
+            </div>
+
+            <!-- Focus Session Stopwatch & Ambient Tone -->
+            <div style="display:flex; gap:10px; margin-bottom:12px;">
+                <div style="flex:1; background:rgba(255,179,0,0.06); border:1px solid rgba(255,179,0,0.25); border-radius:10px; padding:10px; text-align:center;">
+                    <div style="font-size:9px; font-weight:800; color:rgba(255,215,100,0.7); text-transform:uppercase;">Focus Time</div>
+                    <div style="font-size:18px; font-weight:900; color:#FFD700; margin-top:2px;" id="zen-timer-display">00:00</div>
+                </div>
+                <div style="flex:1; background:rgba(255,179,0,0.06); border:1px solid rgba(255,179,0,0.25); border-radius:10px; padding:10px; text-align:center; display:flex; flex-direction:column; justify-content:center;">
+                    <div style="font-size:9px; font-weight:800; color:rgba(255,215,100,0.7); text-transform:uppercase; margin-bottom:4px;">432Hz Drone</div>
+                    <button id="zen-audio-toggle" onclick="toggleZenAmbientDrone()" style="background:rgba(255,179,0,0.15); border:1px solid rgba(255,179,0,0.5); color:#FFD700; border-radius:8px; padding:4px 8px; font-size:10px; font-weight:800; cursor:pointer;">🎧 PLAY TONE</button>
+                </div>
+            </div>
+
+            <button class="livelink-btn" onclick="toggleZenFocusModal()" style="width:100%; margin-top:4px;">CLOSE HUD</button>
+        </div>
+    </div>
+
+    <!-- ── Full-Screen Priority Incoming Call Alert for Amma ── -->
+    <div id="amma-override-banner">
+        <div class="livelink-card" style="max-width:360px; text-align:center; border:2px solid #FFD700; box-shadow:0 0 50px rgba(255,215,0,0.85); background:rgba(20,10,2,0.98);">
+            <div style="font-size:42px; margin-bottom:6px; animation:bounce 1s infinite;">📞❤️</div>
+            <div style="font-size:22px; font-weight:900; color:#FFD700; letter-spacing:2px; margin-bottom:4px;">INCOMING CALL</div>
+            <div style="font-size:28px; font-weight:900; color:#FFF; text-shadow:0 0 16px #FFD700; margin-bottom:8px;">AMMA (Mom)</div>
+            <div style="background:rgba(0,230,118,0.18); border:1px solid #00E676; color:#B9F6CA; border-radius:10px; padding:8px 12px; font-size:11px; font-weight:800; margin-bottom:18px; line-height:1.4;">
+                🛡️ ZEN FOCUS OVERRIDE ACTIVE<br>
+                This call is NEVER silenced or blocked!
+            </div>
+            <div style="display:flex; gap:12px;">
+                <button onclick="dismissAmmaCall(true)" style="flex:1; background:linear-gradient(135deg, #00E676, #00C853); border:none; border-radius:12px; padding:12px; color:#000; font-weight:900; font-size:13px; cursor:pointer; letter-spacing:1px; box-shadow:0 0 18px rgba(0,230,118,0.7);">ACCEPT CALL</button>
+                <button onclick="dismissAmmaCall(false)" style="flex:1; background:rgba(255,60,60,0.25); border:1px solid #FF5252; border-radius:12px; padding:12px; color:#FF8A80; font-weight:800; font-size:12px; cursor:pointer;">DISMISS</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Full-Screen AI Image Viewer Modal ── -->
+    <div id="image-viewer-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.96); z-index:1060; justify-content:center; align-items:center; backdrop-filter:blur(14px); padding:16px;">
+        <div style="max-width:92vw; max-height:92vh; display:flex; flex-direction:column; align-items:center; gap:12px;">
+            <img id="viewer-img" src="" alt="ULTRON Generated Image" style="max-width:100%; max-height:78vh; border-radius:14px; border:2px solid #FFB300; box-shadow:0 0 40px rgba(255,179,0,0.5); object-fit:contain;">
+            <div style="display:flex; gap:12px;">
+                <button id="viewer-download-btn" onclick="downloadViewerImage()" class="livelink-btn" style="padding:8px 22px; font-size:11px; width:auto;">⬇️ DOWNLOAD IMAGE</button>
+                <button onclick="closeImageViewer()" class="livelink-btn" style="padding:8px 22px; font-size:11px; width:auto; background:rgba(255,179,0,0.2); border:1px solid #FFB300; color:#FFD700;">CLOSE ✕</button>
+            </div>
         </div>
     </div>
 
@@ -2443,6 +2976,7 @@
             playAcoustic('chirp');
             document.getElementById('user-text').innerText = "You: " + val;
             scrollChatToBottom();
+            appendToChatStream('user', val);
             if (!overrideVal) input.value = "";
 
             if (!navigator.onLine) {
@@ -2482,6 +3016,12 @@
                     document.getElementById('ai-text').innerText = "ULTRON: " + rep;
                     scrollChatToBottom();
                     triggerHaptic([30, 20]);
+                    appendToChatStream('ai', rep);
+
+                    // Check if AI image generation was returned
+                    if (data.image_url) {
+                        renderGeneratedImageInChat(data.image_prompt || val, data.image_url);
+                    }
 
                     // Store turn in temporary session memory buffer for continuous adaptability
                     appendSessionHistory(val, rep);
@@ -2513,6 +3053,378 @@
                 showToast("Connection drop. Command queued for retry.");
                 if (handsFreeVoice) setTimeout(startHandsFreeVoice, 2000);
             });
+        }
+
+        // ── Slide-Out Session Chat Panel Engine (With Orb Repositioning) ──
+        let isChatPanelOpen = false;
+
+        function toggleSessionChatPanel() {
+            isChatPanelOpen = !isChatPanelOpen;
+            const panel = document.getElementById('session-chat-panel');
+            const chatBtn = document.getElementById('header-chat-btn');
+            
+            if (panel) panel.classList.toggle('active', isChatPanelOpen);
+            document.body.classList.toggle('chat-panel-open', isChatPanelOpen);
+            if (chatBtn) chatBtn.classList.toggle('active', isChatPanelOpen);
+
+            triggerHaptic([20]);
+            playAcoustic('chirp');
+        }
+
+        function openSessionChatPanel() {
+            if (!isChatPanelOpen) toggleSessionChatPanel();
+        }
+
+        function appendToChatStream(sender, text, timestamp = null, mediaHtml = '') {
+            const stream = document.getElementById('session-chat-stream');
+            if (!stream) return;
+            const timeStr = timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const isUser = sender === 'user';
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `stream-msg ${isUser ? 'stream-user' : 'stream-ai'}`;
+            msgDiv.innerHTML = `
+                <div class="stream-sender">${isUser ? '👤 YOU' : '⚡ ULTRON'}</div>
+                <div>${escapeHtml(text)}</div>
+                ${mediaHtml}
+                <div class="stream-timestamp">${timeStr}</div>
+            `;
+            stream.appendChild(msgDiv);
+            stream.scrollTop = stream.scrollHeight;
+        }
+
+        function clearSessionChatStream() {
+            const stream = document.getElementById('session-chat-stream');
+            if (stream) {
+                stream.innerHTML = '<div style="font-size:11px; color:rgba(255,215,100,0.6); text-align:center; padding:18px 12px;">Transcripts cleared for this session.</div>';
+                showToast("Session transcripts cleared.");
+            }
+        }
+
+        function renderGeneratedImageInChat(promptText, imageUrl) {
+            openSessionChatPanel();
+            const safePrompt = escapeHtml(promptText);
+            const mediaHtml = `
+                <div class="chat-image-card">
+                    <img src="${imageUrl}" class="chat-image-preview" onclick="openImageViewer('${encodeURIComponent(imageUrl)}', '${encodeURIComponent(promptText)}')" alt="${safePrompt}">
+                    <div class="chat-image-footer">
+                        <div class="chat-image-prompt" title="${safePrompt}">🎨 ${safePrompt}</div>
+                        <div style="display:flex; gap:6px;">
+                            <button class="chat-action-btn" onclick="openImageViewer('${encodeURIComponent(imageUrl)}', '${encodeURIComponent(promptText)}')">🔍 EXPAND</button>
+                            <button class="chat-action-btn" onclick="directDownloadImage('${imageUrl}', 'ultron_${Date.now()}.jpg')">⬇️ SAVE</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            appendToChatStream('ai', `I have generated the image for you: "${promptText}".`, null, mediaHtml);
+        }
+
+        let currentViewerImgUrl = '';
+        function openImageViewer(urlEncoded, promptEncoded) {
+            const url = decodeURIComponent(urlEncoded);
+            currentViewerImgUrl = url;
+            const modal = document.getElementById('image-viewer-modal');
+            const img = document.getElementById('viewer-img');
+            if (modal && img) {
+                img.src = url;
+                modal.style.display = 'flex';
+                triggerHaptic([20]);
+            }
+        }
+
+        function closeImageViewer() {
+            const modal = document.getElementById('image-viewer-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function downloadViewerImage() {
+            if (currentViewerImgUrl) {
+                directDownloadImage(currentViewerImgUrl, `ultron_flux_${Date.now()}.jpg`);
+            }
+        }
+
+        function directDownloadImage(url, filename) {
+            triggerHaptic([25]);
+            playAcoustic('transfer');
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast("Downloading image...");
+        }
+
+        // ── Snap-My-Food Calorie Vision Scanner Engine ──
+        function triggerCalorieScan() {
+            triggerHaptic([20]);
+            const input = document.getElementById('calorie-file-input');
+            if (input) input.click();
+        }
+
+        function handleCalorieFileSelected(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            triggerHaptic([30]);
+            playAcoustic('chirp');
+            showToast("Analyzing meal with ULTRON Nutri-Vision...");
+            openSessionChatPanel();
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Data = e.target.result;
+                const userThumbHtml = `
+                    <div style="margin-top:6px; border-radius:10px; overflow:hidden; max-width:200px; border:1px solid rgba(255,179,0,0.5);">
+                        <img src="${base64Data}" style="width:100%; height:auto; display:block;">
+                    </div>
+                `;
+                appendToChatStream('user', '📸 Snap My Food Analysis', null, userThumbHtml);
+
+                updateBadge('● SCANNING FOOD...', '#FF9100');
+                document.getElementById('state-text').innerText = "CALCULATING CALORIES & MACROS...";
+
+                fetch('/api/food_scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },
+                    body: JSON.stringify({ image: base64Data, token: liveLinkToken })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    updateBadge('● ONLINE', '#00E676');
+                    document.getElementById('state-text').innerText = "TAP MIC FOR HANDS-FREE VOICE";
+                    if (data.success && data.nutrition) {
+                        const n = data.nutrition;
+                        renderNutritionCardInChat(n);
+                        if (n.spoken_summary) {
+                            speakMobileResponse(n.spoken_summary);
+                        }
+                    } else {
+                        showToast("Nutri-Vision: Could not determine food details.");
+                        appendToChatStream('ai', "I was unable to clearly recognize the meal. Please ensure good lighting and try again.");
+                    }
+                })
+                .catch(() => {
+                    updateBadge('● ONLINE', '#00E676');
+                    showToast("Food scanner error. Please try again.");
+                });
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function renderNutritionCardInChat(n) {
+            const cardHtml = `
+                <div class="calorie-card">
+                    <div class="calorie-header">
+                        <div class="calorie-dish-name">🍽️ ${escapeHtml(n.dish_name || 'Analyzed Meal')} (${n.portion_grams || 200}g)</div>
+                        <div class="calorie-total-badge">${n.calories || 0} kcal</div>
+                    </div>
+                    <div class="macro-grid">
+                        <div class="macro-pill">
+                            <div class="macro-label">PROTEIN</div>
+                            <div class="macro-val">${n.protein_g || 0}g</div>
+                        </div>
+                        <div class="macro-pill">
+                            <div class="macro-label">CARBS</div>
+                            <div class="macro-val">${n.carbs_g || 0}g</div>
+                        </div>
+                        <div class="macro-pill">
+                            <div class="macro-label">FATS</div>
+                            <div class="macro-val">${n.fats_g || 0}g</div>
+                        </div>
+                        <div class="macro-pill">
+                            <div class="macro-label">FIBER</div>
+                            <div class="macro-val">${n.fiber_g || 0}g</div>
+                        </div>
+                    </div>
+                    <div class="calorie-verdict">💡 <b>Nutritionist Verdict:</b> ${escapeHtml(n.health_verdict || 'Balanced nutritional profile.')}</div>
+                </div>
+            `;
+            appendToChatStream('ai', `Nutri-Vision Scan Complete: ${n.dish_name} (~${n.calories} kcal).`, null, cardHtml);
+        }
+
+        // ── ZEN FOCUS Deep Study Protocol & Priority Whitelist ──
+        let zenFocusActive = false;
+        let zenTimerInterval = null;
+        let zenSecondsElapsed = 0;
+        let zenDroneOsc = null;
+        let zenDroneGain = null;
+
+        function toggleZenFocusModal() {
+            triggerHaptic([20]);
+            const overlay = document.getElementById('zen-modal-overlay');
+            if (overlay) {
+                const isVisible = overlay.style.display === 'flex';
+                overlay.style.display = isVisible ? 'none' : 'flex';
+            }
+        }
+
+        function toggleZenFocusState() {
+            zenFocusActive = !zenFocusActive;
+            triggerHaptic([40, 40]);
+            playAcoustic(zenFocusActive ? 'approved' : 'chirp');
+
+            const btn = document.getElementById('zen-focus-btn');
+            const sw = document.getElementById('zen-toggle-switch');
+            const desc = document.getElementById('zen-status-desc');
+
+            if (btn) btn.classList.toggle('zen-active', zenFocusActive);
+
+            if (zenFocusActive) {
+                if (sw) {
+                    sw.innerText = 'DISENGAGE';
+                    sw.style.background = 'linear-gradient(135deg, #FF3D00, #D50000)';
+                    sw.style.color = '#FFF';
+                }
+                if (desc) desc.innerText = '🟢 ACTIVE: Muting distractions • Amma calls 100% allowed';
+                startZenTimer();
+                showToast('🛡️ ZEN FOCUS ACTIVE • Amma calls never blocked!');
+                updateBadge('● ZEN FOCUS SHIELD', '#00E676');
+            } else {
+                if (sw) {
+                    sw.innerText = 'ENGAGE';
+                    sw.style.background = 'linear-gradient(135deg, #FFB300, #FF6F00)';
+                    sw.style.color = '#000';
+                }
+                if (desc) desc.innerText = 'Distractions & non-priority alerts silenced';
+                stopZenTimer();
+                stopZenAmbientDrone();
+                showToast('Zen Focus disengaged.');
+                updateBadge('● ONLINE', '#00E676');
+            }
+        }
+
+        function startZenTimer() {
+            if (zenTimerInterval) clearInterval(zenTimerInterval);
+            zenSecondsElapsed = 0;
+            zenTimerInterval = setInterval(() => {
+                zenSecondsElapsed++;
+                const mins = Math.floor(zenSecondsElapsed / 60).toString().padStart(2, '0');
+                const secs = (zenSecondsElapsed % 60).toString().padStart(2, '0');
+                const el = document.getElementById('zen-timer-display');
+                if (el) el.innerText = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function stopZenTimer() {
+            if (zenTimerInterval) {
+                clearInterval(zenTimerInterval);
+                zenTimerInterval = null;
+            }
+        }
+
+        function toggleZenAmbientDrone() {
+            const btn = document.getElementById('zen-audio-toggle');
+            if (zenDroneOsc) {
+                stopZenAmbientDrone();
+                if (btn) btn.innerText = '🎧 PLAY TONE';
+                showToast('Ambient focus tone stopped.');
+            } else {
+                startZenAmbientDrone();
+                if (btn) btn.innerText = '⏹️ STOP TONE';
+                showToast('432Hz focus drone active.');
+            }
+        }
+
+        function startZenAmbientDrone() {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                zenDroneOsc = audioCtx.createOscillator();
+                zenDroneGain = audioCtx.createGain();
+
+                zenDroneOsc.type = 'sine';
+                zenDroneOsc.frequency.setValueAtTime(432, audioCtx.currentTime);
+                zenDroneGain.gain.setValueAtTime(0.02, audioCtx.currentTime);
+
+                zenDroneOsc.connect(zenDroneGain);
+                zenDroneGain.connect(audioCtx.destination);
+                zenDroneOsc.start();
+            } catch(e) {
+                console.log("Audio drone error:", e);
+            }
+        }
+
+        function stopZenAmbientDrone() {
+            try {
+                if (zenDroneOsc) {
+                    zenDroneOsc.stop();
+                    zenDroneOsc.disconnect();
+                    zenDroneOsc = null;
+                }
+            } catch(e) {}
+        }
+
+        // ── Critical Amma / Mom Whitelist Verification Simulator ──
+        let ammaRingInterval = null;
+        function simulateAmmaCall() {
+            triggerHaptic([400, 150, 400, 150, 600]);
+            const banner = document.getElementById('amma-override-banner');
+            if (banner) banner.style.display = 'flex';
+
+            // Sound loud priority alert ringtone
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            let ringBeep = 0;
+            ammaRingInterval = setInterval(() => {
+                if (ringBeep > 8) { clearInterval(ammaRingInterval); return; }
+                try {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    const t = audioCtx.currentTime;
+                    osc.frequency.setValueAtTime(ringBeep % 2 === 0 ? 880 : 1046, t);
+                    gain.gain.setValueAtTime(0.35, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+                    osc.start(t);
+                    osc.stop(t + 0.35);
+                    ringBeep++;
+                } catch(e) {}
+            }, 400);
+        }
+
+        function dismissAmmaCall(accepted) {
+            if (ammaRingInterval) {
+                clearInterval(ammaRingInterval);
+                ammaRingInterval = null;
+            }
+            const banner = document.getElementById('amma-override-banner');
+            if (banner) banner.style.display = 'none';
+            if (accepted) {
+                showToast("Connected to Amma with priority override!");
+                playAcoustic('approved');
+            } else {
+                showToast("Call dismissed.");
+            }
+        }
+
+        function quickPromptDraw() {
+            const input = document.getElementById('cmd-input');
+            if (input) {
+                input.value = "Generate an image of ";
+                input.focus();
+            }
+        }
+
+        function quickPromptTutor() {
+            const input = document.getElementById('cmd-input');
+            if (input) {
+                input.value = "Explain for my exam with formulas and analogies: ";
+                input.focus();
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
         function switchDockTab(tab) {
