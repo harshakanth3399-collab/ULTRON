@@ -1,13 +1,18 @@
 {
   "version": 2,
   "name": "ultron-assistant",
+  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "/api/index.py"
     },
     {
-      "source": "/(.*)",
+      "source": "/",
+      "destination": "/public/index.html"
+    },
+    {
+      "source": "/((?!api/).*)",
       "destination": "/public/$1"
     }
   ],

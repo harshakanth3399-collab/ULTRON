@@ -1,15 +1,10 @@
-main.py
-app.py
-run_livelink.py
-web_server.py
-ai.py
-speech.py
-router.py
-commands_daily.py
-tools/
-scratch/
-modules/
-memory/
-data/
-*.log
-*.db
+# Vercel Deployment Filter: allow only cloud web app & serverless API
+/*
+
+# Explicitly allow cloud frontend, API gateway, and configuration
+!/api
+!/api/**
+!/public
+!/public/**
+!/vercel.json
+!/requirements.txt

@@ -1,0 +1,2 @@
+# ULTRON Serverless Function dependencies
+# Pure Python 3 standard library
