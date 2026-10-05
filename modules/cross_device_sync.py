@@ -237,9 +237,12 @@ class CrossDeviceSync:
             direct = os.path.join(s_root, safe_name)
             if os.path.isfile(direct):
                 return direct
-            # Subdirectory search
+            # Subdirectory search (max 2 levels deep, skip code dirs)
             for root, dirs, files in os.walk(s_root):
-                dirs[:] = [d for d in dirs if not d.startswith((".", "~$", "node_modules", "AppData"))]
+                dirs[:] = [d for d in dirs if not d.startswith((".", "~$", "node_modules", "AppData", "__pycache__", "venv")) and d != "ULTRON"]
+                if len(os.path.relpath(root, s_root).split(os.sep)) > 2:
+                    dirs.clear()
+                    continue
                 if safe_name in files:
                     candidate = os.path.join(root, safe_name)
                     if os.path.isfile(candidate):
