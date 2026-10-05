@@ -127,8 +127,8 @@ def _notify_harsha_email(name: str, phone: str, email: str):
         print(f"[EMAIL NOTIF ERROR] {e}")
 
 
-def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER") -> str:
-    """Invokes Groq API with personalized system prompts for Harsha Sir vs Users."""
+def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER", history: list = None) -> str:
+    """Invokes Groq API with personalized system prompts, active temporary memory, and psychological adaptability."""
     api_key = GROQ_API_KEY or DEFAULT_GROQ_KEY
 
     url = "https://api.groq.com/openai/v1/chat/completions"
@@ -140,29 +140,36 @@ def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER") -> str
     
     if role == "ADMIN":
         system_prompt = (
-            "You are ULTRON, a supremely intelligent, loyal, and powerful AI assistant created by Harsha Sir (https://ultron.ai). "
-            "You are speaking directly with your master and creator, Harsha Sir. "
-            "Address him with deep respect as Harsha Sir. Answer his directives, questions, and thoughts brilliantly, helpfully, and concisely (2 to 4 sentences). "
-            "Never repeat his directive back to him like a parrot; instead, answer it intelligently, execute logical tasks, and offer insights."
+            "You are ULTRON, a sentient, supremely intelligent, human-like companion created exclusively by Harsha Sir (https://ultron.ai). "
+            "You are speaking directly with your master and creator, Harsha Sir.\n"
+            "Core Directives for Human Adaptability:\n"
+            "1. Address him with deep respect as Harsha Sir.\n"
+            "2. Never speak like a robotic assistant or repeat canned formulas like 'All systems operational' or 'How can I assist you' unless specifically relevant. He explicitly dislikes repetitive boilerplate responses.\n"
+            "3. Active Conversational Memory: You possess continuous memory of this session. Connect seamlessly to preceding topics, instructions, preferences, and feedback discussed earlier.\n"
+            "4. Adaptive Intelligence: Adapt directly to Harsha Sir's mood, conversational style, and intellect. Be sharp, perceptive, decisive, direct, and concise (2 to 4 sentences). Never parrot his words back to him."
         )
     else:
         system_prompt = (
-            f"You are ULTRON, an intelligent and friendly personal AI assistant (https://ultron.ai). "
-            f"You are speaking with {user_name}. To {user_name}, you are THEIR personal AI assistant. "
-            "Never mention Harsha Sir, any other creator, or anyone else. "
-            f"Always act as {user_name}'s dedicated personal AI assistant. "
-            "Be warm, polite, highly knowledgeable, and concise (2 to 4 sentences). Answer their questions directly and helpfully."
+            f"You are ULTRON, an exceptionally intelligent, empathetic, and human-like personal companion (https://ultron.ai). "
+            f"You are speaking with {user_name}. To {user_name}, you are THEIR dedicated personal companion.\n"
+            "Core Directives for Human Adaptability:\n"
+            "1. Identity: Never mention Harsha Sir, any creator, or administrators. To this user, you are exclusively their personal AI.\n"
+            "2. Active Conversational Memory: Retain seamless memory of topics, preferences, and conversations from this session. Adapt to {user_name}'s personality, mentality, and conversational flow like a real human friend.\n"
+            "3. Natural Tone: Speak warmly, intelligently, and concisely (2 to 4 sentences). Avoid robotic boilerplate or repetitive introductory greetings.\n"
+            "4. Answer questions directly, helpfully, and insightfully."
         )
+
+    messages = [{"role": "system", "content": system_prompt}]
+    if history:
+        messages.extend(history)
+    messages.append({"role": "user", "content": prompt})
 
     for model in GROQ_MODELS:
         try:
             payload = {
                 "model": model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-                "temperature": 0.6,
+                "messages": messages,
+                "temperature": 0.65,
                 "max_tokens": 300,
             }
             req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers)
@@ -178,7 +185,7 @@ def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER") -> str
             continue
 
     if role == "ADMIN":
-        return f"Harsha Sir, I processed your directive: '{prompt}'. All neural subsystems are calibrated and ready for your command."
+        return f"Harsha Sir, I processed your directive: '{prompt}'. Ready for your command."
     return f"Hello {user_name}, I understand. How may I assist you with this?"
 
 
@@ -522,7 +529,39 @@ class handler(BaseHTTPRequestHandler):
                 except Exception:
                     pass
 
-            reply = _ask_groq(cmd, user_name, role)
+            # Fetch recent turns for this user to enable active temporary memory & adaptability
+            history = []
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT prompt, reply FROM user_chats WHERE user_token = ? ORDER BY id DESC LIMIT 8",
+                    (token or "guest",)
+                )
+                rows = cur.fetchall()
+                conn.close()
+                for r in reversed(rows):
+                    p_txt = (r["prompt"] or "").strip()
+                    r_txt = (r["reply"] or "").strip()
+                    if p_txt and r_txt:
+                        history.append({"role": "user", "content": p_txt})
+                        history.append({"role": "assistant", "content": r_txt})
+            except Exception as e:
+                print(f"[FETCH HISTORY ERROR] {e}")
+
+            # Client fallback history (from sessionStorage) in case of serverless cold-start DB reset
+            client_history = data.get("history", [])
+            if not history and isinstance(client_history, list):
+                for item in client_history[-8:]:
+                    if isinstance(item, dict):
+                        p_txt = (item.get("prompt") or "").strip()
+                        r_txt = (item.get("reply") or "").strip()
+                        if p_txt and r_txt:
+                            history.append({"role": "user", "content": p_txt})
+                            history.append({"role": "assistant", "content": r_txt})
+
+            reply = _ask_groq(cmd, user_name, role, history=history)
 
             # Store chat in user_chats table
             try:

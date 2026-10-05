@@ -49,6 +49,7 @@
             align-items: center;
             padding-top: 4px;
             z-index: 10;
+            flex-shrink: 0;
         }
         .logo {
             display: flex;
@@ -146,13 +147,14 @@
         /* 3D WebGL Matrix Container */
         .visualizer-container {
             position: relative;
-            width: 320px;
-            height: 320px;
+            width: min(300px, 38vh);
+            height: min(300px, 38vh);
             display: flex;
             justify-content: center;
             align-items: center;
             margin: auto;
             z-index: 5;
+            flex-shrink: 1;
         }
         #webgl-canvas {
             width: 100%;
@@ -167,25 +169,45 @@
             color: rgba(255, 193, 7, 0.9);
             text-shadow: 0 0 8px rgba(255, 145, 0, 0.5);
             text-transform: uppercase;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             text-align: center;
+            flex-shrink: 0;
         }
         .chat-container {
             width: 100%;
-            max-width: 420px;
+            max-width: 580px;
             display: flex;
             flex-direction: column;
             gap: 6px;
-            margin-bottom: 8px;
-            min-height: 42px;
+            margin: 0 auto 8px auto;
+            min-height: 40px;
+            max-height: 115px;
+            overflow-y: auto;
+            padding: 6px 12px;
+            border-radius: 12px;
+            background: rgba(255, 179, 0, 0.04);
+            border: 1px solid rgba(255, 179, 0, 0.2);
+            backdrop-filter: blur(8px);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 179, 0, 0.4) transparent;
+            box-sizing: border-box;
+            flex-shrink: 1;
+        }
+        .chat-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        .chat-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 179, 0, 0.4);
+            border-radius: 4px;
         }
         .chat-line {
             font-size: 13px;
             font-weight: 500;
             line-height: 1.4;
+            word-break: break-word;
         }
         .user-line {
-            color: rgba(230, 220, 200, 0.75);
+            color: rgba(230, 220, 200, 0.85);
         }
         .ai-line {
             color: #FFC107;
@@ -193,21 +215,24 @@
             text-shadow: 0 0 10px rgba(255, 179, 0, 0.5);
         }
 
-        /* Controls & Input Area */
+        /* Controls & Input Area - STRICTLY PROTECTED FROM SHRINKING */
         .controls-wrapper {
             width: 100%;
-            max-width: 420px;
+            max-width: 460px;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 10px;
             padding-bottom: 4px;
             z-index: 10;
+            flex-shrink: 0 !important;
+            margin-top: auto;
         }
         .controls {
             display: flex;
             justify-content: center;
             align-items: center;
+            flex-shrink: 0 !important;
         }
         .mic-btn {
             width: 64px;
@@ -221,6 +246,7 @@
             cursor: pointer;
             box-shadow: 0 0 24px rgba(255, 179, 0, 0.35);
             transition: all 0.2s ease;
+            flex-shrink: 0 !important;
         }
         .mic-btn.active {
             background: radial-gradient(circle, #FF6F00 0%, #B71C1C 100%);
@@ -249,6 +275,7 @@
             width: 100%;
             display: flex;
             gap: 8px;
+            flex-shrink: 0 !important;
         }
         .cmd-input {
             flex: 1;
@@ -274,6 +301,7 @@
             cursor: pointer;
             letter-spacing: 1px;
             box-shadow: 0 0 12px rgba(255, 179, 0, 0.4);
+            flex-shrink: 0 !important;
         }
 
         /* ── LiveLink Synergy Bottom Dock (Minimalist & Unobtrusive) ── */
@@ -281,9 +309,10 @@
             display: flex;
             gap: 6px;
             width: 100%;
-            max-width: 420px;
+            max-width: 460px;
             justify-content: space-around;
             padding-top: 4px;
+            flex-shrink: 0 !important;
         }
         .dock-btn {
             flex: 1;
@@ -507,12 +536,19 @@
             #touchpad-panel {
                 display: none !important;
             }
-            .container {
-                max-width: 680px;
-            }
             .visualizer-container {
-                width: 350px;
-                height: 350px;
+                width: min(340px, 44vh);
+                height: min(340px, 44vh);
+            }
+            .chat-container {
+                max-width: 680px;
+                max-height: 130px;
+            }
+            .controls-wrapper {
+                max-width: 540px;
+            }
+            .dock-bar {
+                max-width: 540px;
             }
         }
         @media (max-width: 767px) {
@@ -1985,40 +2021,42 @@
             if (!clock || !renderer || !scene || !camera) return;
             const elapsedTime = clock.getElapsedTime();
 
-            speechPulse *= 0.88;
-            const dynamicPulse = isSpeaking ? (0.09 + speechPulse * 0.28) : (isListening ? 0.05 : 0.015);
-            const speedMultiplier = isSpeaking ? (0.8 + speechPulse * 0.35) : (isListening ? 0.65 : (isLowPowerMode ? 0.3 : 0.5));
+            speechPulse *= 0.90;
+            // Harmonic voice breathing pulse (subtle core glow when speaking, never rapid spin)
+            const dynamicPulse = isSpeaking ? (0.04 + speechPulse * 0.12) : (isListening ? 0.03 : 0.01);
+            // Constant, dignified, calm rotation speed (never spins fast or accelerates out of control)
+            const speedMultiplier = isSpeaking ? 0.38 : (isListening ? 0.32 : (isLowPowerMode ? 0.22 : 0.28));
 
             // Rotate Concentric Rings slowly and elegantly
             if (ring1Mesh) {
-                ring1Mesh.rotation.z = elapsedTime * 0.12 * speedMultiplier;
-                ring1Mesh.rotation.x = 0.35 + Math.sin(elapsedTime * 0.25) * 0.10;
+                ring1Mesh.rotation.z = elapsedTime * 0.045 * speedMultiplier;
+                ring1Mesh.rotation.x = 0.35 + Math.sin(elapsedTime * 0.12) * 0.05;
             }
             if (ring2Mesh) {
-                ring2Mesh.rotation.y = -elapsedTime * 0.14 * speedMultiplier;
-                ring2Mesh.rotation.z = 0.75 + Math.cos(elapsedTime * 0.20) * 0.08;
+                ring2Mesh.rotation.y = -elapsedTime * 0.055 * speedMultiplier;
+                ring2Mesh.rotation.z = 0.75 + Math.cos(elapsedTime * 0.10) * 0.04;
             }
             if (ring3Mesh) {
-                ring3Mesh.rotation.x = elapsedTime * 0.10 * speedMultiplier;
-                ring3Mesh.rotation.y = Math.sin(elapsedTime * 0.18) * 0.12;
+                ring3Mesh.rotation.x = elapsedTime * 0.040 * speedMultiplier;
+                ring3Mesh.rotation.y = Math.sin(elapsedTime * 0.08) * 0.05;
             }
 
             // Pulse Core Sphere according to speech & voice words
             if (arcCoreMesh) {
-                const coreScale = 1.0 + Math.sin(elapsedTime * 1.8) * 0.025 + dynamicPulse * 0.65;
+                const coreScale = 1.0 + Math.sin(elapsedTime * 1.0) * 0.015 + dynamicPulse * 0.45;
                 arcCoreMesh.scale.set(coreScale, coreScale, coreScale);
             }
             if (outerGlowMesh) {
-                outerGlowMesh.rotation.y = -elapsedTime * 0.08 * speedMultiplier;
-                outerGlowMesh.rotation.x = Math.sin(elapsedTime * 0.12) * 0.08;
-                const glowScale = 1.0 + Math.sin(elapsedTime * 1.5) * 0.035 + dynamicPulse * 0.55;
+                outerGlowMesh.rotation.y = -elapsedTime * 0.03 * speedMultiplier;
+                outerGlowMesh.rotation.x = Math.sin(elapsedTime * 0.06) * 0.04;
+                const glowScale = 1.0 + Math.sin(elapsedTime * 0.8) * 0.02 + dynamicPulse * 0.35;
                 outerGlowMesh.scale.set(glowScale, glowScale, glowScale);
             }
 
             // Displace Neural Particles with harmonic speech waves
             if (particleSystem && particleGeometry) {
-                particleSystem.rotation.y = elapsedTime * 0.06 * speedMultiplier;
-                particleSystem.rotation.x = Math.sin(elapsedTime * 0.10) * 0.08;
+                particleSystem.rotation.y = elapsedTime * 0.025 * speedMultiplier;
+                particleSystem.rotation.x = Math.sin(elapsedTime * 0.06) * 0.04;
 
                 const posAttr = particleGeometry.attributes.position;
                 const pArr = posAttr.array;
@@ -2028,12 +2066,12 @@
                     const by = basePositions[i3 + 1];
                     const bz = basePositions[i3 + 2];
 
-                    const wave = Math.sin(elapsedTime * 1.2 + bx * 2.2 + bz * 2.0) * (0.04 + dynamicPulse * 0.45)
-                               + Math.cos(elapsedTime * 1.0 + by * 2.5) * (0.03 + dynamicPulse * 0.35);
+                    const wave = Math.sin(elapsedTime * 0.8 + bx * 1.5 + bz * 1.4) * (0.02 + dynamicPulse * 0.25)
+                               + Math.cos(elapsedTime * 0.7 + by * 1.8) * (0.02 + dynamicPulse * 0.20);
 
-                    pArr[i3]     = bx * (1.0 + wave * 0.35);
+                    pArr[i3]     = bx * (1.0 + wave * 0.25);
                     pArr[i3 + 1] = by + wave;
-                    pArr[i3 + 2] = bz * (1.0 + wave * 0.35);
+                    pArr[i3 + 2] = bz * (1.0 + wave * 0.25);
                 }
                 posAttr.needsUpdate = true;
             }
@@ -2056,6 +2094,43 @@
         let isRecognizing = false;
         let handsFreeVoice = false;
         let silenceTimer = null;
+        let availableVoices = [];
+
+        function updateVoiceList() {
+            if (typeof window.speechSynthesis !== 'undefined') {
+                availableVoices = window.speechSynthesis.getVoices() || [];
+            }
+        }
+        updateVoiceList();
+        if (typeof window.speechSynthesis !== 'undefined') {
+            window.speechSynthesis.onvoiceschanged = updateVoiceList;
+        }
+
+        // ── Temporary Conversational Memory (Keeps context while UI stays clean) ──
+        function getSessionHistory() {
+            try {
+                const raw = sessionStorage.getItem('ultron_session_history');
+                return raw ? JSON.parse(raw) : [];
+            } catch(e) {
+                return [];
+            }
+        }
+
+        function appendSessionHistory(promptText, replyText) {
+            try {
+                let hist = getSessionHistory();
+                hist.push({ prompt: promptText, reply: replyText });
+                if (hist.length > 10) hist = hist.slice(-10);
+                sessionStorage.setItem('ultron_session_history', JSON.stringify(hist));
+            } catch(e) {}
+        }
+
+        function scrollChatToBottom() {
+            const chatContainer = document.querySelector('.chat-container');
+            if (chatContainer) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
 
         function initSpeechRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -2077,21 +2152,28 @@
 
             recog.onresult = (e) => {
                 if (isSpeaking) return;
-                let currentSentence = '';
-                for (let i = e.resultIndex; i < e.results.length; i++) {
-                    currentSentence += e.results[i][0].transcript;
+                let interimTranscript = '';
+                let finalTranscript = '';
+                for (let i = 0; i < e.results.length; ++i) {
+                    if (e.results[i].isFinal) {
+                        finalTranscript += e.results[i][0].transcript;
+                    } else {
+                        interimTranscript += e.results[i][0].transcript;
+                    }
                 }
-                const trimmed = currentSentence.trim();
-                if (trimmed) {
-                    document.getElementById('cmd-input').value = trimmed;
-                    document.getElementById('user-text').innerText = "You: " + trimmed;
+                const spokenText = (finalTranscript + ' ' + interimTranscript).trim();
+                if (spokenText) {
+                    document.getElementById('cmd-input').value = spokenText;
+                    document.getElementById('user-text').innerText = "You: " + spokenText;
+                    scrollChatToBottom();
+
                     clearTimeout(silenceTimer);
-                    // Automatically execute after 1.2s of natural pause
+                    // 1.8s of silence allows user to pause and think naturally without getting cut off
                     silenceTimer = setTimeout(() => {
-                        if (!isSpeaking && handsFreeVoice && trimmed) {
-                            sendTextCommand(trimmed);
+                        if (!isSpeaking && handsFreeVoice && spokenText) {
+                            sendTextCommand(spokenText);
                         }
-                    }, 1200);
+                    }, 1800);
                 }
             };
 
@@ -2192,7 +2274,14 @@
 
             try {
                 window.speechSynthesis.cancel();
-                const clean = text.replace(/[*_#`~>]/g, '').trim();
+                // Clean punctuation, URLs, markdown formatting for crystal-clear natural speech
+                const clean = text
+                    .replace(/[*_#`~>]/g, '')
+                    .replace(/\((https?:\/\/[^\)]+)\)/g, '')
+                    .replace(/https?:\/\/\S+/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
                 if (!clean) {
                     isSpeaking = false;
                     if (handsFreeVoice) startHandsFreeVoice();
@@ -2200,23 +2289,28 @@
                 }
 
                 const utter = new SpeechSynthesisUtterance(clean);
-                utter.rate = 1.0;
-                utter.pitch = 0.92;
+                utter.rate = 0.96; // Articulate, human cadence
+                utter.pitch = 0.92; // Deep, dignified, clear tone
 
-                // Pick the highest quality natural/neural English voice
-                const voices = window.speechSynthesis.getVoices();
-                if (voices && voices.length > 0) {
-                    const natural = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Neural') || v.name.includes('Google UK English Male') || v.name.includes('Google US English')));
-                    if (natural) {
-                        utter.voice = natural;
-                    } else {
-                        const male = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Male') || v.name.includes('Guy') || v.name.includes('David') || v.name.includes('George')));
-                        if (male) utter.voice = male;
-                        else {
-                            const en = voices.find(v => v.lang.startsWith('en'));
-                            if (en) utter.voice = en;
-                        }
-                    }
+                if (!availableVoices.length) updateVoiceList();
+
+                // Select the highest fidelity natural voice
+                if (availableVoices.length > 0) {
+                    const natural = availableVoices.find(v => v.lang.startsWith('en') && (
+                        v.name.includes('Natural') || 
+                        v.name.includes('Neural') || 
+                        v.name.includes('Google UK English Male') || 
+                        v.name.includes('Google US English') ||
+                        v.name.includes('Daniel') ||
+                        v.name.includes('Arthur')
+                    )) || availableVoices.find(v => v.lang.startsWith('en') && (
+                        v.name.includes('Male') || 
+                        v.name.includes('Guy') || 
+                        v.name.includes('David') || 
+                        v.name.includes('George')
+                    )) || availableVoices.find(v => v.lang.startsWith('en'));
+
+                    if (natural) utter.voice = natural;
                 }
 
                 utter.onstart = () => {
@@ -2226,12 +2320,14 @@
                 };
 
                 utter.onboundary = (e) => {
-                    speechPulse = 1.0;
+                    // Soft wave ripple only, no rapid spinning
+                    speechPulse = 0.35;
                     triggerHaptic([10]);
                 };
 
                 utter.onend = () => {
                     isSpeaking = false;
+                    speechPulse = 0.0;
                     if (handsFreeVoice) {
                         setTimeout(startHandsFreeVoice, 400);
                     } else {
@@ -2242,12 +2338,14 @@
 
                 utter.onerror = () => {
                     isSpeaking = false;
+                    speechPulse = 0.0;
                     if (handsFreeVoice) setTimeout(startHandsFreeVoice, 500);
                 };
 
                 window.speechSynthesis.speak(utter);
             } catch(e) {
                 isSpeaking = false;
+                speechPulse = 0.0;
                 if (handsFreeVoice) setTimeout(startHandsFreeVoice, 1500);
             }
         }
@@ -2266,6 +2364,7 @@
             triggerHaptic([20]);
             playAcoustic('chirp');
             document.getElementById('user-text').innerText = "You: " + val;
+            scrollChatToBottom();
             if (!overrideVal) input.value = "";
 
             if (!navigator.onLine) {
@@ -2284,7 +2383,11 @@
                     'Authorization': `Bearer ${liveLinkToken}`,
                     'X-LiveLink-Token': liveLinkToken
                 },
-                body: JSON.stringify({ command: val, token: liveLinkToken })
+                body: JSON.stringify({
+                    command: val,
+                    token: liveLinkToken,
+                    history: getSessionHistory()
+                })
             })
             .then(res => {
                 if (res.status === 403) {
@@ -2298,7 +2401,11 @@
                 const rep = data.reply || data.response;
                 if (rep) {
                     document.getElementById('ai-text').innerText = "ULTRON: " + rep;
+                    scrollChatToBottom();
                     triggerHaptic([30, 20]);
+
+                    // Store turn in temporary session memory buffer for continuous adaptability
+                    appendSessionHistory(val, rep);
 
                     // Mobile App Launching (e.g. WhatsApp, YouTube, Instagram)
                     if (data.mobile_url) {
