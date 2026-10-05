@@ -1,0 +1,30 @@
+{
+  "name": "ULTRON",
+  "short_name": "ULTRON",
+  "description": "ULTRON AI Assistant (https://ultron.ai) - Real-World Autonomous Cross-Device Workstation",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#060401",
+  "theme_color": "#FFB300",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
