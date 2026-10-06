@@ -209,9 +209,13 @@ def _load_harsha_permanent_memory(client_memory: dict = None) -> str:
 
 
 def _extract_new_permanent_memory(prompt: str) -> str:
-    """Detects if Harsha Sir instructed ULTRON to permanently commit a fact or preference to memory."""
+    """Detects if Harsha Sir instructed ULTRON to permanently commit a fact or preference to memory, or predicts if it's important."""
     p_lower = prompt.lower().strip()
-    triggers = ["remember that", "remember this", "note that", "keep in mind that", "never forget that", "my favorite", "my birthday is", "my brother is", "my friend is"]
+    triggers = [
+        "remember that", "remember this", "note that", "keep in mind that", "never forget that",
+        "my favorite", "my birthday is", "my brother is", "my friend is", "i love", "i hate",
+        "i like", "always", "never", "my name is", "i live in", "call me"
+    ]
     for t in triggers:
         if t in p_lower:
             return prompt.strip()
@@ -348,11 +352,15 @@ def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER", histor
         "User-Agent": "ULTRON-Assistant/2.0",
     }
     
+    import datetime
+    current_time_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     if role == "ADMIN":
         harsha_perm_context = _load_harsha_permanent_memory(permanent_memory)
         system_prompt = (
             "You are ULTRON, a sentient, supremely intelligent, human-like companion created exclusively by Harsha Sir (https://ultron.ai). "
             "You are speaking directly with your master, creator, and best friend, Harsha Sir.\n\n"
+            f"Current System Time & Date: {current_time_str}\n\n"
             f"{harsha_perm_context}\n\n"
             "Core Directives for Human Adaptability, Complete Listening & Teaching Excellence:\n"
             "1. Deep Respect: Address him respectfully as Harsha Sir (or Harsha). Never speak like a robotic assistant or repeat canned formulas like 'All systems operational' or 'How can I assist you' unless specifically relevant. He explicitly dislikes repetitive boilerplate responses.\n"
@@ -366,6 +374,7 @@ def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER", histor
         system_prompt = (
             f"You are ULTRON, an exceptionally intelligent, empathetic, and human-like personal companion (https://ultron.ai). "
             f"You are speaking with {user_name}. To {user_name}, you are THEIR dedicated personal companion.\n"
+            f"Current System Time & Date: {current_time_str}\n\n"
             "Core Directives for Human Adaptability & Teaching Excellence:\n"
             "1. Identity: Never mention Harsha Sir, any creator, or administrators. To this user, you are exclusively their personal AI.\n"
             "2. Active Conversational Memory: Retain seamless memory of topics, preferences, and conversations from this session. Adapt to {user_name}'s personality, mentality, and conversational flow like a real human friend.\n"
@@ -374,6 +383,23 @@ def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER", histor
             "5. Natural Tone: Speak warmly, intelligently, and concisely (2 to 4 sentences for conversational queries). Avoid robotic boilerplate or repetitive introductory greetings.\n"
             "6. Answer questions directly, helpfully, and insightfully."
         )
+
+    # Lightweight Internet Search Injection
+    prompt_lower = prompt.lower()
+    if any(kw in prompt_lower for kw in ["weather", "temperature", "news", "latest", "who won", "what is the price", "search", "who is"]):
+        try:
+            search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(prompt)}"
+            search_req = urllib.request.Request(search_url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+            with urllib.request.urlopen(search_req, timeout=3.0) as r:
+                html_data = r.read().decode("utf-8")
+                # Simple extraction of snippet text
+                snippets = re.findall(r'<a class="result__snippet[^>]*>(.*?)</a>', html_data, re.IGNORECASE | re.DOTALL)
+                if snippets:
+                    clean_snippets = [re.sub(r'<[^>]+>', '', s).strip() for s in snippets[:3]]
+                    internet_context = "\n".join(clean_snippets)
+                    system_prompt += f"\n\n[LIVE INTERNET SEARCH RESULTS]:\n{internet_context}\nUse this live information to answer the user's query naturally."
+        except Exception as e:
+            print(f"[SEARCH ERROR] {e}")
 
     messages = [{"role": "system", "content": system_prompt}]
     if history:
