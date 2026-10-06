@@ -256,6 +256,62 @@
             filter: drop-shadow(0 0 6px rgba(255, 179, 0, 0.7));
         }
 
+        
+        .action-dock {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-top: 24px;
+            padding: 10px 16px;
+            background: rgba(14, 10, 2, 0.7);
+            border: 1px solid rgba(255, 179, 0, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            flex-wrap: wrap;
+        }
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 179, 0, 0.05);
+            border: 1px solid rgba(255, 179, 0, 0.3);
+            border-radius: 12px;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .action-btn:hover {
+            background: rgba(255, 179, 0, 0.15);
+            border-color: #FFB300;
+            transform: translateY(-2px);
+        }
+        .action-icon {
+            font-size: 14px;
+        }
+        .action-text {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        @media (max-width: 767px) {
+            .action-dock {
+                gap: 8px;
+                padding: 8px;
+                border-radius: 16px;
+            }
+            .action-btn {
+                padding: 5px 8px;
+                border-radius: 10px;
+            }
+            .action-text {
+                font-size: 9px;
+            }
+        }
+
         /* Sleek Modern Input Bar */
         .input-bar {
             width: 100%;
@@ -924,13 +980,13 @@
             <span>ULTRON</span>
         </div>
         <div class="header-right">
-            <button class="header-pill-btn mobile-hidden" id="header-chat-btn" onclick="toggleSessionChatPanel()" title="Open Session Chat">💬 CHAT</button>
-            <button class="header-pill-btn mobile-hidden" id="header-vision-btn" onclick="toggleOpticalVision()" title="Toggle Camera Video Feed">👁️ VISION</button>
-            <button class="header-pill-btn desktop-hidden" id="header-files-btn" onclick="switchDockTab('files')" title="Bi-Directional Drag & Drop Files">📁 FILES</button>
-            <button class="header-pill-btn mobile-hidden" id="header-remote-btn" onclick="switchDockTab('remote')" title="Laptop & Phone Remote Controls">⚡ REMOTE</button>
-            <button class="header-pill-btn desktop-hidden" id="header-zen-btn" onclick="toggleZenFocusModal()" title="Zen Focus Deep Study Shield">🛡️ ZEN FOCUS</button>
-            <button class="header-pill-btn desktop-hidden" id="admin-vault-btn" onclick="openCommanderVault()" style="display:none; color:#000; background:linear-gradient(135deg, #FFB300, #FFD54F); font-weight:800; border:none;" title="Review Access Requests">🚨 REQUESTS (<span id="header-pending-count">0</span>)</button>
-            <button class="header-pill-btn" id="header-pair-btn" onclick="toggleQRModal()" title="Pair Phone with Laptop">📱 PAIR</button>
+            
+            
+            
+            
+            
+            
+            
             <div class="status-badge" id="badge" onclick="openChangePasswordModal()" style="white-space:nowrap; cursor:pointer;" title="Click to Change Password">● ONLINE</div>
             <button class="header-pill-btn" id="change-pw-btn-hud" onclick="openChangePasswordModal()" style="display:none;" title="Change Password to Fix Breach Warning">🔑 PW</button>
             <button class="header-pill-btn" id="login-btn-hud" onclick="openLoginModal()" style="color:#000; background:linear-gradient(135deg, #FFB300, #FFD54F); font-weight:800; border:none; box-shadow:0 0 12px rgba(255,179,0,0.5);" title="Sign in to ULTRON">🔑 SIGN IN</button>
@@ -992,6 +1048,30 @@
                 <input type="text" class="cmd-input" id="cmd-input" autocomplete="off" data-lpignore="true" placeholder="Type command here..." onkeypress="handleKeyPress(event)">
                 <button class="send-btn" onclick="sendTextCommand()">SEND</button>
             </div>
+            <div class="action-dock">
+                <button class="action-btn" onclick="toggleSessionChatPanel()" title="Open Session Chat">
+                    <span class="action-icon">💬</span><span class="action-text">CHAT</span>
+                </button>
+                <button class="action-btn" onclick="toggleOpticalVision()" title="Toggle Camera Video Feed">
+                    <span class="action-icon">👁️</span><span class="action-text">VISION</span>
+                </button>
+                <button class="action-btn" onclick="switchDockTab('files')" title="Bi-Directional Drag & Drop Files">
+                    <span class="action-icon">📁</span><span class="action-text">FILES</span>
+                </button>
+                <button class="action-btn" onclick="switchDockTab('remote')" title="Laptop & Phone Remote Controls">
+                    <span class="action-icon">⚡</span><span class="action-text">REMOTE</span>
+                </button>
+                <button class="action-btn" onclick="toggleZenFocusModal()" title="Zen Focus Deep Study Shield">
+                    <span class="action-icon">🛡️</span><span class="action-text">ZEN</span>
+                </button>
+                <button class="action-btn" id="action-vault-btn" onclick="openCommanderVault()" style="display:none;" title="Review Access Requests">
+                    <span class="action-icon" style="color:#FFB300;">👑</span><span class="action-text" style="color:#FFB300;">REQUESTS</span>
+                </button>
+                <button class="action-btn" onclick="toggleQRModal()" title="Pair Phone with Laptop">
+                    <span class="action-icon">📱</span><span class="action-text">PAIR</span>
+                </button>
+            </div>
+
         </div>
     </div>
 
@@ -1796,7 +1876,7 @@
         function updateUserSessionUI(user) {
             const logoutBtn = document.getElementById('logout-btn-hud');
             const changePwBtn = document.getElementById('change-pw-btn-hud');
-            const vaultBtn = document.getElementById('admin-vault-btn');
+            const vaultBtn = document.getElementById('action-vault-btn');
             const dockVaultBtn = document.getElementById('dock-btn-vault');
             const mobileVault = document.getElementById('mobile-dock-vault-btn');
 
@@ -1877,7 +1957,7 @@
                     }
                 }
 
-                const vaultBtn = document.getElementById('admin-vault-btn');
+                const vaultBtn = document.getElementById('action-vault-btn');
                 if (vaultBtn) {
                     if (count > 0) {
                         vaultBtn.style.background = 'linear-gradient(135deg, #FF3D00, #FF9100)';
@@ -4273,33 +4353,7 @@
 </script>
 
     <!-- ── Mobile Phone Bottom Navigation Dock (Thumb-Friendly Experience) ── -->
-    <nav class="mobile-bottom-dock" id="mobile-bottom-dock">
-        <button class="mobile-dock-btn desktop-hidden" onclick="toggleSessionChatPanel()" title="Session Chat">
-            <span class="dock-icon">💬</span>
-            <span class="dock-text">CHAT</span>
-        </button>
-        <button class="mobile-dock-btn desktop-hidden" onclick="toggleOpticalVision()" title="Vision Mirror">
-            <span class="dock-icon">👁️</span>
-            <span class="dock-text">VISION</span>
-        </button>
-        <button class="mobile-dock-btn mobile-hidden" onclick="switchDockTab('files')" title="Files Bay">
-            <span class="dock-icon">📁</span>
-            <span class="dock-text">FILES</span>
-        </button>
-        <button class="mobile-dock-btn desktop-hidden" onclick="switchDockTab('remote')" title="Remote Control">
-            <span class="dock-icon">⚡</span>
-            <span class="dock-text">REMOTE</span>
-        </button>
-        <button class="mobile-dock-btn mobile-hidden" onclick="toggleZenFocusModal()" title="Zen Focus">
-            <span class="dock-icon">🛡️</span>
-            <span class="dock-text">ZEN</span>
-        </button>
-        
-        <button class="mobile-dock-btn mobile-hidden" id="mobile-dock-vault-btn" onclick="openCommanderVault()" style="display:none;" title="Access Requests">
-            <span class="dock-icon">🚨</span>
-            <span class="dock-text">REQUESTS</span>
-        </button>
-    </nav>
+    
 
 </body>
 </html>
