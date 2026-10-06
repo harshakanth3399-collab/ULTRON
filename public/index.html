@@ -3178,11 +3178,24 @@
                     const nonFemaleVoices = allVoices.filter(v => !isExplicitFemale(v));
                     const englishNonFemale = nonFemaleVoices.filter(v => (v.lang || '').toLowerCase().startsWith('en'));
 
-                    // Rank 1: British Jarvis Male voice (Daniel / Arthur / Oliver / UK Male)
+                    
+                    // Rank 1: Explicit British Jarvis Male voice
                     let bestVoice = englishNonFemale.find(v => {
                         const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
                         return n.includes('daniel') || n.includes('arthur') || n.includes('uk english male') || n.includes('oliver');
                     });
+
+                    // Rank 1.5: Android Google TTS Hardcoded Male Voice URIs
+                    if (!bestVoice) {
+                        bestVoice = allVoices.find(v => {
+                            const uri = (v.voiceURI || '').toLowerCase();
+                            // These are known Android Google TTS male voices
+                            return uri.includes('en-gb-x-rjs') || uri.includes('en-gb-x-gbd') || 
+                                   uri.includes('en-us-x-tpd') || uri.includes('en-us-x-sfg') || 
+                                   uri.includes('en-in-x-ind') || uri.includes('en-in-x-ene') || 
+                                   uri.includes('en-au-x-aud');
+                        });
+                    }
 
                     // Rank 2: Explicit British/US/International Male Voice
                     if (!bestVoice) bestVoice = englishNonFemale.find(isExplicitMale);
@@ -3200,10 +3213,15 @@
                         bestVoice = allVoices.find(isExplicitMale);
                     }
 
-                    // Rank 5: If only generic voices exist, use first non-female with deep pitch
+                    // Rank 5: Aggressive Pitch Shifting Fallback
+                    // If we STILL don't have a known male voice (meaning the phone only has 1 generic voice),
+                    // we heavily drop the pitch to 0.4 to forcibly synthesize a deep, masculine, robotic tone!
                     if (!bestVoice && englishNonFemale.length > 0) {
                         bestVoice = englishNonFemale[0];
+                        // If it's a generic unidentifiable voice, drop pitch massively to force male resonance
+                        utter.pitch = 0.35; 
                     }
+
 
                     if (bestVoice) {
                         utter.voice = bestVoice;
