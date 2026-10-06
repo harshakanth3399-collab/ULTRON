@@ -70,7 +70,7 @@ def get_db_connection():
                 
         return SqliteToPostgresConnection(psycopg2.connect(pg_url))
     else:
-        conn = get_db_connection()
+        conn = sqlite3.connect(DB_PATH)
         return conn
 
 MASTER_TOKEN = "LIVELINK_MASTER_HARSHA"
