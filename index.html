@@ -45,13 +45,14 @@
             background-color: #000000 !important;
             background: #000000 !important;
             color: #ffffff !important;
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: flex-start;
             align-items: center;
             padding: 18px 20px 24px 20px;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
             position: relative;
         }
 
@@ -162,13 +163,14 @@
         /* 3D Golden Particle Orb Container */
         .visualizer-container {
             position: relative;
-            width: min(340px, 44vh);
-            height: min(340px, 44vh);
+            width: min(350px, 42vh);
+            height: min(350px, 42vh);
             display: flex;
             justify-content: center;
             align-items: center;
-            margin: auto;
+            margin: 12px auto 6px auto;
             z-index: 10;
+            overflow: visible;
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
         body.chat-panel-open .visualizer-container {
@@ -725,6 +727,105 @@
             box-shadow: 0 0 25px rgba(255, 179, 0, 0.75) !important;
         }
 
+
+        /* Hide simulated Amma override banner by default so zero shields peek at bottom */
+        #amma-override-banner {
+            display: none;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(0, 0, 0, 0.92) !important;
+            backdrop-filter: blur(14px) !important;
+            -webkit-backdrop-filter: blur(14px) !important;
+            z-index: 10000 !important;
+            justify-content: center !important;
+            align-items: center !important;
+        }
+
+
+        /* ══════════════════════════════════════════════════════════════════
+           MOBILE VS DESKTOP RESPONSIVE LAYOUT ENGINE
+           ══════════════════════════════════════════════════════════════════ */
+        /* Desktop: single horizontal line in header, hide mobile dock */
+        .mobile-bottom-dock {
+            display: none !important;
+        }
+
+        .header-right {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            white-space: nowrap !important;
+            scrollbar-width: none !important;
+        }
+        .header-right::-webkit-scrollbar {
+            display: none !important;
+        }
+
+        /* Mobile Phones (< 768px): Header stays ultra-clean, actions move to bottom dock */
+        @media (max-width: 767px) {
+            #header-chat-btn, 
+            #header-vision-btn, 
+            #header-files-btn, 
+            #header-remote-btn, 
+            #header-zen-btn, 
+            #admin-vault-btn {
+                display: none !important;
+            }
+
+            body {
+                padding-bottom: 74px !important;
+            }
+
+            .mobile-bottom-dock {
+                display: flex !important;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                background: rgba(12, 8, 2, 0.96);
+                backdrop-filter: blur(18px);
+                -webkit-backdrop-filter: blur(18px);
+                border-top: 1.5px solid rgba(255, 179, 0, 0.4);
+                z-index: 150;
+                padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+                justify-content: space-around;
+                align-items: center;
+                box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.9), 0 -1px 12px rgba(255, 179, 0, 0.25);
+            }
+
+            .mobile-dock-btn {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: transparent;
+                border: none;
+                color: rgba(255, 215, 100, 0.75);
+                font-size: 9px;
+                font-weight: 800;
+                letter-spacing: 0.8px;
+                cursor: pointer;
+                padding: 4px 2px;
+                transition: transform 0.15s, color 0.15s;
+            }
+
+            .mobile-dock-btn .dock-icon {
+                font-size: 17px;
+                margin-bottom: 2px;
+            }
+
+            .mobile-dock-btn:active {
+                color: #FFD700;
+                transform: scale(0.92);
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -934,7 +1035,7 @@
     </div>
 
     <!-- ── Full-Screen Priority Incoming Call Alert for Amma ── -->
-    <div id="amma-override-banner">
+    <div id="amma-override-banner" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.92); backdrop-filter:blur(14px); z-index:10000; justify-content:center; align-items:center; padding:16px;">
         <div class="livelink-card" style="max-width:360px; text-align:center; border:2px solid #FFD700; box-shadow:0 0 50px rgba(255,215,0,0.85); background:rgba(20,10,2,0.98);">
             <div style="font-size:40px; margin-bottom:8px; animation:pulse-gold 1.5s infinite;">🛡️</div>
             <div style="font-size:12px; font-weight:800; color:#FFD700; letter-spacing:2px; margin-bottom:4px;">PRIORITY OVERRIDE • INCOMING CALL</div>
@@ -1427,6 +1528,10 @@
                 if (loginBtn) loginBtn.style.display = 'none';
                 if (vaultBtn) {
                     vaultBtn.style.display = isAdmin ? 'inline-block' : 'none';
+                }
+                const mobileVault = document.getElementById('mobile-dock-vault-btn');
+                if (mobileVault) {
+                    mobileVault.style.display = isAdmin ? 'flex' : 'none';
                 }
                 if (dockVaultBtn) {
                     dockVaultBtn.style.display = isAdmin ? 'inline-block' : 'none';
@@ -2069,7 +2174,7 @@
 
                 scene = new THREE.Scene();
                 camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
-                camera.position.z = 4.2;
+                camera.position.z = 4.95;
 
                 renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
                 renderer.setSize(340, 340);
@@ -2540,35 +2645,65 @@
 
                 if (!availableVoices.length) updateVoiceList();
 
-                // STRICTLY ENFORCE ENGLISH (en-GB or en-US) AND MALE VOICE (JARVIS)
+                // ── DEEP MASCULINE JARVIS/ULTRON VOICE ENGINE (Strict Male Filter) ──
+                // Enforce deep, commanding baritone resonance across Mobile & Laptop
+                utter.rate = 0.94;
+                utter.pitch = typeof currentVoicePitch !== 'undefined' ? currentVoicePitch : 0.82; // Deep, masculine acoustic resonance
+
                 if (availableVoices.length > 0) {
-                    const englishVoices = availableVoices.filter(v => v.lang.startsWith('en'));
-                    
-                    // 1. Hunt for Google UK English Male or Arthur / Daniel (The authentic Jarvis voices)
-                    let bestVoice = englishVoices.find(v => 
-                        v.name.includes('Google UK English Male') ||
-                        v.name.includes('Arthur') ||
-                        v.name.includes('Daniel')
-                    );
-                    
-                    // 2. Fallback to ANY Male English voice
+                    const isExplicitFemale = (v) => {
+                        const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+                        return n.includes('female') || n.includes('woman') || n.includes('girl') || 
+                               n.includes('samantha') || n.includes('karen') || n.includes('victoria') || 
+                               n.includes('zira') || n.includes('eva') || n.includes('hazel') || 
+                               n.includes('susan') || n.includes('catherine') || n.includes('helena') || 
+                               n.includes('linda') || n.includes('amy') || n.includes('alice');
+                    };
+
+                    const isExplicitMale = (v) => {
+                        const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+                        return n.includes('male') || n.includes('man') || n.includes('boy') || 
+                               n.includes('george') || n.includes('david') || n.includes('james') || 
+                               n.includes('daniel') || n.includes('arthur') || n.includes('oliver') || 
+                               n.includes('guy') || n.includes('rishi') || n.includes('aaron') ||
+                               n.includes('fred') || n.includes('tom') || n.includes('brian');
+                    };
+
+                    const nonFemaleVoices = availableVoices.filter(v => !isExplicitFemale(v));
+                    const englishNonFemale = nonFemaleVoices.filter(v => (v.lang || '').toLowerCase().startsWith('en'));
+
+                    // Rank 1: Premium British/UK Male (Authentic Jarvis: Google UK English Male, Daniel, Arthur, George)
+                    let bestVoice = englishNonFemale.find(v => {
+                        const n = v.name.toLowerCase();
+                        return n.includes('google uk english male') || n.includes('daniel') || n.includes('arthur') || n.includes('george') || n.includes('oliver');
+                    });
+
+                    // Rank 2: Premium US Male (Google US English Male, Guy, David, James, Aaron)
                     if (!bestVoice) {
-                        bestVoice = englishVoices.find(v => v.name.includes('Male') || v.name.includes('Boy'));
-                    }
-                    
-                    // 3. Fallback to any premium English voice (Natural/Neural)
-                    if (!bestVoice) {
-                        bestVoice = englishVoices.find(v => v.name.includes('Natural') || v.name.includes('Neural') || v.name.includes('Premium'));
+                        bestVoice = englishNonFemale.find(v => {
+                            const n = v.name.toLowerCase();
+                            return n.includes('google us english male') || n.includes('guy') || n.includes('david') || n.includes('james') || n.includes('aaron');
+                        });
                     }
 
-                    // 4. Absolute fallback to any English voice
+                    // Rank 3: Any explicitly tagged Male voice
                     if (!bestVoice) {
-                        bestVoice = englishVoices.find(v => v.default) || englishVoices[0];
+                        bestVoice = englishNonFemale.find(isExplicitMale);
+                    }
+
+                    // Rank 4: Any non-female English voice
+                    if (!bestVoice) {
+                        bestVoice = englishNonFemale[0];
+                    }
+
+                    // Rank 5: If only generic voices exist, use first non-female
+                    if (!bestVoice && nonFemaleVoices.length > 0) {
+                        bestVoice = nonFemaleVoices[0];
                     }
 
                     if (bestVoice) {
                         utter.voice = bestVoice;
-                        utter.lang = bestVoice.lang;
+                        utter.lang = bestVoice.lang || 'en-GB';
                     }
                 }
 
@@ -3707,6 +3842,35 @@
         }
 
 </script>
+
+    <!-- ── Mobile Phone Bottom Navigation Dock (Thumb-Friendly Experience) ── -->
+    <nav class="mobile-bottom-dock" id="mobile-bottom-dock">
+        <button class="mobile-dock-btn" onclick="toggleSessionChatPanel()" title="Session Chat">
+            <span class="dock-icon">💬</span>
+            <span class="dock-text">CHAT</span>
+        </button>
+        <button class="mobile-dock-btn" onclick="toggleOpticalVision()" title="Vision Mirror">
+            <span class="dock-icon">👁️</span>
+            <span class="dock-text">VISION</span>
+        </button>
+        <button class="mobile-dock-btn" onclick="switchDockTab('files')" title="Files Bay">
+            <span class="dock-icon">📁</span>
+            <span class="dock-text">FILES</span>
+        </button>
+        <button class="mobile-dock-btn" onclick="switchDockTab('remote')" title="Remote Control">
+            <span class="dock-icon">⚡</span>
+            <span class="dock-text">REMOTE</span>
+        </button>
+        <button class="mobile-dock-btn" onclick="toggleZenFocusModal()" title="Zen Focus">
+            <span class="dock-icon">🛡️</span>
+            <span class="dock-text">ZEN</span>
+        </button>
+        <button class="mobile-dock-btn" id="mobile-dock-vault-btn" onclick="openCommanderVault()" style="display:none;" title="Access Requests">
+            <span class="dock-icon">🚨</span>
+            <span class="dock-text">REQUESTS</span>
+        </button>
+    </nav>
+
 </body>
 </html>
 
