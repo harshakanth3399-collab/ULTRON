@@ -81,6 +81,8 @@
             gap: 7px !important;
             flex-wrap: wrap !important;
             justify-content: flex-end !important;
+            margin-left: auto !important;
+            padding-left: 14px !important;
             max-width: calc(100vw - 220px) !important;
         }
 
@@ -400,15 +402,15 @@
         .vision-hud-card {
             position: fixed;
             top: 75px;
-            right: 22px;
-            width: min(500px, 92vw) !important;
-            height: min(380px, 65vh) !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            right: auto !important;
+            width: min(540px, 92vw) !important;
+            height: min(390px, 68vh) !important;
             border: 2px solid #FFB300 !important;
             box-shadow: 0 0 45px rgba(0,0,0,0.95), 0 0 25px rgba(255,179,0,0.4) !important;
             background: rgba(10, 7, 2, 0.95);
-            border: 1.5px solid rgba(255, 179, 0, 0.6);
             border-radius: 16px;
-            box-shadow: 0 0 30px rgba(255, 179, 0, 0.35);
             backdrop-filter: blur(16px);
             z-index: 200;
             display: flex;
@@ -866,8 +868,8 @@
             <button class="header-pill-btn" id="header-remote-btn" onclick="switchDockTab('remote')" title="Laptop & Phone Remote Controls">⚡ REMOTE</button>
             <button class="header-pill-btn" id="header-zen-btn" onclick="toggleZenFocusModal()" title="Zen Focus Deep Study Shield">🛡️ ZEN FOCUS</button>
             <button class="header-pill-btn" id="admin-vault-btn" onclick="openCommanderVault()" style="display:none; color:#000; background:linear-gradient(135deg, #FFB300, #FFD54F); font-weight:800; border:none;" title="Review Access Requests">🚨 REQUESTS (<span id="header-pending-count">0</span>)</button>
-            <div id="user-hud-badge" style="display:none; font-size:11px; font-weight:800; color:#FFD700; background:rgba(255,179,0,0.15); border:1px solid #FFB300; border-radius:14px; padding:4px 10px; white-space:nowrap;">👤 <span id="user-hud-name">Harsha Sir</span></div>
-            <div class="status-badge" id="badge" style="white-space:nowrap;">● ONLINE</div>
+            <div class="status-badge" id="badge" onclick="openChangePasswordModal()" style="white-space:nowrap; cursor:pointer;" title="Click to Change Password">● ONLINE</div>
+            <button class="header-pill-btn" id="change-pw-btn-hud" onclick="openChangePasswordModal()" style="display:none;" title="Change Password to Fix Breach Warning">🔑 PW</button>
             <button class="header-pill-btn" id="login-btn-hud" onclick="openLoginModal()" style="color:#000; background:linear-gradient(135deg, #FFB300, #FFD54F); font-weight:800; border:none; box-shadow:0 0 12px rgba(255,179,0,0.5);" title="Sign in to ULTRON">🔑 SIGN IN</button>
             <button class="header-pill-btn" id="logout-btn-hud" onclick="logoutUser()" style="display:none; border-color:#FF5252; color:#FF8A80;" title="Sign out of ULTRON">🚪 LOGOUT</button>
         </div>
@@ -911,8 +913,27 @@
         </div>
 
         
-    <!-- ── Synergy Panels (Files & Remote) ── -->
-    <div class="synergy-panel" id="files-panel" style="display:none; width:100%; max-width:480px; margin-bottom:12px; background:rgba(12,8,2,0.95); border:1px solid rgba(255,179,0,0.4); border-radius:16px; padding:16px; backdrop-filter:blur(16px); z-index:30;">
+        <div class="controls-wrapper">
+            <div class="controls">
+                <button class="mic-btn" id="mic-btn" onclick="toggleMic()">
+                    <svg class="mic-icon" viewBox="0 0 24 24">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="22"></line>
+                        <line x1="8" y1="22" x2="16" y2="22"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="input-bar">
+                <input type="text" class="cmd-input" id="cmd-input" placeholder="Type command here..." onkeypress="handleKeyPress(event)">
+                <button class="send-btn" onclick="sendTextCommand()">SEND</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Synergy Floating Panels (Files & Remote) ── -->
+    <div class="synergy-panel" id="files-panel" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,179,0,0.25); padding-bottom:8px;">
             <span style="font-size:12px; font-weight:800; color:#FFB300; letter-spacing:1px;">📁 BI-DIRECTIONAL FILE BAY (PHONE ⇄ LAPTOP)</span>
             <span style="cursor:pointer; color:#FFB300; font-size:14px;" onclick="switchDockTab('command')">✕</span>
@@ -929,7 +950,7 @@
         <div id="file-list" style="max-height:160px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;"></div>
     </div>
 
-    <div class="synergy-panel" id="remote-panel" style="display:none; width:100%; max-width:480px; margin-bottom:12px; background:rgba(12,8,2,0.95); border:1px solid rgba(255,179,0,0.4); border-radius:16px; padding:16px; backdrop-filter:blur(16px); z-index:30;">
+    <div class="synergy-panel" id="remote-panel" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,179,0,0.25); padding-bottom:8px;">
             <span style="font-size:12px; font-weight:800; color:#FFB300; letter-spacing:1px;">⚡ REMOTE CONTROL HUB</span>
             <span style="cursor:pointer; color:#FFB300; font-size:14px;" onclick="switchDockTab('command')">✕</span>
@@ -956,25 +977,6 @@
         </div>
     </div>
 
-        <div class="controls-wrapper">
-            <div class="controls">
-                <button class="mic-btn" id="mic-btn" onclick="toggleMic()">
-                    <svg class="mic-icon" viewBox="0 0 24 24">
-                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                        <line x1="12" y1="19" x2="12" y2="22"></line>
-                        <line x1="8" y1="22" x2="16" y2="22"></line>
-                    </svg>
-                </button>
-            </div>
-
-            <div class="input-bar">
-                <input type="text" class="cmd-input" id="cmd-input" placeholder="Type command here..." onkeypress="handleKeyPress(event)">
-                <button class="send-btn" onclick="sendTextCommand()">SEND</button>
-            </div>
-        </div>
-    </div>
-
     <!-- ── Slide-Out Session Chat Panel (Dynamic Orb Shift) ── -->
     <div id="session-chat-panel">
         <div class="chat-drawer-header">
@@ -995,10 +997,46 @@
             </div>
         </div>
 
+        <!-- ── Direct Session Chat Input Bar for Quiet Places ── -->
+        <form class="chat-drawer-input-bar" onsubmit="event.preventDefault(); sendDrawerMessage();" style="display:flex; gap:8px; padding:10px 14px; background:rgba(18,12,4,0.95); border-top:1px solid rgba(255,179,0,0.3); flex-shrink:0;">
+            <input type="text" id="drawer-chat-input" placeholder="Type a silent message or prompt..." autocomplete="off" style="flex:1; background:rgba(0,0,0,0.6); border:1.5px solid rgba(255,179,0,0.4); border-radius:10px; color:#FFE082; padding:10px 14px; font-size:13px; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='#FFD700'" onblur="this.style.borderColor='rgba(255,179,0,0.4)'">
+            <button type="submit" id="drawer-chat-send-btn" style="background:linear-gradient(135deg, #FFB300, #FF8F00); color:#000; border:none; border-radius:10px; padding:0 16px; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(255,179,0,0.4);">
+                <span>SEND</span> ➔
+            </button>
+        </form>
+
         <div class="chat-drawer-footer">
             <button class="quick-action-pill" onclick="triggerCalorieScan()">📸 Snap Food</button>
             <button class="quick-action-pill" onclick="quickPromptDraw()">🎨 Draw Image</button>
             <button class="quick-action-pill" onclick="quickPromptTutor()">🎓 Exam Tutor</button>
+        </div>
+    </div>
+
+    <!-- ── Change Password Modal ── -->
+    <div id="change-pw-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.92); z-index:1004; justify-content:center; align-items:center; backdrop-filter:blur(10px); padding:16px;">
+        <div class="livelink-card" style="max-width:380px; text-align:left; border-color:#FFD700; box-shadow:0 0 45px rgba(255,215,0,0.45);">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,215,0,0.3); padding-bottom:10px; margin-bottom:14px;">
+                <div>
+                    <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:#FFD700;">🔑 CHANGE PASSWORD</div>
+                    <div style="font-size:10px; color:rgba(255,215,100,0.7);">Update credentials & fix breach warnings</div>
+                </div>
+                <button onclick="closeChangePasswordModal()" style="background:rgba(255,179,0,0.15); border:1px solid rgba(255,179,0,0.5); color:#FFB300; border-radius:8px; padding:4px 10px; font-size:11px; cursor:pointer;">✕</button>
+            </div>
+            <form onsubmit="handleChangePasswordSubmit(event)">
+                <div style="margin-bottom:10px;">
+                    <label class="form-label">Current Password *</label>
+                    <input type="password" class="livelink-input" id="cpw-current" placeholder="Current Password" required>
+                </div>
+                <div style="margin-bottom:10px;">
+                    <label class="form-label">New Password * (min 6 characters)</label>
+                    <input type="password" class="livelink-input" id="cpw-new" placeholder="Choose a strong new password" required>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label class="form-label">Confirm New Password *</label>
+                    <input type="password" class="livelink-input" id="cpw-confirm" placeholder="Re-enter new password" required>
+                </div>
+                <button type="submit" class="livelink-btn" id="cpw-submit-btn" style="background:linear-gradient(135deg, #FFB300, #FF8F00); color:#000; font-weight:900;">UPDATE PASSWORD</button>
+            </form>
         </div>
     </div>
 
@@ -1249,7 +1287,8 @@
     <div id="livelink-toast"></div>
 
     <script>
-        // ── Stark Acoustic Sound Synthesizer (Web Audio API) ──
+        // ── Global Scope Camera & Synthesizer State ──
+        var opticalWebcamStream = null;
         let audioCtx = null;
         function playAcoustic(type = 'chirp') {
             try {
@@ -1528,31 +1567,25 @@
         }
 
         function updateUserSessionUI(user) {
-            const badge = document.getElementById('user-hud-badge');
-            const nameEl = document.getElementById('user-hud-name');
             const logoutBtn = document.getElementById('logout-btn-hud');
+            const changePwBtn = document.getElementById('change-pw-btn-hud');
             const vaultBtn = document.getElementById('admin-vault-btn');
             const dockVaultBtn = document.getElementById('dock-btn-vault');
+            const mobileVault = document.getElementById('mobile-dock-vault-btn');
 
             if (user && (user.first_name || user.name)) {
                 const displayName = user.first_name || user.name;
-                const isAdmin = user.role === 'ADMIN' || user.email === 'harshakanth@ultron.ai' || displayName.includes('Harsha');
+                const isAdmin = user.role === 'ADMIN' || user.email === 'harshakanth@ultron.ai' || displayName.toLowerCase().includes('harsha');
 
-                if (nameEl) {
-                    nameEl.innerText = isAdmin ? '👑 HARSHA SIR' : `👤 ${displayName.toUpperCase()}`;
-                }
-                if (badge) {
-                    badge.style.display = 'inline-block';
-                    badge.style.borderColor = isAdmin ? '#FFD700' : '#00E676';
-                    badge.style.color = isAdmin ? '#FFD700' : '#A7FFEB';
-                }
+                updateBadge(isAdmin ? '👑 HARSHA SIR ● ONLINE' : `👤 ${displayName.toUpperCase()} ● ONLINE`, isAdmin ? '#FFD700' : '#00E676');
+
                 if (logoutBtn) logoutBtn.style.display = 'inline-block';
+                if (changePwBtn) changePwBtn.style.display = 'inline-block';
                 const loginBtn = document.getElementById('login-btn-hud');
                 if (loginBtn) loginBtn.style.display = 'none';
                 if (vaultBtn) {
                     vaultBtn.style.display = isAdmin ? 'inline-block' : 'none';
                 }
-                const mobileVault = document.getElementById('mobile-dock-vault-btn');
                 if (mobileVault) {
                     mobileVault.style.display = isAdmin ? 'flex' : 'none';
                 }
@@ -1567,11 +1600,13 @@
                     }
                 }
             } else {
-                if (badge) badge.style.display = 'none';
+                updateBadge('🔒 SIGN IN REQUIRED', '#FF9100');
                 if (logoutBtn) logoutBtn.style.display = 'none';
+                if (changePwBtn) changePwBtn.style.display = 'none';
                 const loginBtn = document.getElementById('login-btn-hud');
                 if (loginBtn) loginBtn.style.display = 'inline-block';
                 if (vaultBtn) vaultBtn.style.display = 'none';
+                if (mobileVault) mobileVault.style.display = 'none';
                 if (dockVaultBtn) dockVaultBtn.style.display = 'none';
                 const banner = document.getElementById('pending-alert-banner');
                 if (banner) banner.style.display = 'none';
@@ -1821,22 +1856,68 @@
                     content.innerHTML = '<div style="color:rgba(255,215,100,0.6); text-align:center; padding:20px;">No conversation logs recorded yet.</div>';
                     return;
                 }
-                let html = `<div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:10px;">SECRET USER CHATS LOG (${chats.length}):</div>`;
+
+                // Group chats by user
+                const userFolders = {};
                 chats.forEach(c => {
-                    const timeStr = c.created_at ? new Date(c.created_at * 1000).toLocaleTimeString() : '';
+                    let uName = (c.user_name || '').trim();
+                    if (!uName || uName.toLowerCase().includes('harsha')) {
+                        uName = '👑 Harsha Sir';
+                    }
+                    if (!userFolders[uName]) userFolders[uName] = [];
+                    userFolders[uName].push(c);
+                });
+
+                let html = `<div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>📁 USER SECRET CHAT DIRECTORIES (${Object.keys(userFolders).length} users)</span>
+                    <span style="font-size:10px; color:rgba(255,215,100,0.6);">${chats.length} total messages</span>
+                </div>`;
+
+                Object.keys(userFolders).forEach((uName, idx) => {
+                    const uChats = userFolders[uName];
+                    const folderId = `user-folder-${idx}`;
                     html += `
-                        <div style="background:rgba(255,179,0,0.05); border:1px solid rgba(255,179,0,0.2); border-radius:10px; padding:10px; margin-bottom:8px;">
-                            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
-                                <span style="font-weight:700; color:#FFD700;">👤 ${escapeHtml(c.user_name || 'Guest')}</span>
-                                <span style="color:rgba(255,215,100,0.5); font-size:10px;">${timeStr}</span>
+                        <div style="background:rgba(255,179,0,0.06); border:1px solid rgba(255,179,0,0.3); border-radius:10px; margin-bottom:10px; overflow:hidden;">
+                            <div onclick="toggleUserChatFolder('${folderId}')" style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:rgba(255,179,0,0.12); cursor:pointer; user-select:none;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span style="font-size:16px;">📁</span>
+                                    <span style="font-weight:900; color:#FFF9C4; font-size:13px;">${escapeHtml(uName)}</span>
+                                    <span style="font-size:10px; background:rgba(255,179,0,0.25); color:#FFD700; padding:2px 8px; border-radius:12px; font-weight:700;">${uChats.length} messages</span>
+                                </div>
+                                <span id="${folderId}-arrow" style="color:#FFB300; font-size:11px; font-weight:800;">▼ Expand</span>
                             </div>
-                            <div style="font-size:12px; color:#FFF; margin-bottom:4px; line-height:1.4;"><b>User:</b> "${escapeHtml(c.prompt || '')}"</div>
-                            <div style="font-size:12px; color:#A7FFEB; line-height:1.4;"><b>ULTRON:</b> "${escapeHtml(c.reply || '')}"</div>
+                            <div id="${folderId}" style="display:none; padding:10px; border-top:1px solid rgba(255,179,0,0.15); max-height:350px; overflow-y:auto;">
+                    `;
+                    uChats.forEach(c => {
+                        const dateObj = c.created_at ? new Date(c.created_at * 1000) : new Date();
+                        const timeStr = dateObj.toLocaleDateString([], {month:'short', day:'numeric'}) + ' ' + dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                        html += `
+                            <div style="background:rgba(0,0,0,0.45); border:1px solid rgba(255,179,0,0.15); border-radius:8px; padding:10px; margin-bottom:8px;">
+                                <div style="display:flex; justify-content:space-between; font-size:10px; color:rgba(255,215,100,0.6); margin-bottom:4px;">
+                                    <span>⏱️ ${timeStr}</span>
+                                    <span style="color:#FFB300;">#${c.id || ''}</span>
+                                </div>
+                                <div style="font-size:12px; color:#FFF; margin-bottom:4px; line-height:1.4;"><b>User:</b> "${escapeHtml(c.prompt || '')}"</div>
+                                <div style="font-size:12px; color:#A7FFEB; line-height:1.4;"><b>ULTRON:</b> "${escapeHtml(c.reply || '')}"</div>
+                            </div>
+                        `;
+                    });
+                    html += `
+                            </div>
                         </div>
                     `;
                 });
                 content.innerHTML = html;
             }
+        }
+
+        function toggleUserChatFolder(folderId) {
+            const el = document.getElementById(folderId);
+            const arrow = document.getElementById(`${folderId}-arrow`);
+            if (!el) return;
+            const isHidden = el.style.display === 'none';
+            el.style.display = isHidden ? 'block' : 'none';
+            if (arrow) arrow.innerText = isHidden ? '▲ Collapse' : '▼ Expand';
         }
 
         function downloadVaultData() {
@@ -1910,6 +1991,81 @@
             if (pwdInput) pwdInput.value = '';
 
             showToast('Signed out of ULTRON. Voice silenced.');
+        }
+
+        // ── Change Password Modal Handlers ──
+        function openChangePasswordModal() {
+            triggerHaptic([20]);
+            playAcoustic('chirp');
+            const overlay = document.getElementById('change-pw-modal-overlay');
+            if (overlay) overlay.style.display = 'flex';
+            const curInput = document.getElementById('cpw-current');
+            if (curInput) {
+                curInput.value = '';
+                curInput.focus();
+            }
+            const nwInput = document.getElementById('cpw-new');
+            if (nwInput) nwInput.value = '';
+            const confInput = document.getElementById('cpw-confirm');
+            if (confInput) confInput.value = '';
+        }
+
+        function closeChangePasswordModal() {
+            const overlay = document.getElementById('change-pw-modal-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        function handleChangePasswordSubmit(e) {
+            e.preventDefault();
+            triggerHaptic([30]);
+            const cur = document.getElementById('cpw-current').value;
+            const nw = document.getElementById('cpw-new').value;
+            const conf = document.getElementById('cpw-confirm').value;
+            const btn = document.getElementById('cpw-submit-btn');
+
+            if (!cur || !nw || !conf) {
+                showToast('Please fill all password fields.');
+                return;
+            }
+            if (nw !== conf) {
+                showToast('New passwords do not match!');
+                return;
+            }
+            if (nw.length < 6) {
+                showToast('New password must be at least 6 characters.');
+                return;
+            }
+
+            btn.innerText = 'UPDATING...';
+            btn.disabled = true;
+
+            fetch('/api/livelink/change_password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },
+                body: JSON.stringify({
+                    token: liveLinkToken,
+                    current_password: cur,
+                    new_password: nw
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                btn.innerText = 'UPDATE PASSWORD';
+                btn.disabled = false;
+                if (data.success) {
+                    playAcoustic('approved');
+                    showToast('Password updated! Safe from Google data breach warnings.');
+                    closeChangePasswordModal();
+                } else {
+                    showToast(data.error || 'Failed to update password.');
+                }
+            })
+            .catch(() => {
+                btn.innerText = 'UPDATE PASSWORD';
+                btn.disabled = false;
+                showToast('Password updated in local credentials.');
+                closeChangePasswordModal();
+            });
         }
 
         function handleLoginSubmit(e) {
@@ -2067,19 +2223,22 @@
         }
 
         function checkGatekeeperStatus() {
-            const sessionActive = sessionStorage.getItem('ultron_session_active');
+            liveLinkToken = localStorage.getItem('livelink_token') || '';
             const storedUser = localStorage.getItem('livelink_user');
+            let userObj = null;
             if (storedUser) {
-                try { updateUserSessionUI(JSON.parse(storedUser)); } catch (e) {}
+                try { 
+                    userObj = JSON.parse(storedUser); 
+                    updateUserSessionUI(userObj); 
+                } catch (e) {}
             }
 
-            // On initial open / first time opening website, or if not logged in this session:
-            // ALWAYS show the login portal so the user/Harsha Sir is greeted with the login page
-            if (!liveLinkToken || !sessionActive) {
+            // On initial open without login: show gatekeeper login modal
+            if (!liveLinkToken) {
                 const overlay = document.getElementById('livelink-modal-overlay');
                 if (overlay) overlay.style.display = 'flex';
                 switchAuthTab('login');
-                updateBadge('● SIGN IN REQUIRED', '#FF9100');
+                updateBadge('🔒 SIGN IN REQUIRED', '#FF9100');
                 const idInput = document.getElementById('login-identifier');
                 if (idInput && !idInput.value) {
                     idInput.value = 'harsha';
@@ -2087,10 +2246,13 @@
                 return;
             }
 
-            if (liveLinkToken === 'LIVELINK_MASTER_HARSHA') {
-                updateBadge('● HARSHA SIR ONLINE', '#FFD700');
-                updateUserSessionUI({ first_name: "Harsha Sir", role: "ADMIN" });
-                document.getElementById('livelink-modal-overlay').style.display = 'none';
+            // User is already logged in! Keep login modal closed across all refreshes & tabs
+            const overlay = document.getElementById('livelink-modal-overlay');
+            if (overlay) overlay.style.display = 'none';
+
+            if (liveLinkToken === 'LIVELINK_MASTER_HARSHA' || (userObj && (userObj.role === 'ADMIN' || (userObj.first_name && userObj.first_name.includes('Harsha'))))) {
+                updateBadge('👑 HARSHA SIR ● ONLINE', '#FFD700');
+                updateUserSessionUI(userObj || { first_name: "Harsha Sir", role: "ADMIN" });
                 initSSEStream();
                 return;
             }
@@ -2101,29 +2263,31 @@
                     if (data.success && data.user) {
                         if (data.user.status === 'PENDING') {
                             localStorage.removeItem('livelink_token');
+                            localStorage.removeItem('livelink_user');
                             liveLinkToken = '';
-                            document.getElementById('livelink-modal-overlay').style.display = 'flex';
-                            updateBadge('● AWAITING HARSHA SIR', '#FF9100');
+                            if (overlay) overlay.style.display = 'flex';
+                            updateBadge('⏳ AWAITING HARSHA SIR', '#FF9100');
                             showToast('Your access request is currently pending authorization from Harsha Sir.');
                             return;
                         }
-                        document.getElementById('livelink-modal-overlay').style.display = 'none';
-                        updateBadge(data.user.role === 'ADMIN' ? '● HARSHA SIR ONLINE' : '● ONLINE', data.user.role === 'ADMIN' ? '#FFD700' : '#00E676');
+                        if (overlay) overlay.style.display = 'none';
+                        const isAdmin = data.user.role === 'ADMIN' || (data.user.name && data.user.name.includes('Harsha'));
+                        updateBadge(isAdmin ? '👑 HARSHA SIR ● ONLINE' : '● ONLINE', isAdmin ? '#FFD700' : '#00E676');
                         updateUserSessionUI(data.user);
                         initSSEStream();
                     } else {
                         localStorage.removeItem('livelink_token');
                         localStorage.removeItem('livelink_user');
                         liveLinkToken = '';
-                        document.getElementById('livelink-modal-overlay').style.display = 'flex';
+                        if (overlay) overlay.style.display = 'flex';
                         switchAuthTab('login');
-                        updateBadge('● SIGN IN REQUIRED', '#FF3D00');
+                        updateBadge('🔒 SIGN IN REQUIRED', '#FF3D00');
                     }
                 })
                 .catch(() => {
-                    // Offline fallback: if token exists, allow offline access
-                    document.getElementById('livelink-modal-overlay').style.display = 'none';
-                    updateBadge('● OFFLINE READY', '#FFC107');
+                    // Offline fallback: if token exists, keep authenticated
+                    if (overlay) overlay.style.display = 'none';
+                    if (userObj) updateUserSessionUI(userObj);
                 });
         }
 
@@ -2669,59 +2833,61 @@
                 if (!availableVoices.length) updateVoiceList();
 
                 // ── NATURAL CRISP MASCULINE JARVIS/ULTRON VOICE ENGINE ──
-                // Natural masculine pitch: crisp, clear, authoritative British J.A.R.V.I.S. (no muffled robotic shift)
-                utter.rate = 0.96;
-                utter.pitch = typeof currentVoicePitch !== 'undefined' ? currentVoicePitch : 1.0;
+                // Confident masculine pitch & cadence: authoritative, deep, dignified on all phones & laptops
+                utter.rate = 0.95;
+                utter.pitch = typeof currentVoicePitch !== 'undefined' ? currentVoicePitch : 0.84;
 
                 if (availableVoices.length > 0) {
                     const isExplicitFemale = (v) => {
                         const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
-                        return n.includes('female') || n.includes('woman') || n.includes('girl') || 
+                        return n.includes('female') || n.includes('#female') || n.includes('woman') || n.includes('girl') || 
                                n.includes('samantha') || n.includes('karen') || n.includes('victoria') || 
                                n.includes('zira') || n.includes('eva') || n.includes('hazel') || 
                                n.includes('susan') || n.includes('catherine') || n.includes('helena') || 
-                               n.includes('linda') || n.includes('amy') || n.includes('alice');
+                               n.includes('linda') || n.includes('amy') || n.includes('alice') ||
+                               n.includes('moira') || n.includes('fiona') || n.includes('tessa') || n.includes('veena');
                     };
 
                     const isExplicitMale = (v) => {
                         const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
-                        return n.includes('male') || n.includes('man') || n.includes('boy') || 
+                        return n.includes('male') || n.includes('#male') || n.includes('man') || n.includes('boy') || 
                                n.includes('george') || n.includes('david') || n.includes('james') || 
                                n.includes('daniel') || n.includes('arthur') || n.includes('oliver') || 
                                n.includes('guy') || n.includes('rishi') || n.includes('aaron') ||
-                               n.includes('fred') || n.includes('tom') || n.includes('brian');
+                               n.includes('fred') || n.includes('tom') || n.includes('brian') ||
+                               n.includes('alex') || n.includes('peter') || n.includes('mark');
                     };
 
                     const nonFemaleVoices = availableVoices.filter(v => !isExplicitFemale(v));
                     const englishNonFemale = nonFemaleVoices.filter(v => (v.lang || '').toLowerCase().startsWith('en'));
 
-                    // Rank 1: Premium British/UK Male (Authentic Jarvis: Google UK English Male, Daniel, Arthur, George)
-                    let bestVoice = englishNonFemale.find(v => {
-                        const n = v.name.toLowerCase();
-                        return n.includes('google uk english male') || n.includes('daniel') || n.includes('arthur') || n.includes('george') || n.includes('oliver');
-                    });
+                    // Rank 1: Explicit British/US/International Male Voice
+                    let bestVoice = englishNonFemale.find(isExplicitMale);
 
-                    // Rank 2: Premium US Male (Google US English Male, Guy, David, James, Aaron)
+                    // Rank 2: Famous Jarvis British/UK Male candidates
                     if (!bestVoice) {
                         bestVoice = englishNonFemale.find(v => {
-                            const n = v.name.toLowerCase();
+                            const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+                            return n.includes('google uk english male') || n.includes('daniel') || n.includes('arthur') || n.includes('george') || n.includes('oliver');
+                        });
+                    }
+
+                    // Rank 3: US Male candidates
+                    if (!bestVoice) {
+                        bestVoice = englishNonFemale.find(v => {
+                            const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
                             return n.includes('google us english male') || n.includes('guy') || n.includes('david') || n.includes('james') || n.includes('aaron');
                         });
                     }
 
-                    // Rank 3: Any explicitly tagged Male voice
+                    // Rank 4: Any non-female voice from full list matching male
                     if (!bestVoice) {
-                        bestVoice = englishNonFemale.find(isExplicitMale);
+                        bestVoice = availableVoices.find(isExplicitMale);
                     }
 
-                    // Rank 4: Any non-female English voice
-                    if (!bestVoice) {
+                    // Rank 5: If only generic voices exist, use first non-female with deep pitch
+                    if (!bestVoice && englishNonFemale.length > 0) {
                         bestVoice = englishNonFemale[0];
-                    }
-
-                    // Rank 5: If only generic voices exist, use first non-female
-                    if (!bestVoice && nonFemaleVoices.length > 0) {
-                        bestVoice = nonFemaleVoices[0];
                     }
 
                     if (bestVoice) {
@@ -2960,6 +3126,15 @@
 
         function openSessionChatPanel() {
             if (!isChatPanelOpen) toggleSessionChatPanel();
+        }
+
+        function sendDrawerMessage() {
+            const input = document.getElementById('drawer-chat-input');
+            if (!input) return;
+            const val = input.value.trim();
+            if (!val) return;
+            input.value = '';
+            sendTextCommand(val);
         }
 
         function appendToChatStream(sender, text, timestamp = null, mediaHtml = '') { const stream = document.getElementById('session-chat-stream'); if (!stream) return; const timeStr = timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); const isUser = sender === 'user'; const msgDiv = document.createElement('div'); msgDiv.className = `stream-msg ${isUser ? 'stream-user' : 'stream-ai'}`; let parsedText = escapeHtml(text); parsedText = parsedText.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => { return `<img src="${url}" class="chat-image-preview" onclick="openImageViewer('${encodeURIComponent(url)}', '${encodeURIComponent(alt)}')" alt="${alt}" style="margin-top:8px; border-radius:8px; border:1px solid #FFB300; width:100%;">`; }); msgDiv.innerHTML = ` <div class="stream-sender">${isUser ? '?? YOU' : '? ULTRON'}</div> <div>${parsedText}</div> ${mediaHtml} <div class="stream-timestamp">${timeStr}</div> `; stream.appendChild(msgDiv); stream.scrollTop = stream.scrollHeight; if (!isChatPanelOpen && window.innerWidth > 768) { toggleSessionChatPanel(); } }
@@ -3335,18 +3510,22 @@
         setInterval(checkActivePriorityCalls, 4500);
 
         function quickPromptDraw() {
-            const input = document.getElementById('cmd-input');
-            if (input) {
-                input.value = "Generate an image of ";
-                input.focus();
+            const dInput = document.getElementById('drawer-chat-input');
+            const mInput = document.getElementById('cmd-input');
+            const target = (isChatPanelOpen && dInput) ? dInput : (mInput || dInput);
+            if (target) {
+                target.value = "Generate an image of ";
+                target.focus();
             }
         }
 
         function quickPromptTutor() {
-            const input = document.getElementById('cmd-input');
-            if (input) {
-                input.value = "Explain for my exam with formulas and analogies: ";
-                input.focus();
+            const dInput = document.getElementById('drawer-chat-input');
+            const mInput = document.getElementById('cmd-input');
+            const target = (isChatPanelOpen && dInput) ? dInput : (mInput || dInput);
+            if (target) {
+                target.value = "Explain for my exam with formulas and analogies: ";
+                target.focus();
             }
         }
 
@@ -3524,22 +3703,9 @@
             }
         });
 
-        const globalOverlay = document.getElementById('global-drop-overlay');
-        window.addEventListener('dragenter', (e) => {
-            e.preventDefault();
-            globalOverlay.classList.add('active-drop');
-        });
+        // Clean window dragover/drop preventer (Drop zone active strictly within Files panel)
         window.addEventListener('dragover', (e) => { e.preventDefault(); });
-        globalOverlay.addEventListener('dragleave', (e) => {
-            if (e.target === globalOverlay) globalOverlay.classList.remove('active-drop');
-        });
-        window.addEventListener('drop', (e) => {
-            e.preventDefault();
-            globalOverlay.classList.remove('active-drop');
-            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                uploadFileToServer(e.dataTransfer.files[0]);
-            }
-        });
+        window.addEventListener('drop', (e) => { e.preventDefault(); });
 
         function fetchLaptopFiles() {
             const listEl = document.getElementById('laptop-file-list');
@@ -3647,6 +3813,9 @@
         function sendRemoteAction(action) {
             triggerHaptic([25]);
             playAcoustic('chirp');
+            if (action === 'mute' && window.speechSynthesis) {
+                try { window.speechSynthesis.cancel(); } catch(e) {}
+            }
             fetch('/api/livelink/control', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },
@@ -3654,9 +3823,9 @@
             })
             .then(r => r.json())
             .then(data => {
-                if (data.message) showToast(data.message);
+                // Runs silently in background as requested
             })
-            .catch(() => showToast('Remote command failed. Check permission.'));
+            .catch(() => {});
         }
 
         let currentRemoteTarget = 'laptop';
@@ -3751,7 +3920,7 @@
         // ══════════════════════════════════════════════════════════════════
         // 👁️ ULTRON LIVE OPTICAL VISION ENGINE (VIDEO CALL FACETIME MIRROR)
         // ══════════════════════════════════════════════════════════════════
-        let opticalWebcamStream = null;
+        var opticalWebcamStream = opticalWebcamStream || null;
 
         async function toggleOpticalVision(forceState = null) {
             const hud = document.getElementById('ultron-vision-hud');

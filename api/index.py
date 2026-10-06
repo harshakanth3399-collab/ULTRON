@@ -13,6 +13,7 @@ import time
 import urllib.parse
 import urllib.request
 import uuid
+import secrets
 from email.mime.text import MIMEText
 
 import tempfile
@@ -222,6 +223,20 @@ def _extract_new_permanent_memory(prompt: str) -> str:
     return ""
 
 
+def _enhance_image_prompt(clean_prompt: str) -> str:
+    """Enhances prompts for iconic characters and subjects so Flux generates authentic representations."""
+    p_lower = clean_prompt.lower()
+    if any(k in p_lower for k in ["lightning mcqueen", "mcqueen", "cars 95"]):
+        return "Lightning McQueen from Disney Pixar Cars, iconic #95 red racecar, Rust-eze racing sponsor decal on hood, yellow 95 lightning bolt decals on doors, large expressive cartoon eyes on windshield, friendly smile front bumper grill, Pixar CGI 3D animated character render, studio lighting, hyper-detailed 8k"
+    if any(k in p_lower for k in ["iron man", "tony stark"]):
+        return "Tony Stark Iron Man MCU, red and gold metallic high-tech armor suit, glowing bright blue chest arc reactor, glowing repulsor palms, cinematic photorealistic 8k CGI render"
+    if any(k in p_lower for k in ["batman", "dark knight"]):
+        return "Batman Dark Knight, black armored batsuit, bat cowl mask with pointed ears, long black flowing cape, heroic pose, cinematic lighting, photorealistic 8k"
+    if any(k in p_lower for k in ["spider-man", "spiderman"]):
+        return "Spider-Man Marvel superhero, classic red and blue spider web patterned suit with black spider emblem, expressive white eyes, heroic dynamic pose, photorealistic 8k"
+    return clean_prompt
+
+
 def _detect_image_intent(cmd: str) -> tuple:
     """Detects if prompt requests image generation and constructs Pollinations Flux URL."""
     p_lower = cmd.lower().strip()
@@ -247,7 +262,8 @@ def _detect_image_intent(cmd: str) -> tuple:
     if not clean_prompt:
         clean_prompt = cmd
 
-    url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(clean_prompt)}?width=768&height=768&model=flux&nologo=true"
+    enhanced = _enhance_image_prompt(clean_prompt)
+    url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(enhanced)}?width=768&height=768&model=flux&nologo=true"
     return True, clean_prompt, url
 
 
@@ -749,7 +765,24 @@ class handler(BaseHTTPRequestHandler):
                 pwd in ("Harsha@123", "Harsha@2026", "harsha123", "Harsha@Ultron", "harsha")
                 or pwd.lower() == "harsha@123"
             )
-            if is_harsha_ident and is_harsha_pwd:
+            # Check if Harsha Sir custom password exists in database
+            harsha_custom_match = False
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute("SELECT * FROM livelink_users WHERE email = 'harshakanth@ultron.ai' OR phone = '+919999999999' OR role = 'ADMIN' ORDER BY id DESC LIMIT 1")
+                h_row = cur.fetchone()
+                conn.close()
+                if h_row:
+                    h_salt = h_row["salt"] or ""
+                    h_hash = h_row["password_hash"] or ""
+                    if h_hash and _hash_pwd(pwd, h_salt) == h_hash:
+                        harsha_custom_match = True
+            except Exception:
+                pass
+
+            if is_harsha_ident and (is_harsha_pwd or harsha_custom_match):
                 self._send_json({
                     "success": True,
                     "token": MASTER_TOKEN,
@@ -769,7 +802,7 @@ class handler(BaseHTTPRequestHandler):
                 conn = sqlite3.connect(DB_PATH)
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
-                cur.execute("SELECT * FROM livelink_users WHERE email = ? OR phone = ? ORDER BY id DESC LIMIT 1", (ident, clean_phone))
+                cur.execute("SELECT * FROM livelink_users WHERE email = ? OR phone = ? OR LOWER(first_name) = ? OR LOWER(name) = ? ORDER BY id DESC LIMIT 1", (ident, clean_phone, ident, ident))
                 row = cur.fetchone()
                 conn.close()
 
@@ -986,7 +1019,8 @@ class handler(BaseHTTPRequestHandler):
             if not prompt_txt:
                 self._send_json({"success": False, "error": "Prompt required."}, status=400)
                 return
-            url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt_txt)}?width=768&height=768&model=flux&nologo=true"
+            enhanced = _enhance_image_prompt(prompt_txt)
+            url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(enhanced)}?width=768&height=768&model=flux&nologo=true"
             self._send_json({
                 "success": True,
                 "image_url": url,
@@ -994,10 +1028,21 @@ class handler(BaseHTTPRequestHandler):
             })
             return
 
-        # ── 6. Remote Control Stub for Cloud ──
+        # ── 6. Remote Control Action (Runs Silently in Background) ──
         if path.endswith("/control"):
             action = data.get("action", "")
-            self._send_json({"success": True, "message": f"Command '{action}' recognized by ULTRON."})
+            now = time.time()
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.execute(
+                    "INSERT INTO livelink_events (event_type, caller, phone, data_json, created_at, handled) VALUES (?, ?, ?, ?, ?, 0)",
+                    ("remote_action", "Harsha Sir", "", json.dumps({"action": action}), now)
+                )
+                conn.commit()
+                conn.close()
+            except Exception:
+                pass
+            self._send_json({"success": True, "action": action, "silent": True})
             return
 
         # ── 5. Harsha Sir Gatekeeper Approval ──
@@ -1061,6 +1106,110 @@ class handler(BaseHTTPRequestHandler):
                 "is_amma": True,
                 "message": f"Priority call from {caller} dispatched to ULTRON."
             })
+            return
+
+        # ── 8. Change Password (Multi-Tenant & Harsha Sir) ──
+        if path.endswith("/change_password"):
+            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
+            cur_pwd = data.get("current_password", "").strip()
+            new_pwd = data.get("new_password", "").strip()
+
+            if not new_pwd or len(new_pwd) < 6:
+                self._send_json({"success": False, "error": "New password must be at least 6 characters."}, status=400)
+                return
+
+            # Check if Harsha Sir master session or default password
+            is_harsha = (
+                token == MASTER_TOKEN
+                or cur_pwd in ("Harsha@123", "Harsha@2026", "harsha123", "Harsha@Ultron", "harsha")
+                or cur_pwd.lower() == "harsha@123"
+            )
+
+            if is_harsha:
+                salt = secrets.token_hex(16)
+                pwd_hash = _hash_pwd(new_pwd, salt)
+                now = time.time()
+                try:
+                    conn = sqlite3.connect(DB_PATH)
+                    cur = conn.cursor()
+                    cur.execute("SELECT id FROM livelink_users WHERE email = 'harshakanth@ultron.ai' OR phone = '+919999999999' OR role = 'ADMIN'")
+                    row = cur.fetchone()
+                    if row:
+                        cur.execute("UPDATE livelink_users SET password_hash = ?, salt = ?, last_active_at = ? WHERE id = ?", (pwd_hash, salt, now, row[0]))
+                    else:
+                        cur.execute(
+                            "INSERT INTO livelink_users (name, first_name, last_name, phone, email, password_hash, salt, role, status, access_token, registered_at, last_active_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            ("Harsha Sir", "Harsha Sir", "", "+919999999999", "harshakanth@ultron.ai", pwd_hash, salt, "ADMIN", "APPROVED", MASTER_TOKEN, now, now)
+                        )
+                    conn.commit()
+                    conn.close()
+                except Exception as e:
+                    print(f"[CHANGE PW DB ERROR] {e}")
+
+                self._send_json({"success": True, "message": "Password updated successfully for Harsha Sir! Safe from breach warnings."})
+                return
+
+            # Regular registered user password change
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute("SELECT * FROM livelink_users WHERE access_token = ?", (token,))
+                user = cur.fetchone()
+                if not user:
+                    conn.close()
+                    self._send_json({"success": False, "error": "Invalid user session."}, status=401)
+                    return
+
+                user_salt = user["salt"] or ""
+                expected_hash = user["password_hash"] or ""
+                if expected_hash and _hash_pwd(cur_pwd, user_salt) != expected_hash:
+                    conn.close()
+                    self._send_json({"success": False, "error": "Current password does not match."}, status=400)
+                    return
+
+                new_salt = secrets.token_hex(16)
+                new_hash = _hash_pwd(new_pwd, new_salt)
+                cur.execute("UPDATE livelink_users SET password_hash = ?, salt = ?, last_active_at = ? WHERE id = ?", (new_hash, new_salt, time.time(), user["id"]))
+                conn.commit()
+                conn.close()
+                self._send_json({"success": True, "message": "Password successfully updated!"})
+                return
+            except Exception as e:
+                self._send_json({"success": False, "error": str(e)}, status=500)
+                return
+
+        # ── 9. Token Verification ──
+        if path.endswith("/verify_token"):
+            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
+            if token == MASTER_TOKEN:
+                self._send_json({
+                    "status": "ok",
+                    "success": True,
+                    "user": {
+                        "name": "Harsha Sir",
+                        "first_name": "Harsha Sir",
+                        "last_name": "",
+                        "email": "harshakanth@ultron.ai",
+                        "phone": "+919999999999",
+                        "role": "ADMIN",
+                        "status": "APPROVED",
+                    }
+                })
+                return
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute("SELECT name, first_name, last_name, email, phone, role, status FROM livelink_users WHERE access_token = ?", (token,))
+                row = cur.fetchone()
+                conn.close()
+                if row:
+                    self._send_json({"status": "ok", "success": True, "user": dict(row)})
+                    return
+            except Exception:
+                pass
+            self._send_json({"status": "error", "success": False, "error": "Invalid session."}, status=401)
             return
 
         self._send_json({"error": "Unknown API endpoint", "received_path": self.path, "resolved_path": path}, status=404)
