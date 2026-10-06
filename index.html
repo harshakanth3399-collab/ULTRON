@@ -982,7 +982,7 @@
             </div>
 
             <div class="input-bar">
-                <input type="text" class="cmd-input" id="cmd-input" placeholder="Type command here..." onkeypress="handleKeyPress(event)">
+                <input type="text" class="cmd-input" id="cmd-input" autocomplete="off" data-lpignore="true" placeholder="Type command here..." onkeypress="handleKeyPress(event)">
                 <button class="send-btn" onclick="sendTextCommand()">SEND</button>
             </div>
         </div>
@@ -1915,7 +1915,7 @@
             const idInput = document.getElementById('login-identifier');
             const pwdInput = document.getElementById('login-password');
             if (idInput && pwdInput) {
-                idInput.value = 'harsha';
+                idInput.value = \'harsha\';
                 pwdInput.value = 'Harsha@123';
                 showToast('👑 Harsha Sir Recognized // Signing In...');
                 const form = document.getElementById('livelink-login-form');
@@ -2206,7 +2206,7 @@
             switchAuthTab('login');
 
             const idInput = document.getElementById('login-identifier');
-            if (idInput) idInput.value = 'harsha';
+            if (idInput) idInput.value = '';
             const pwdInput = document.getElementById('login-password');
             if (pwdInput) pwdInput.value = '';
 
@@ -2275,6 +2275,7 @@
                 if (data.success) {
                     playAcoustic('approved');
                     showToast('Password updated! Safe from Google data breach warnings.');
+                    localStorage.setItem('offline_fallback_pwd', nw);
                     closeChangePasswordModal();
                 } else {
                     showToast(data.error || 'Failed to update password.');
@@ -2349,7 +2350,8 @@
                 }
             })
             .catch(() => {
-                if (ident.toLowerCase() === 'harsha' && pwd === 'Harsha@123') {
+                const fallbackPwd = localStorage.getItem('offline_fallback_pwd') || 'Harsha@123';
+                if (ident.toLowerCase() === 'harsha' && pwd === fallbackPwd) {
                     const masterUser = { first_name: "Harsha Sir", role: "ADMIN", email: "harshakanth@ultron.ai" };
                     liveLinkToken = 'LIVELINK_MASTER_HARSHA';
                     sessionStorage.setItem('ultron_session_active', '1');
@@ -2461,7 +2463,7 @@
                 updateBadge('🔒 SIGN IN REQUIRED', '#FF9100');
                 const idInput = document.getElementById('login-identifier');
                 if (idInput && !idInput.value) {
-                    idInput.value = 'harsha';
+                    idInput.value = '';
                 }
                 return;
             }
