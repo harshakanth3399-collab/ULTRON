@@ -761,9 +761,16 @@
            MOBILE VS DESKTOP RESPONSIVE LAYOUT ENGINE
            ══════════════════════════════════════════════════════════════════ */
         /* Desktop: single horizontal line in header, hide mobile dock */
-        .mobile-bottom-dock {
-            display: none !important;
+        
+        @media (min-width: 768px) {
+            .desktop-hidden { display: none !important; }
+            .mobile-bottom-dock { display: flex !important; }
+            body { padding-bottom: 74px !important; }
         }
+        @media (max-width: 767px) {
+            .mobile-hidden { display: none !important; }
+        }
+
 
         .header-right {
             display: flex !important;
@@ -799,14 +806,7 @@
                 border-radius: 14px !important;
                 letter-spacing: 1px !important;
             }
-            #header-chat-btn, 
-            #header-vision-btn, 
-            #header-files-btn, 
-            #header-remote-btn, 
-            #header-zen-btn, 
-            #admin-vault-btn {
-                display: none !important;
-            }
+            
 
             body {
                 padding-top: calc(64px + env(safe-area-inset-top, 0px)) !important;
@@ -917,12 +917,12 @@
             <span>ULTRON</span>
         </div>
         <div class="header-right">
-            <button class="header-pill-btn" id="header-chat-btn" onclick="toggleSessionChatPanel()" title="Open Session Chat">💬 CHAT</button>
-            <button class="header-pill-btn" id="header-vision-btn" onclick="toggleOpticalVision()" title="Toggle Camera Video Feed">👁️ VISION</button>
-            <button class="header-pill-btn" id="header-files-btn" onclick="switchDockTab('files')" title="Bi-Directional Drag & Drop Files">📁 FILES</button>
-            <button class="header-pill-btn" id="header-remote-btn" onclick="switchDockTab('remote')" title="Laptop & Phone Remote Controls">⚡ REMOTE</button>
-            <button class="header-pill-btn" id="header-zen-btn" onclick="toggleZenFocusModal()" title="Zen Focus Deep Study Shield">🛡️ ZEN FOCUS</button>
-            <button class="header-pill-btn" id="admin-vault-btn" onclick="openCommanderVault()" style="display:none; color:#000; background:linear-gradient(135deg, #FFB300, #FFD54F); font-weight:800; border:none;" title="Review Access Requests">🚨 REQUESTS (<span id="header-pending-count">0</span>)</button>
+            <button class="header-pill-btn mobile-hidden" id="header-chat-btn" onclick="toggleSessionChatPanel()" title="Open Session Chat">💬 CHAT</button>
+            <button class="header-pill-btn mobile-hidden" id="header-vision-btn" onclick="toggleOpticalVision()" title="Toggle Camera Video Feed">👁️ VISION</button>
+            <button class="header-pill-btn desktop-hidden" id="header-files-btn" onclick="switchDockTab('files')" title="Bi-Directional Drag & Drop Files">📁 FILES</button>
+            <button class="header-pill-btn mobile-hidden" id="header-remote-btn" onclick="switchDockTab('remote')" title="Laptop & Phone Remote Controls">⚡ REMOTE</button>
+            <button class="header-pill-btn desktop-hidden" id="header-zen-btn" onclick="toggleZenFocusModal()" title="Zen Focus Deep Study Shield">🛡️ ZEN FOCUS</button>
+            <button class="header-pill-btn desktop-hidden" id="admin-vault-btn" onclick="openCommanderVault()" style="display:none; color:#000; background:linear-gradient(135deg, #FFB300, #FFD54F); font-weight:800; border:none;" title="Review Access Requests">🚨 REQUESTS (<span id="header-pending-count">0</span>)</button>
             <button class="header-pill-btn" id="header-pair-btn" onclick="toggleQRModal()" title="Pair Phone with Laptop">📱 PAIR</button>
             <div class="status-badge" id="badge" onclick="openChangePasswordModal()" style="white-space:nowrap; cursor:pointer;" title="Click to Change Password">● ONLINE</div>
             <button class="header-pill-btn" id="change-pw-btn-hud" onclick="openChangePasswordModal()" style="display:none;" title="Change Password to Fix Breach Warning">🔑 PW</button>
@@ -4267,28 +4267,28 @@
 
     <!-- ── Mobile Phone Bottom Navigation Dock (Thumb-Friendly Experience) ── -->
     <nav class="mobile-bottom-dock" id="mobile-bottom-dock">
-        <button class="mobile-dock-btn" onclick="toggleSessionChatPanel()" title="Session Chat">
+        <button class="mobile-dock-btn desktop-hidden" onclick="toggleSessionChatPanel()" title="Session Chat">
             <span class="dock-icon">💬</span>
             <span class="dock-text">CHAT</span>
         </button>
-        <button class="mobile-dock-btn" onclick="toggleOpticalVision()" title="Vision Mirror">
+        <button class="mobile-dock-btn desktop-hidden" onclick="toggleOpticalVision()" title="Vision Mirror">
             <span class="dock-icon">👁️</span>
             <span class="dock-text">VISION</span>
         </button>
-        <button class="mobile-dock-btn" onclick="switchDockTab('files')" title="Files Bay">
+        <button class="mobile-dock-btn mobile-hidden" onclick="switchDockTab('files')" title="Files Bay">
             <span class="dock-icon">📁</span>
             <span class="dock-text">FILES</span>
         </button>
-        <button class="mobile-dock-btn" onclick="switchDockTab('remote')" title="Remote Control">
+        <button class="mobile-dock-btn desktop-hidden" onclick="switchDockTab('remote')" title="Remote Control">
             <span class="dock-icon">⚡</span>
             <span class="dock-text">REMOTE</span>
         </button>
-        <button class="mobile-dock-btn" onclick="toggleZenFocusModal()" title="Zen Focus">
+        <button class="mobile-dock-btn mobile-hidden" onclick="toggleZenFocusModal()" title="Zen Focus">
             <span class="dock-icon">🛡️</span>
             <span class="dock-text">ZEN</span>
         </button>
         
-        <button class="mobile-dock-btn" id="mobile-dock-vault-btn" onclick="openCommanderVault()" style="display:none;" title="Access Requests">
+        <button class="mobile-dock-btn mobile-hidden" id="mobile-dock-vault-btn" onclick="openCommanderVault()" style="display:none;" title="Access Requests">
             <span class="dock-icon">🚨</span>
             <span class="dock-text">REQUESTS</span>
         </button>
