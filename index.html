@@ -1194,7 +1194,7 @@
             <div style="font-size:16px; font-weight:900; letter-spacing:3px; color:#FFB300; margin-bottom:4px;">PAIR ULTRON ASSISTANT</div>
             <div style="font-size:11px; color:rgba(255,215,100,0.7); margin-bottom:12px;">LiveLink Phone ⇄ Laptop Synchronization</div>
             <div style="background:#060401; padding:12px; border-radius:14px; border:1px solid rgba(255,179,0,0.4); display:inline-block; margin-bottom:12px;">
-                <img src="livelink_qr.png" alt="ULTRON QR Code" style="width:200px; height:200px; display:block; border-radius:8px;">
+                <img id="qr-code-img" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://ultron-omega-drab.vercel.app" alt="ULTRON QR Code" style="width:200px; height:200px; display:block; border-radius:8px;">
             </div>
             <div style="font-size:12px; font-weight:700; color:#FFF9C4; margin-bottom:14px; word-break:break-all;">
                 <a id="qr-live-link" href="https://ultron-omega-drab.vercel.app" target="_blank" style="color:#FFB300; text-decoration:none;">https://ultron-omega-drab.vercel.app</a>
@@ -1226,7 +1226,7 @@
             <div style="font-size:28px; margin-bottom:6px;">📱</div>
             <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:#FFB300; margin-bottom:6px;">INSTALL ULTRON APP</div>
             <div style="font-size:11px; color:rgba(255,215,100,0.8); line-height:1.5; margin-bottom:14px;">
-                Install ULTRON directly to your phone home screen with the official Iron Man helmet icon!
+                Install ULTRON directly to your phone home screen.<br><br><b style="color:#00E676;">NOTE:</b> This is a secure <b>Progressive Web App (PWA)</b> installed from this browser, bypassing the Play Store entirely for ultimate privacy.
             </div>
             
             <div style="background:rgba(255,179,0,0.08); border:1px solid rgba(255,179,0,0.3); border-radius:10px; padding:12px; text-align:left; font-size:11px; color:#FFF9C4; margin-bottom:16px; line-height:1.6;">
@@ -1413,10 +1413,14 @@
             el.style.display = isShowing ? 'none' : 'flex';
             if (!isShowing) {
                 const linkEl = document.getElementById('qr-live-link');
+                const originUrl = window.location.origin || 'https://ultron-omega-drab.vercel.app';
                 if (linkEl) {
-                    const originUrl = window.location.origin || 'https://ultron-omega-drab.vercel.app';
                     linkEl.href = originUrl;
                     linkEl.innerText = originUrl;
+                }
+                const qrImg = document.getElementById('qr-code-img');
+                if (qrImg) {
+                    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(originUrl)}`;
                 }
             }
         }
@@ -4281,10 +4285,7 @@
             <span class="dock-icon">🛡️</span>
             <span class="dock-text">ZEN</span>
         </button>
-        <button class="mobile-dock-btn" onclick="toggleQRModal()" title="Pair Phone & Laptop">
-            <span class="dock-icon">📱</span>
-            <span class="dock-text">PAIR</span>
-        </button>
+        
         <button class="mobile-dock-btn" id="mobile-dock-vault-btn" onclick="openCommanderVault()" style="display:none;" title="Access Requests">
             <span class="dock-icon">🚨</span>
             <span class="dock-text">REQUESTS</span>
