@@ -1045,7 +1045,7 @@
             </div>
 
             <div class="input-bar">
-                <input type="text" class="cmd-input" id="cmd-input" autocomplete="off" data-lpignore="true" placeholder="Type command here..." onkeypress="handleKeyPress(event)">
+                <input type="text" class="cmd-input" id="cmd-input" autocomplete="new-password" name="ultron_cmd_prompt_xyz" data-1p-ignore="true" data-lpignore="true" spellcheck="false" placeholder="Type command here..." onkeypress="handleKeyPress(event)">
                 <button class="send-btn" onclick="sendTextCommand()">SEND</button>
             </div>
             <div class="action-dock">
@@ -1931,9 +1931,22 @@
             .then(data => {
                 if (!data || !data.success) return;
                 vaultCachedData = data;
+                
                 const count = data.pending_count || 0;
+                
+                const actionVaultBtn = document.getElementById('action-vault-btn');
+                if (actionVaultBtn) {
+                    if (count > 0) {
+                        actionVaultBtn.classList.add('glow-pulse');
+                        actionVaultBtn.innerHTML = `<span class="action-icon" style="color:#FF3D00;">🚨</span><span class="action-text" style="color:#FF3D00;">REQUESTS (${count})</span>`;
+                    } else {
+                        actionVaultBtn.classList.remove('glow-pulse');
+                        actionVaultBtn.innerHTML = `<span class="action-icon" style="color:#FFB300;">👑</span><span class="action-text" style="color:#FFB300;">REQUESTS</span>`;
+                    }
+                }
 
                 const vBadge = document.getElementById('vault-pending-badge');
+
                 if (vBadge) vBadge.innerText = count;
 
                 const hBadge = document.getElementById('header-pending-count');
@@ -3179,17 +3192,17 @@
                     const englishNonFemale = nonFemaleVoices.filter(v => (v.lang || '').toLowerCase().startsWith('en'));
 
                     
+                    
                     // Rank 1: Explicit British Jarvis Male voice
                     let bestVoice = englishNonFemale.find(v => {
                         const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
-                        return n.includes('daniel') || n.includes('arthur') || n.includes('uk english male') || n.includes('oliver');
+                        return n.includes('daniel') || n.includes('arthur') || n.includes('uk english male') || n.includes('oliver') || n.includes('george');
                     });
 
                     // Rank 1.5: Android Google TTS Hardcoded Male Voice URIs
                     if (!bestVoice) {
-                        bestVoice = allVoices.find(v => {
+                        bestVoice = englishNonFemale.find(v => {
                             const uri = (v.voiceURI || '').toLowerCase();
-                            // These are known Android Google TTS male voices
                             return uri.includes('en-gb-x-rjs') || uri.includes('en-gb-x-gbd') || 
                                    uri.includes('en-us-x-tpd') || uri.includes('en-us-x-sfg') || 
                                    uri.includes('en-in-x-ind') || uri.includes('en-in-x-ene') || 
@@ -3197,7 +3210,7 @@
                         });
                     }
 
-                    // Rank 2: Explicit British/US/International Male Voice
+                    // Rank 2: Explicit US/International Male Voice
                     if (!bestVoice) bestVoice = englishNonFemale.find(isExplicitMale);
 
                     // Rank 3: US Male candidates
@@ -3208,19 +3221,19 @@
                         });
                     }
 
-                    // Rank 4: Any non-female voice matching male
+                    // Rank 4: generic english voice matching male
                     if (!bestVoice) {
-                        bestVoice = allVoices.find(isExplicitMale);
+                        bestVoice = englishNonFemale.find(isExplicitMale);
                     }
 
                     // Rank 5: Aggressive Pitch Shifting Fallback
-                    // If we STILL don't have a known male voice (meaning the phone only has 1 generic voice),
-                    // we heavily drop the pitch to 0.4 to forcibly synthesize a deep, masculine, robotic tone!
                     if (!bestVoice && englishNonFemale.length > 0) {
                         bestVoice = englishNonFemale[0];
-                        // If it's a generic unidentifiable voice, drop pitch massively to force male resonance
-                        utter.pitch = 0.35; 
                     }
+                    
+                    // Force the pitch extremely low to guarantee Alpha Male resonance
+                    utter.pitch = 0.15; 
+
 
 
                     if (bestVoice) {
