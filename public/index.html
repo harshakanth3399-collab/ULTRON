@@ -63,15 +63,16 @@
             display: flex !important;
             justify-content: space-between !important;
             align-items: center !important;
-            padding: 12px 28px !important;
+            padding: 10px 24px !important;
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             z-index: 100 !important;
-            background: linear-gradient(180deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.4) 75%, transparent 100%) !important;
-            backdrop-filter: blur(10px) !important;
-            -webkit-backdrop-filter: blur(10px) !important;
+            background: linear-gradient(180deg, rgba(0,0,0,0.94) 0%, rgba(0,0,0,0.5) 75%, transparent 100%) !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
             flex-shrink: 0 !important;
+            gap: 20px !important;
         }
 
         .header-right {
@@ -104,15 +105,18 @@
         }
 
         .logo {
-            font-size: 22px;
+            font-size: 21px;
             font-weight: 900;
-            letter-spacing: 5px;
+            letter-spacing: 4px;
             color: #FFB300;
             text-shadow: 0 0 18px rgba(255, 179, 0, 0.65), 0 0 32px rgba(255, 140, 0, 0.35);
             display: flex;
             align-items: center;
             gap: 10px;
             cursor: pointer;
+            flex-shrink: 0 !important;
+            margin-right: 28px !important;
+            z-index: 2 !important;
         }
         .logo-img {
             width: 26px;
@@ -826,6 +830,25 @@
             }
         }
 
+
+        /* Drag and Drop Overlay Hidden by default */
+        #global-drop-overlay {
+            display: none;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(0, 0, 0, 0.92) !important;
+            backdrop-filter: blur(14px) !important;
+            -webkit-backdrop-filter: blur(14px) !important;
+            z-index: 9000 !important;
+            justify-content: center !important;
+            align-items: center !important;
+            flex-direction: column !important;
+            pointer-events: none !important;
+        }
+
     </style>
 </head>
 <body>
@@ -1063,11 +1086,11 @@
         </div>
     </div>
 
-    <!-- ── Full-Screen Drag-and-Drop Overlay ── -->
-    <div id="global-drop-overlay">
+    <!-- ── Full-Screen Drag-and-Drop Overlay (Hidden by Default) ── -->
+    <div id="global-drop-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.92); backdrop-filter:blur(14px); z-index:9000; justify-content:center; align-items:center; flex-direction:column; pointer-events:none;">
         <div class="drop-icon-large">⚡</div>
-        <div class="drop-title-large">DROP FILE TO SEND TO LAPTOP</div>
-        <div style="font-size: 12px; color: rgba(255,215,100,0.8);">Transfers immediately to Downloads</div>
+        <div class="drop-title-large">DROP FILE TO UPLOAD</div>
+        <div style="font-size: 12px; color: rgba(255,215,100,0.8);">Transfers directly to ULTRON Bay</div>
     </div>
 
     <!-- ── QR Code Pairing Modal ── -->
@@ -1108,7 +1131,7 @@
     <!-- ── LiveLink Security Gatekeeper & Login Modal (Strict Portal) ── -->
     <div id="livelink-modal-overlay" style="display:flex;">
         <div class="livelink-card" style="max-width: 420px;">
-            <button type="button" onclick="document.getElementById('livelink-modal-overlay').style.display='none'" style="position:absolute; top:16px; right:18px; background:transparent; border:none; color:rgba(255,179,0,0.7); font-size:16px; font-weight:800; cursor:pointer;" title="Close Modal">✕</button>
+            
             <div class="livelink-shield" style="display:flex; flex-direction:column; align-items:center;">
                 <img src="icon.png" class="livelink-avatar" alt="ULTRON App Icon" onclick="tapHelmetSecret()" title="Tap 3D Helmet to Auto-Fill Harsha Sir Key" style="cursor:pointer;">
                 <div onclick="tapHelmetSecret()" style="font-size:10px; color:#FFB300; letter-spacing:1.5px; font-weight:800; margin-top:8px; cursor:pointer; text-transform:uppercase; text-shadow:0 0 10px rgba(255,179,0,0.5);">⚡ TAP HELMET FOR 1-TOUCH SIGN-IN</div>
@@ -2645,10 +2668,10 @@
 
                 if (!availableVoices.length) updateVoiceList();
 
-                // ── DEEP MASCULINE JARVIS/ULTRON VOICE ENGINE (Strict Male Filter) ──
-                // Enforce deep, commanding baritone resonance across Mobile & Laptop
-                utter.rate = 0.94;
-                utter.pitch = typeof currentVoicePitch !== 'undefined' ? currentVoicePitch : 0.82; // Deep, masculine acoustic resonance
+                // ── NATURAL CRISP MASCULINE JARVIS/ULTRON VOICE ENGINE ──
+                // Natural masculine pitch: crisp, clear, authoritative British J.A.R.V.I.S. (no muffled robotic shift)
+                utter.rate = 0.96;
+                utter.pitch = typeof currentVoicePitch !== 'undefined' ? currentVoicePitch : 1.0;
 
                 if (availableVoices.length > 0) {
                     const isExplicitFemale = (v) => {
