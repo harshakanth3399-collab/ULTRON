@@ -599,7 +599,7 @@ class handler(BaseHTTPRequestHandler):
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
                 cur.execute(
-                    "SELECT id, caller, phone, data_json, created_at FROM livelink_events WHERE created_at > ? ORDER BY id DESC LIMIT 1",
+                    "SELECT id, caller, phone, data_json, created_at FROM livelink_events WHERE event_type = 'incoming_call' AND handled = 0 AND created_at > ? ORDER BY id DESC LIMIT 1",
                     (now - 45,)
                 )
                 row = cur.fetchone()
@@ -617,6 +617,52 @@ class handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
             self._send_json({"active_call": False})
+            return
+
+        # ── Dismiss Priority Call (Mark Handled) ──
+        if path.endswith("/dismiss_call"):
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.execute("UPDATE livelink_events SET handled = 1 WHERE event_type = 'incoming_call'")
+                conn.commit()
+                conn.close()
+            except Exception:
+                pass
+            self._send_json({"success": True})
+            return
+
+        # ── Remote Control Sync Poll (Dispatches Phone Actions to Laptop) ──
+        if path.endswith("/poll_remote"):
+            now = time.time()
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT id, data_json, created_at FROM livelink_events WHERE event_type = 'remote_action' AND handled = 0 AND created_at > ? ORDER BY id DESC LIMIT 1",
+                    (now - 30,)
+                )
+                row = cur.fetchone()
+                if row:
+                    action_data = {}
+                    try:
+                        action_data = json.loads(row["data_json"]) if row["data_json"] else {}
+                    except Exception:
+                        pass
+                    cur.execute("UPDATE livelink_events SET handled = 1 WHERE id = ?", (row["id"],))
+                    conn.commit()
+                    conn.close()
+                    self._send_json({
+                        "has_action": True,
+                        "action": action_data.get("action", ""),
+                        "timestamp": row["created_at"],
+                        "id": row["id"]
+                    })
+                    return
+                conn.close()
+            except Exception:
+                pass
+            self._send_json({"has_action": False})
             return
 
         # ── Server-Sent Events (SSE) Stream ──
@@ -638,15 +684,27 @@ class handler(BaseHTTPRequestHandler):
                     conn.row_factory = sqlite3.Row
                     cur = conn.cursor()
                     cur.execute(
-                        "SELECT id, caller, phone FROM livelink_events WHERE created_at > ? ORDER BY id DESC LIMIT 1",
+                        "SELECT id, caller, phone FROM livelink_events WHERE event_type = 'incoming_call' AND handled = 0 AND created_at > ? ORDER BY id DESC LIMIT 1",
                         (now - 30,)
                     )
                     row = cur.fetchone()
-                    conn.close()
                     if row:
                         call_payload = json.dumps({"caller": row["caller"], "phone": row["phone"], "type": "incoming_call", "is_amma": True})
                         self.wfile.write(f"event: incoming_call\ndata: {call_payload}\n\n".encode("utf-8"))
                         self.wfile.flush()
+
+                    cur.execute(
+                        "SELECT id, data_json FROM livelink_events WHERE event_type = 'remote_action' AND handled = 0 AND created_at > ? ORDER BY id DESC LIMIT 1",
+                        (now - 20,)
+                    )
+                    rem_row = cur.fetchone()
+                    if rem_row:
+                        self.wfile.write(f"event: remote_action\ndata: {rem_row['data_json']}\n\n".encode("utf-8"))
+                        self.wfile.flush()
+                        cur.execute("UPDATE livelink_events SET handled = 1 WHERE id = ?", (rem_row["id"],))
+                        conn.commit()
+
+                    conn.close()
                 except Exception:
                     pass
             except Exception:
@@ -1034,6 +1092,7 @@ class handler(BaseHTTPRequestHandler):
             now = time.time()
             try:
                 conn = sqlite3.connect(DB_PATH)
+                conn.execute("UPDATE livelink_events SET handled = 1 WHERE event_type = 'remote_action' AND handled = 0")
                 conn.execute(
                     "INSERT INTO livelink_events (event_type, caller, phone, data_json, created_at, handled) VALUES (?, ?, ?, ?, ?, 0)",
                     ("remote_action", "Harsha Sir", "", json.dumps({"action": action}), now)
@@ -1043,6 +1102,18 @@ class handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
             self._send_json({"success": True, "action": action, "silent": True})
+            return
+
+        # ── Dismiss Priority Call ──
+        if path.endswith("/dismiss_call"):
+            try:
+                conn = sqlite3.connect(DB_PATH)
+                conn.execute("UPDATE livelink_events SET handled = 1 WHERE event_type = 'incoming_call'")
+                conn.commit()
+                conn.close()
+            except Exception:
+                pass
+            self._send_json({"success": True})
             return
 
         # ── 5. Harsha Sir Gatekeeper Approval ──

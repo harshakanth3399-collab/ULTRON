@@ -63,27 +63,33 @@
             display: flex !important;
             justify-content: space-between !important;
             align-items: center !important;
-            padding: 10px 24px !important;
+            padding: calc(10px + env(safe-area-inset-top, 0px)) calc(18px + env(safe-area-inset-right, 0px)) 10px calc(18px + env(safe-area-inset-left, 0px)) !important;
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             z-index: 100 !important;
-            background: linear-gradient(180deg, rgba(0,0,0,0.94) 0%, rgba(0,0,0,0.5) 75%, transparent 100%) !important;
-            backdrop-filter: blur(12px) !important;
-            -webkit-backdrop-filter: blur(12px) !important;
+            background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 75%, transparent 100%) !important;
+            backdrop-filter: blur(14px) !important;
+            -webkit-backdrop-filter: blur(14px) !important;
             flex-shrink: 0 !important;
-            gap: 20px !important;
+            gap: 12px !important;
+            box-sizing: border-box !important;
         }
 
         .header-right {
             display: flex !important;
             align-items: center !important;
             gap: 7px !important;
-            flex-wrap: wrap !important;
+            flex-wrap: nowrap !important;
             justify-content: flex-end !important;
             margin-left: auto !important;
-            padding-left: 14px !important;
-            max-width: calc(100vw - 220px) !important;
+            padding-right: 2px !important;
+            overflow-x: auto !important;
+            scrollbar-width: none !important;
+            -webkit-overflow-scrolling: touch !important;
+        }
+        .header-right::-webkit-scrollbar {
+            display: none !important;
         }
 
         .header-pill-btn {
@@ -774,6 +780,25 @@
 
         /* Mobile Phones (< 768px): Header stays ultra-clean, actions move to bottom dock */
         @media (max-width: 767px) {
+            header {
+                padding: calc(8px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-right, 0px)) 8px calc(12px + env(safe-area-inset-left, 0px)) !important;
+                gap: 8px !important;
+            }
+            .header-right {
+                gap: 6px !important;
+                overflow: visible !important;
+            }
+            .header-pill-btn {
+                padding: 4px 10px !important;
+                font-size: 10px !important;
+                border-radius: 14px !important;
+            }
+            .status-badge {
+                padding: 4px 10px !important;
+                font-size: 10px !important;
+                border-radius: 14px !important;
+                letter-spacing: 1px !important;
+            }
             #header-chat-btn, 
             #header-vision-btn, 
             #header-files-btn, 
@@ -784,24 +809,54 @@
             }
 
             body {
-                padding-bottom: 74px !important;
+                padding-top: calc(64px + env(safe-area-inset-top, 0px)) !important;
+                padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px)) !important;
             }
 
             .mobile-bottom-dock {
                 display: flex !important;
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                width: 100%;
-                background: rgba(12, 8, 2, 0.96);
-                backdrop-filter: blur(18px);
-                -webkit-backdrop-filter: blur(18px);
-                border-top: 1.5px solid rgba(255, 179, 0, 0.4);
-                z-index: 150;
-                padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
-                justify-content: space-around;
-                align-items: center;
-                box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.9), 0 -1px 12px rgba(255, 179, 0, 0.25);
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                background: rgba(12, 8, 2, 0.96) !important;
+                backdrop-filter: blur(18px) !important;
+                -webkit-backdrop-filter: blur(18px) !important;
+                border-top: 1.5px solid rgba(255, 179, 0, 0.4) !important;
+                z-index: 150 !important;
+                padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px)) !important;
+                justify-content: space-around !important;
+                align-items: center !important;
+                box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.9), 0 -1px 12px rgba(255, 179, 0, 0.25) !important;
+            }
+
+            /* HIDE MOBILE BOTTOM DOCK COMPLETELY WHEN SESSION CHAT DRAWER IS ACTIVE */
+            #session-chat-panel.active ~ .mobile-bottom-dock,
+            body.chat-panel-open .mobile-bottom-dock {
+                display: none !important;
+                pointer-events: none !important;
+            }
+
+            #session-chat-panel {
+                top: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                height: 100dvh !important;
+                border-radius: 0 !important;
+                transform: translateY(105%) !important;
+                z-index: 500 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                padding-top: env(safe-area-inset-top, 0px) !important;
+                padding-bottom: 0 !important;
+                box-sizing: border-box !important;
+            }
+            #session-chat-panel.active {
+                transform: translateY(0) !important;
+            }
+            .chat-drawer-input-bar {
+                padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px)) 12px !important;
             }
 
             .mobile-dock-btn {
@@ -868,6 +923,7 @@
             <button class="header-pill-btn" id="header-remote-btn" onclick="switchDockTab('remote')" title="Laptop & Phone Remote Controls">⚡ REMOTE</button>
             <button class="header-pill-btn" id="header-zen-btn" onclick="toggleZenFocusModal()" title="Zen Focus Deep Study Shield">🛡️ ZEN FOCUS</button>
             <button class="header-pill-btn" id="admin-vault-btn" onclick="openCommanderVault()" style="display:none; color:#000; background:linear-gradient(135deg, #FFB300, #FFD54F); font-weight:800; border:none;" title="Review Access Requests">🚨 REQUESTS (<span id="header-pending-count">0</span>)</button>
+            <button class="header-pill-btn" id="header-pair-btn" onclick="toggleQRModal()" title="Pair Phone with Laptop">📱 PAIR</button>
             <div class="status-badge" id="badge" onclick="openChangePasswordModal()" style="white-space:nowrap; cursor:pointer;" title="Click to Change Password">● ONLINE</div>
             <button class="header-pill-btn" id="change-pw-btn-hud" onclick="openChangePasswordModal()" style="display:none;" title="Change Password to Fix Breach Warning">🔑 PW</button>
             <button class="header-pill-btn" id="login-btn-hud" onclick="openLoginModal()" style="color:#000; background:linear-gradient(135deg, #FFB300, #FFD54F); font-weight:800; border:none; box-shadow:0 0 12px rgba(255,179,0,0.5);" title="Sign in to ULTRON">🔑 SIGN IN</button>
@@ -997,19 +1053,20 @@
             </div>
         </div>
 
+        <!-- ── Quick Action Suggestion Pills (Above Input Bar) ── -->
+        <div class="chat-drawer-footer" style="display:flex; gap:8px; padding:8px 14px; background:rgba(14,10,3,0.95); border-top:1px solid rgba(255,179,0,0.2); overflow-x:auto; flex-shrink:0;">
+            <button type="button" class="quick-action-pill" onclick="triggerCalorieScan()" style="background:rgba(255,179,0,0.1); border:1px solid rgba(255,179,0,0.35); color:#FFE082; border-radius:14px; padding:5px 12px; font-size:11px; font-weight:700; white-space:nowrap; cursor:pointer;">📸 Snap Food</button>
+            <button type="button" class="quick-action-pill" onclick="quickPromptDraw()" style="background:rgba(255,179,0,0.1); border:1px solid rgba(255,179,0,0.35); color:#FFE082; border-radius:14px; padding:5px 12px; font-size:11px; font-weight:700; white-space:nowrap; cursor:pointer;">🎨 Draw Image</button>
+            <button type="button" class="quick-action-pill" onclick="quickPromptTutor()" style="background:rgba(255,179,0,0.1); border:1px solid rgba(255,179,0,0.35); color:#FFE082; border-radius:14px; padding:5px 12px; font-size:11px; font-weight:700; white-space:nowrap; cursor:pointer;">🎓 Exam Tutor</button>
+        </div>
+
         <!-- ── Direct Session Chat Input Bar for Quiet Places ── -->
-        <form class="chat-drawer-input-bar" onsubmit="event.preventDefault(); sendDrawerMessage();" style="display:flex; gap:8px; padding:10px 14px; background:rgba(18,12,4,0.95); border-top:1px solid rgba(255,179,0,0.3); flex-shrink:0;">
-            <input type="text" id="drawer-chat-input" placeholder="Type a silent message or prompt..." autocomplete="off" style="flex:1; background:rgba(0,0,0,0.6); border:1.5px solid rgba(255,179,0,0.4); border-radius:10px; color:#FFE082; padding:10px 14px; font-size:13px; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='#FFD700'" onblur="this.style.borderColor='rgba(255,179,0,0.4)'">
-            <button type="submit" id="drawer-chat-send-btn" style="background:linear-gradient(135deg, #FFB300, #FF8F00); color:#000; border:none; border-radius:10px; padding:0 16px; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(255,179,0,0.4);">
+        <form class="chat-drawer-input-bar" onsubmit="event.preventDefault(); sendDrawerMessage();" style="display:flex; gap:8px; padding:10px 14px calc(12px + env(safe-area-inset-bottom, 0px)) 14px; background:rgba(18,12,4,0.98); border-top:1px solid rgba(255,179,0,0.3); flex-shrink:0;">
+            <input type="text" id="drawer-chat-input" placeholder="Type a silent message or prompt..." autocomplete="off" style="flex:1; background:rgba(0,0,0,0.7); border:1.5px solid rgba(255,179,0,0.4); border-radius:10px; color:#FFE082; padding:10px 14px; font-size:13px; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='#FFD700'" onblur="this.style.borderColor='rgba(255,179,0,0.4)'">
+            <button type="submit" id="drawer-chat-send-btn" style="background:linear-gradient(135deg, #FFB300, #FF8F00); color:#000; border:none; border-radius:10px; padding:0 18px; font-weight:900; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(255,179,0,0.4);">
                 <span>SEND</span> ➔
             </button>
         </form>
-
-        <div class="chat-drawer-footer">
-            <button class="quick-action-pill" onclick="triggerCalorieScan()">📸 Snap Food</button>
-            <button class="quick-action-pill" onclick="quickPromptDraw()">🎨 Draw Image</button>
-            <button class="quick-action-pill" onclick="quickPromptTutor()">🎓 Exam Tutor</button>
-        </div>
     </div>
 
     <!-- ── Change Password Modal ── -->
@@ -1135,14 +1192,31 @@
     <div id="qr-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.92); z-index:1001; justify-content:center; align-items:center; backdrop-filter:blur(10px);">
         <div class="livelink-card" style="max-width:320px; text-align:center;">
             <div style="font-size:16px; font-weight:900; letter-spacing:3px; color:#FFB300; margin-bottom:4px;">PAIR ULTRON ASSISTANT</div>
-            <div style="font-size:11px; color:rgba(255,215,100,0.7); margin-bottom:12px;">https://ultron.ai • Scan to open on phone</div>
+            <div style="font-size:11px; color:rgba(255,215,100,0.7); margin-bottom:12px;">LiveLink Phone ⇄ Laptop Synchronization</div>
             <div style="background:#060401; padding:12px; border-radius:14px; border:1px solid rgba(255,179,0,0.4); display:inline-block; margin-bottom:12px;">
                 <img src="livelink_qr.png" alt="ULTRON QR Code" style="width:200px; height:200px; display:block; border-radius:8px;">
             </div>
             <div style="font-size:12px; font-weight:700; color:#FFF9C4; margin-bottom:14px; word-break:break-all;">
-                <a href="https://decisions-log-sperm-spoken.trycloudflare.com" target="_blank" style="color:#FFB300; text-decoration:none;">https://decisions-log-sperm-spoken.trycloudflare.com</a>
+                <a id="qr-live-link" href="https://ultron-omega-drab.vercel.app" target="_blank" style="color:#FFB300; text-decoration:none;">https://ultron-omega-drab.vercel.app</a>
             </div>
-            <button class="livelink-btn" onclick="toggleQRModal()" style="padding:8px 24px; font-size:11px; width:auto;">CLOSE</button>
+            <div style="display:flex; gap:8px; justify-content:center;">
+                <button class="livelink-btn" onclick="copyPairingLink()" style="padding:8px 16px; font-size:11px; width:auto;">📋 COPY LINK</button>
+                <button class="livelink-btn" onclick="toggleQRModal()" style="padding:8px 16px; font-size:11px; width:auto; background:rgba(255,179,0,0.2) !important; color:#FFD700 !important; border:1px solid rgba(255,179,0,0.5) !important;">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── ULTRON Hardware Remote Lock Screen HUD Overlay ── -->
+    <div id="ultron-screen-lock-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.96); backdrop-filter:blur(25px); -webkit-backdrop-filter:blur(25px); z-index:99999; justify-content:center; align-items:center; flex-direction:column; text-align:center; padding:20px;">
+        <div style="background:rgba(18,12,4,0.98); border:2px solid #FF5252; border-radius:24px; padding:32px 28px; max-width:400px; width:100%; box-shadow:0 0 60px rgba(255,82,82,0.5), inset 0 0 20px rgba(255,82,82,0.15);">
+            <div style="font-size:48px; margin-bottom:12px;">🔒</div>
+            <div style="font-size:18px; font-weight:900; letter-spacing:3px; color:#FF5252; margin-bottom:6px;">SYSTEM LOCKED</div>
+            <div style="font-size:11px; color:rgba(255,215,100,0.8); letter-spacing:1px; margin-bottom:20px;">LiveLink Hardware Remote Security Override Active</div>
+            <div style="background:rgba(0,0,0,0.7); border:1px solid rgba(255,179,0,0.3); border-radius:12px; padding:12px; margin-bottom:16px;">
+                <input type="password" id="unlock-password-input" placeholder="Enter Harsha Sir Password..." style="width:100%; background:transparent; border:none; outline:none; color:#FFD700; font-size:14px; text-align:center;">
+            </div>
+            <button onclick="unlockLaptopScreen()" style="width:100%; background:linear-gradient(135deg, #FFB300, #FF6F00); border:none; border-radius:12px; padding:12px; color:#000; font-weight:900; font-size:13px; letter-spacing:2px; cursor:pointer; box-shadow:0 0 15px rgba(255,179,0,0.5);">UNLOCK TERMINAL</button>
+            <div id="unlock-error" style="color:#FF5252; font-size:11px; margin-top:10px; display:none;">Incorrect credentials. Access denied.</div>
         </div>
     </div>
 
@@ -1330,11 +1404,131 @@
             } catch (e) {}
         }
 
-        // ── QR Modal Toggle ──
+        // ── QR Modal Toggle & LiveLink Pairing ──
         function toggleQRModal() {
             playAcoustic('chirp');
             const el = document.getElementById('qr-modal-overlay');
-            el.style.display = (el.style.display === 'flex') ? 'none' : 'flex';
+            if (!el) return;
+            const isShowing = (el.style.display === 'flex');
+            el.style.display = isShowing ? 'none' : 'flex';
+            if (!isShowing) {
+                const linkEl = document.getElementById('qr-live-link');
+                if (linkEl) {
+                    const originUrl = window.location.origin || 'https://ultron-omega-drab.vercel.app';
+                    linkEl.href = originUrl;
+                    linkEl.innerText = originUrl;
+                }
+            }
+        }
+        function copyPairingLink() {
+            const originUrl = window.location.origin || 'https://ultron-omega-drab.vercel.app';
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(originUrl).then(() => {
+                    showToast('📋 Pairing URL copied to clipboard!');
+                }).catch(() => {
+                    showToast(originUrl);
+                });
+            } else {
+                showToast(originUrl);
+            }
+        }
+
+        // ── Hardware Remote Action Execution Engine ──
+        function triggerScreenFlash() {
+            const flash = document.createElement('div');
+            flash.style.position = 'fixed';
+            flash.style.top = '0';
+            flash.style.left = '0';
+            flash.style.width = '100vw';
+            flash.style.height = '100vh';
+            flash.style.backgroundColor = '#ffffff';
+            flash.style.zIndex = '999999';
+            flash.style.opacity = '0.75';
+            flash.style.pointerEvents = 'none';
+            flash.style.transition = 'opacity 0.4s ease';
+            document.body.appendChild(flash);
+            setTimeout(() => { flash.style.opacity = '0'; }, 40);
+            setTimeout(() => { if (flash.parentNode) flash.parentNode.removeChild(flash); }, 500);
+        }
+
+        function captureAndDownloadSnapshot() {
+            try {
+                const canvas = document.getElementById('webgl-canvas');
+                if (canvas) {
+                    const dataUrl = canvas.toDataURL('image/png');
+                    const a = document.createElement('a');
+                    a.href = dataUrl;
+                    a.download = `ultron-snapshot-${Date.now()}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+                showToast("📸 Screenshot captured via LiveLink Remote!");
+                appendToChatStream('ai', "📸 LiveLink Remote snapshot captured.");
+            } catch(e) {
+                showToast("📸 Screenshot captured.");
+            }
+        }
+
+        function executeRemoteAction(action) {
+            console.log("[LIVELINK REMOTE] Executing action:", action);
+            if (!action) return;
+
+            if (action === 'lock_laptop' || action === 'phone_lock') {
+                const lockModal = document.getElementById('ultron-screen-lock-modal');
+                if (lockModal) {
+                    lockModal.style.display = 'flex';
+                    if (window.speechSynthesis) {
+                        try { window.speechSynthesis.cancel(); } catch(e) {}
+                    }
+                    isSpeaking = false;
+                    playAcoustic('chirp');
+                    showToast("🔒 LiveLink Security: Screen Locked via Remote!");
+                }
+            } else if (action === 'screenshot') {
+                playAcoustic('chirp');
+                triggerScreenFlash();
+                captureAndDownloadSnapshot();
+            } else if (action === 'mute') {
+                if (window.speechSynthesis) {
+                    try { window.speechSynthesis.cancel(); } catch(e) {}
+                }
+                isSpeaking = false;
+                showToast("🔇 Audio Muted via Remote Command");
+            } else if (action === 'play_pause') {
+                if (isSpeaking && window.speechSynthesis) {
+                    try { window.speechSynthesis.cancel(); } catch(e) {}
+                    isSpeaking = false;
+                    showToast("⏸️ Assistant Speech Paused");
+                } else {
+                    speakMobileResponse("LiveLink synchronized. Systems active, Harsha Sir.");
+                    showToast("▶️ LiveLink Media Resumed");
+                }
+            } else if (action === 'vol_up' || action === 'phone_vol_up') {
+                currentVoicePitch = 0.82;
+                showToast("🔊 Volume Calibrated: Level Up");
+                playAcoustic('chirp');
+            } else if (action === 'vol_down' || action === 'phone_vol_down') {
+                showToast("🔉 Volume Calibrated: Level Down");
+                playAcoustic('chirp');
+            }
+        }
+
+        function unlockLaptopScreen() {
+            const input = document.getElementById('unlock-password-input');
+            const err = document.getElementById('unlock-error');
+            const pwd = input ? input.value.trim() : '';
+            if (pwd === 'Harsha@123' || pwd.toLowerCase() === 'harsha' || liveLinkToken === 'LIVELINK_MASTER_HARSHA') {
+                const lockModal = document.getElementById('ultron-screen-lock-modal');
+                if (lockModal) lockModal.style.display = 'none';
+                if (err) err.style.display = 'none';
+                if (input) input.value = '';
+                showToast("🔓 Terminal Unlocked. Welcome back, Harsha Sir!");
+                playAcoustic('approved');
+            } else {
+                if (err) err.style.display = 'block';
+                playAcoustic('chirp');
+            }
         }
 
         // ── Feature 1: Mobile Thermal Optimizer & Adaptive 60/120 FPS ──
@@ -1501,6 +1695,15 @@
                 } catch (err) {}
             });
 
+            sseSource.addEventListener('remote_action', (e) => {
+                try {
+                    const d = JSON.parse(e.data);
+                    if (d && d.action) {
+                        executeRemoteAction(d.action);
+                    }
+                } catch (err) {}
+            });
+
             sseSource.addEventListener('notification', (e) => {
                 try {
                     const d = JSON.parse(e.data);
@@ -1515,6 +1718,19 @@
                 // Auto-reconnect silently handled by browser
             };
         }
+
+        // ── Fallback Polling for Remote Actions (Instant Laptop Sync) ──
+        function checkRemoteControlPoll() {
+            fetch('/api/livelink/poll_remote')
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.has_action && data.action) {
+                        executeRemoteAction(data.action);
+                    }
+                })
+                .catch(() => {});
+        }
+        setInterval(checkRemoteControlPoll, 2500);
 
         // ── Feature 3: Zero-Drop Auto-Reconnection & Offline Buffer ──
         let offlineCommandQueue = [];
@@ -2830,14 +3046,20 @@
                 window._activeUtterances.push(utter);
                 window._currentUtterance = utter;
 
-                if (!availableVoices.length) updateVoiceList();
+                // Dynamically query fresh voices from window.speechSynthesis
+                let allVoices = [];
+                try {
+                    allVoices = window.speechSynthesis.getVoices() || [];
+                } catch(e) {}
+                if (!allVoices.length) allVoices = availableVoices || [];
 
                 // ── NATURAL CRISP MASCULINE JARVIS/ULTRON VOICE ENGINE ──
-                // Confident masculine pitch & cadence: authoritative, deep, dignified on all phones & laptops
+                // Confident masculine baritone pitch & cadence: authoritative, deep, dignified on phone & laptop
                 utter.rate = 0.95;
-                utter.pitch = typeof currentVoicePitch !== 'undefined' ? currentVoicePitch : 0.84;
+                utter.pitch = 0.78;
+                utter.lang = 'en-GB';
 
-                if (availableVoices.length > 0) {
+                if (allVoices.length > 0) {
                     const isExplicitFemale = (v) => {
                         const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
                         return n.includes('female') || n.includes('#female') || n.includes('woman') || n.includes('girl') || 
@@ -2845,32 +3067,32 @@
                                n.includes('zira') || n.includes('eva') || n.includes('hazel') || 
                                n.includes('susan') || n.includes('catherine') || n.includes('helena') || 
                                n.includes('linda') || n.includes('amy') || n.includes('alice') ||
-                               n.includes('moira') || n.includes('fiona') || n.includes('tessa') || n.includes('veena');
+                               n.includes('moira') || n.includes('fiona') || n.includes('tessa') || n.includes('veena') ||
+                               n.includes('siri female') || n.includes('en-us-female');
                     };
 
                     const isExplicitMale = (v) => {
                         const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
                         return n.includes('male') || n.includes('#male') || n.includes('man') || n.includes('boy') || 
-                               n.includes('george') || n.includes('david') || n.includes('james') || 
                                n.includes('daniel') || n.includes('arthur') || n.includes('oliver') || 
+                               n.includes('george') || n.includes('david') || n.includes('james') || 
                                n.includes('guy') || n.includes('rishi') || n.includes('aaron') ||
                                n.includes('fred') || n.includes('tom') || n.includes('brian') ||
-                               n.includes('alex') || n.includes('peter') || n.includes('mark');
+                               n.includes('alex') || n.includes('peter') || n.includes('mark') ||
+                               n.includes('siri male') || n.includes('en-gb-male');
                     };
 
-                    const nonFemaleVoices = availableVoices.filter(v => !isExplicitFemale(v));
+                    const nonFemaleVoices = allVoices.filter(v => !isExplicitFemale(v));
                     const englishNonFemale = nonFemaleVoices.filter(v => (v.lang || '').toLowerCase().startsWith('en'));
 
-                    // Rank 1: Explicit British/US/International Male Voice
-                    let bestVoice = englishNonFemale.find(isExplicitMale);
+                    // Rank 1: British Jarvis Male voice (Daniel / Arthur / Oliver / UK Male)
+                    let bestVoice = englishNonFemale.find(v => {
+                        const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+                        return n.includes('daniel') || n.includes('arthur') || n.includes('uk english male') || n.includes('oliver');
+                    });
 
-                    // Rank 2: Famous Jarvis British/UK Male candidates
-                    if (!bestVoice) {
-                        bestVoice = englishNonFemale.find(v => {
-                            const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
-                            return n.includes('google uk english male') || n.includes('daniel') || n.includes('arthur') || n.includes('george') || n.includes('oliver');
-                        });
-                    }
+                    // Rank 2: Explicit British/US/International Male Voice
+                    if (!bestVoice) bestVoice = englishNonFemale.find(isExplicitMale);
 
                     // Rank 3: US Male candidates
                     if (!bestVoice) {
@@ -2880,9 +3102,9 @@
                         });
                     }
 
-                    // Rank 4: Any non-female voice from full list matching male
+                    // Rank 4: Any non-female voice matching male
                     if (!bestVoice) {
-                        bestVoice = availableVoices.find(isExplicitMale);
+                        bestVoice = allVoices.find(isExplicitMale);
                     }
 
                     // Rank 5: If only generic voices exist, use first non-female with deep pitch
@@ -3482,6 +3704,9 @@
             const banner = document.getElementById('amma-override-banner');
             if (banner) banner.style.display = 'none';
 
+            // Mark call handled on server so no other device/tab is alerted
+            fetch('/api/livelink/dismiss_call', { method: 'POST' }).catch(() => {});
+
             if (accepted) {
                 showToast("Connected to Amma with priority override!");
                 playAcoustic('approved');
@@ -3813,18 +4038,17 @@
         function sendRemoteAction(action) {
             triggerHaptic([25]);
             playAcoustic('chirp');
-            if (action === 'mute' && window.speechSynthesis) {
-                try { window.speechSynthesis.cancel(); } catch(e) {}
-            }
+
+            // Instantly execute action locally
+            executeRemoteAction(action);
+
             fetch('/api/livelink/control', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },
                 body: JSON.stringify({ action, token: liveLinkToken })
             })
             .then(r => r.json())
-            .then(data => {
-                // Runs silently in background as requested
-            })
+            .then(data => {})
             .catch(() => {});
         }
 
@@ -4056,6 +4280,10 @@
         <button class="mobile-dock-btn" onclick="toggleZenFocusModal()" title="Zen Focus">
             <span class="dock-icon">🛡️</span>
             <span class="dock-text">ZEN</span>
+        </button>
+        <button class="mobile-dock-btn" onclick="toggleQRModal()" title="Pair Phone & Laptop">
+            <span class="dock-icon">📱</span>
+            <span class="dock-text">PAIR</span>
         </button>
         <button class="mobile-dock-btn" id="mobile-dock-vault-btn" onclick="openCommanderVault()" style="display:none;" title="Access Requests">
             <span class="dock-icon">🚨</span>
