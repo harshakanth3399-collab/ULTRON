@@ -740,8 +740,16 @@ class handler(BaseHTTPRequestHandler):
             ident = data.get("identifier", "").strip().lower()
             pwd = data.get("password", "").strip()
 
-            # Harsha Sir Master Secure Login
-            if (ident in ("harsha", "harshakanth3399@gmail.com", "harshakanth@ultron.ai") and pwd in ("Harsha@123", "Harsha@2026", "harsha123", "Harsha@Ultron")):
+            # Harsha Sir Master Secure Login (Supports 'harsha', emails with '@', phone, or name)
+            is_harsha_ident = (
+                ident in ("harsha", "harshakanth", "harshakanth3399", "admin", "harshakanth3399@gmail.com", "harshakanth@ultron.ai")
+                or "harsha" in ident
+            )
+            is_harsha_pwd = (
+                pwd in ("Harsha@123", "Harsha@2026", "harsha123", "Harsha@Ultron", "harsha")
+                or pwd.lower() == "harsha@123"
+            )
+            if is_harsha_ident and is_harsha_pwd:
                 self._send_json({
                     "success": True,
                     "token": MASTER_TOKEN,

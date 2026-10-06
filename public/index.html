@@ -573,22 +573,28 @@
             z-index: 9999 !important;
             justify-content: center !important;
             align-items: center !important;
-            padding: 20px !important;
+            padding: 20px 16px !important;
+            overflow-y: auto !important;
+            box-sizing: border-box !important;
         }
 
         .livelink-card {
             width: 100% !important;
             max-width: 420px !important;
+            max-height: calc(100vh - 40px) !important;
+            overflow-y: auto !important;
             background: rgba(14, 10, 3, 0.96) !important;
             border: 1.5px solid rgba(255, 179, 0, 0.65) !important;
             border-radius: 24px !important;
-            padding: 28px 24px !important;
+            padding: 26px 22px !important;
             box-shadow: 0 0 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(255, 179, 0, 0.4), inset 0 0 20px rgba(255, 179, 0, 0.1) !important;
             text-align: center !important;
             backdrop-filter: blur(20px) !important;
             -webkit-backdrop-filter: blur(20px) !important;
             animation: fadeIn 0.3s ease !important;
             position: relative !important;
+            box-sizing: border-box !important;
+            margin: auto !important;
         }
 
         .livelink-shield {
@@ -649,10 +655,28 @@
         }
 
         .livelink-form {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            text-align: left;
+        }
+        .livelink-form.active-form {
             display: flex !important;
-            flex-direction: column !important;
-            gap: 12px !important;
-            text-align: left !important;
+        }
+
+        .livelink-card::-webkit-scrollbar {
+            width: 6px;
+        }
+        .livelink-card::-webkit-scrollbar-track {
+            background: rgba(10, 6, 2, 0.6);
+            border-radius: 6px;
+        }
+        .livelink-card::-webkit-scrollbar-thumb {
+            background: rgba(255, 179, 0, 0.4);
+            border-radius: 6px;
+        }
+        .livelink-card::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 179, 0, 0.8);
         }
 
         .form-label {
@@ -854,12 +878,7 @@
         </div>
     </div>
 
-    <!-- ── Bottom-Right ZEN FOCUS Study Shield Floating Button ── -->
-    <button id="zen-focus-btn" class="zen-focus-btn" onclick="toggleZenFocusModal()" title="Zen Focus - Deep Study Shield">
-        <span class="zen-icon">🛡️</span>
-        <span class="zen-label">ZEN FOCUS</span>
-        <span class="zen-status-dot" id="zen-dot"></span>
-    </button>
+
 
     <!-- ── ZEN FOCUS Controller Modal ── -->
     <div id="zen-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.92); z-index:1003; justify-content:center; align-items:center; backdrop-filter:blur(12px); padding:16px;">
@@ -1002,23 +1021,23 @@
                 <button type="button" class="auth-tab-btn" id="auth-tab-register" onclick="switchAuthTab('register')">📝 CREATE ACCOUNT</button>
             </div>
 
-            <!-- 1. SIGN IN FORM -->
-            <form class="livelink-form" id="livelink-login-form" onsubmit="handleLoginSubmit(event)">
+            <!-- 1. SIGN IN FORM (Strictly shown when SIGN IN tab is active) -->
+            <form class="livelink-form active-form" id="livelink-login-form" style="display:flex;" onsubmit="handleLoginSubmit(event)">
                 <div>
-                    <label class="form-label">Email or Mobile Number *</label>
-                    <input type="text" class="livelink-input" id="login-identifier" placeholder="e.g. your email or mobile" required>
+                    <label class="form-label">Email, Mobile Number or Username *</label>
+                    <input type="text" class="livelink-input" id="login-identifier" placeholder="e.g. harsha, email, or mobile" required autocomplete="username">
                 </div>
                 <div>
                     <label class="form-label">Password *</label>
-                    <input type="password" class="livelink-input" id="login-password" placeholder="Enter your password" required>
+                    <input type="password" class="livelink-input" id="login-password" placeholder="Enter your password" required autocomplete="current-password">
                 </div>
                 <button type="submit" class="livelink-btn" id="login-submit-btn">SIGN IN TO ULTRON</button>
-                <div style="margin-top: 15px; display:flex; justify-content:flex-end; align-items:center;">
+                <div style="margin-top: 14px; display:flex; justify-content:flex-end; align-items:center;">
                     <button type="button" onclick="switchAuthTab('register')" style="background:none; border:none; color:#FFB300; font-size:12px; font-weight:600; cursor:pointer;">New here? Create Account →</button>
                 </div>
             </form>
 
-            <!-- 2. REGISTRATION FORM (Mandatory: First Name, Last Name, Mobile, Email, Password) -->
+            <!-- 2. REGISTRATION FORM (Strictly shown ONLY when CREATE ACCOUNT tab is clicked) -->
             <form class="livelink-form" id="livelink-register-form" style="display:none;" onsubmit="handleRegisterSubmit(event)">
                 <div style="display:flex; gap:10px;">
                     <div style="flex:1;">
@@ -1047,8 +1066,8 @@
                     <input type="password" class="livelink-input" id="reg-password-confirm" placeholder="Confirm your password" required>
                 </div>
                 <button type="submit" class="livelink-btn" id="reg-submit-btn">REGISTER ULTRON ACCOUNT</button>
-                <div style="margin-top: 10px; text-align: center;">
-                    <button type="button" onclick="switchAuthTab('login')" style="background:none; border:none; color:#FFB300; font-size:11px; cursor:pointer; text-decoration:underline;">Already have an account? Sign In →</button>
+                <div style="margin-top: 12px; text-align: center;">
+                    <button type="button" onclick="switchAuthTab('login')" style="background:none; border:none; color:#FFB300; font-size:12px; cursor:pointer; text-decoration:underline;">Already have an account? Sign In →</button>
                 </div>
             </form>
         </div>
@@ -1360,15 +1379,27 @@
             const regForm = document.getElementById('livelink-register-form');
 
             if (tab === 'register') {
-                regBtn.classList.add('active');
-                loginBtn.classList.remove('active');
-                regForm.style.display = 'flex';
-                loginForm.style.display = 'none';
+                if (regBtn) regBtn.classList.add('active');
+                if (loginBtn) loginBtn.classList.remove('active');
+                if (loginForm) {
+                    loginForm.classList.remove('active-form');
+                    loginForm.style.setProperty('display', 'none', 'important');
+                }
+                if (regForm) {
+                    regForm.classList.add('active-form');
+                    regForm.style.setProperty('display', 'flex', 'important');
+                }
             } else {
-                loginBtn.classList.add('active');
-                regBtn.classList.remove('active');
-                loginForm.style.display = 'flex';
-                regForm.style.display = 'none';
+                if (loginBtn) loginBtn.classList.add('active');
+                if (regBtn) regBtn.classList.remove('active');
+                if (regForm) {
+                    regForm.classList.remove('active-form');
+                    regForm.style.setProperty('display', 'none', 'important');
+                }
+                if (loginForm) {
+                    loginForm.classList.add('active-form');
+                    loginForm.style.setProperty('display', 'flex', 'important');
+                }
             }
         }
 
@@ -1703,18 +1734,54 @@
         function logoutUser() {
             triggerHaptic([20, 20]);
             playAcoustic('chirp');
+
+            // 1. SILENCE ALL SPEECH AND CANCEL SPEECH SYNTHESIS IMMEDIATELY
+            if (window.speechSynthesis) {
+                try { window.speechSynthesis.cancel(); } catch(e) {}
+            }
+            window._activeUtterances = [];
+            window._currentUtterance = null;
+            if (window._speechHeartbeat) {
+                clearInterval(window._speechHeartbeat);
+                window._speechHeartbeat = null;
+            }
+            isSpeaking = false;
+            speechPulse = 0;
+
+            // 2. Stop voice listening engine if active
+            if (recognition && isRecognizing) {
+                try { recognition.stop(); } catch(e) {}
+                isRecognizing = false;
+            }
+            handsFreeVoice = false;
+
+            // 3. Clear session and credentials
             sessionStorage.removeItem('ultron_session_active');
             localStorage.removeItem('livelink_token');
             localStorage.removeItem('livelink_user');
             liveLinkToken = '';
+
+            // 4. Update UI to logged-out state
             updateUserSessionUI(null);
             updateBadge('● LOGGED OUT', '#FF9100');
+            const stateEl = document.getElementById('state-text');
+            if (stateEl) stateEl.innerText = "SIGN IN REQUIRED";
+            const aiEl = document.getElementById('ai-text');
+            if (aiEl) aiEl.innerText = "";
+            const userEl = document.getElementById('user-text');
+            if (userEl) userEl.innerText = "";
+
+            // 5. Open login modal cleanly
             const overlay = document.getElementById('livelink-modal-overlay');
             if (overlay) overlay.style.display = 'flex';
             switchAuthTab('login');
+
             const idInput = document.getElementById('login-identifier');
             if (idInput) idInput.value = 'harsha';
-            showToast('Signed out of ULTRON.');
+            const pwdInput = document.getElementById('login-password');
+            if (pwdInput) pwdInput.value = '';
+
+            showToast('Signed out of ULTRON. Voice silenced.');
         }
 
         function handleLoginSubmit(e) {
