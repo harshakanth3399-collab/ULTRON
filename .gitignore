@@ -25,3 +25,5 @@ memory/*.db
 data/camera_captures/
 data/screen_captures/
 
+.vercel
+.env*
