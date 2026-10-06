@@ -21,6 +21,58 @@ import tempfile
 import base64
 
 DB_PATH = os.path.join(tempfile.gettempdir(), "livelink_access.db")
+
+import urllib.parse
+try:
+    import psycopg2
+    import psycopg2.extras
+    HAS_POSTGRES = True
+except ImportError:
+    HAS_POSTGRES = False
+
+def get_db_connection():
+    pg_url = os.environ.get("POSTGRES_URL")
+    if pg_url and HAS_POSTGRES:
+        class SqliteToPostgresCursor:
+            def __init__(self, pg_cursor):
+                self.cursor = pg_cursor
+            def execute(self, query, params=None):
+                if params:
+                    query = query.replace('?', '%s')
+                self.cursor.execute(query, params)
+            def fetchone(self):
+                return self.cursor.fetchone()
+            def fetchall(self):
+                return self.cursor.fetchall()
+            @property
+            def rowcount(self):
+                return self.cursor.rowcount
+                
+        class SqliteToPostgresConnection:
+            def __init__(self, pg_conn):
+                self.conn = pg_conn
+            def cursor(self):
+                return SqliteToPostgresCursor(self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor))
+            def execute(self, query, params=None):
+                cur = self.cursor()
+                cur.execute(query, params)
+                return cur
+            def commit(self):
+                self.conn.commit()
+            def close(self):
+                self.conn.close()
+            @property
+            def row_factory(self):
+                pass
+            @row_factory.setter
+            def row_factory(self, val):
+                pass
+                
+        return SqliteToPostgresConnection(psycopg2.connect(pg_url))
+    else:
+        conn = get_db_connection()
+        return conn
+
 MASTER_TOKEN = "LIVELINK_MASTER_HARSHA"
 _GROQ_KEY_BYTES = [103, 115, 107, 95, 77, 55, 102, 107, 106, 116, 122, 90, 49, 102, 113, 51, 75, 69, 76, 111, 55, 68, 121, 113, 87, 71, 100, 121, 98, 51, 70, 89, 80, 68, 112, 83, 106, 57, 67, 102, 84, 75, 102, 99, 52, 70, 99, 48, 80, 73, 105, 69, 79, 120, 51, 52]
 DEFAULT_GROQ_KEY = "".join(chr(b) for b in _GROQ_KEY_BYTES)
@@ -54,11 +106,9 @@ GEMINI_MODELS = ["gemini-flash-lite-latest", "gemini-3.1-flash-lite-preview"]
 
 def _init_cloud_db():
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
         conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS livelink_users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+            f"""\n            CREATE TABLE IF NOT EXISTS livelink_users (\n                {"id SERIAL PRIMARY KEY" if os.environ.get("POSTGRES_URL") and HAS_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"},
                 name TEXT NOT NULL,
                 first_name TEXT,
                 last_name TEXT,
@@ -75,9 +125,7 @@ def _init_cloud_db():
             """
         )
         conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS user_chats (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+            f"""\n            CREATE TABLE IF NOT EXISTS user_chats (\n                {"id SERIAL PRIMARY KEY" if os.environ.get("POSTGRES_URL") and HAS_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"},
                 user_token TEXT NOT NULL,
                 user_name TEXT,
                 user_email TEXT,
@@ -90,9 +138,7 @@ def _init_cloud_db():
             """
         )
         conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS livelink_events (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+            f"""\n            CREATE TABLE IF NOT EXISTS livelink_events (\n                {"id SERIAL PRIMARY KEY" if os.environ.get("POSTGRES_URL") and HAS_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"},
                 event_type TEXT,
                 caller TEXT,
                 phone TEXT,
@@ -503,7 +549,7 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
                 cur.execute("SELECT name, first_name, last_name, email, phone, role, status FROM livelink_users WHERE access_token = ?", (token,))
@@ -525,7 +571,7 @@ class handler(BaseHTTPRequestHandler):
                 self._send_json({"status": "APPROVED", "name": "Harsha Sir", "role": "ADMIN"})
                 return
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 cur = conn.cursor()
                 cur.execute("SELECT name, status, role FROM livelink_users WHERE access_token = ?", (token,))
                 row = cur.fetchone()
@@ -548,7 +594,7 @@ class handler(BaseHTTPRequestHandler):
 
             chats = []
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
                 cur.execute("SELECT prompt, reply, created_at FROM user_chats ORDER BY id DESC LIMIT 50")
@@ -569,7 +615,7 @@ class handler(BaseHTTPRequestHandler):
             friends = []
             chats = []
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
                 cur.execute("SELECT id, name, first_name, last_name, phone, email, registered_at, role, status FROM livelink_users ORDER BY id DESC")
@@ -595,7 +641,7 @@ class handler(BaseHTTPRequestHandler):
         if path.endswith("/active_call"):
             now = time.time()
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
                 cur.execute(
@@ -622,7 +668,7 @@ class handler(BaseHTTPRequestHandler):
         # ── Dismiss Priority Call (Mark Handled) ──
         if path.endswith("/dismiss_call"):
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.execute("UPDATE livelink_events SET handled = 1 WHERE event_type = 'incoming_call'")
                 conn.commit()
                 conn.close()
@@ -635,7 +681,7 @@ class handler(BaseHTTPRequestHandler):
         if path.endswith("/poll_remote"):
             now = time.time()
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
                 cur.execute(
@@ -680,7 +726,7 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.flush()
                 now = time.time()
                 try:
-                    conn = sqlite3.connect(DB_PATH)
+                    conn = get_db_connection()
                     conn.row_factory = sqlite3.Row
                     cur = conn.cursor()
                     cur.execute(
@@ -752,7 +798,7 @@ class handler(BaseHTTPRequestHandler):
             role = "ADMIN" if "harsha" in full_name.lower() or "harsha" in email else "USER"
 
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 cur = conn.cursor()
                 cur.execute("SELECT id FROM livelink_users WHERE email = ? OR phone = ?", (email, phone))
                 if cur.fetchone():
@@ -826,7 +872,7 @@ class handler(BaseHTTPRequestHandler):
             # Check if Harsha Sir custom password exists in database
             harsha_custom_match = False
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
                 cur.execute("SELECT * FROM livelink_users WHERE email = 'harshakanth@ultron.ai' OR phone = '+919999999999' OR role = 'ADMIN' ORDER BY id DESC LIMIT 1")
@@ -857,7 +903,7 @@ class handler(BaseHTTPRequestHandler):
 
             clean_phone = re.sub(r"[^\d+]", "", ident)
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
                 cur.execute("SELECT * FROM livelink_users WHERE email = ? OR phone = ? OR LOWER(first_name) = ? OR LOWER(name) = ? ORDER BY id DESC LIMIT 1", (ident, clean_phone, ident, ident))
@@ -921,7 +967,7 @@ class handler(BaseHTTPRequestHandler):
                 role = "ADMIN"
             elif token:
                 try:
-                    conn = sqlite3.connect(DB_PATH)
+                    conn = get_db_connection()
                     conn.row_factory = sqlite3.Row
                     cur = conn.cursor()
                     cur.execute("SELECT name, first_name, email, phone, role FROM livelink_users WHERE access_token = ?", (token,))
@@ -938,7 +984,7 @@ class handler(BaseHTTPRequestHandler):
             # Fetch recent turns for this user to enable active temporary memory & adaptability
             history = []
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
                 cur.execute(
@@ -979,7 +1025,7 @@ class handler(BaseHTTPRequestHandler):
                     reply = f"Here is the image: '{clean_img_prompt}'. I've rendered it in your session chat panel."
 
                 try:
-                    conn = sqlite3.connect(DB_PATH)
+                    conn = get_db_connection()
                     conn.execute(
                         """
                         INSERT INTO user_chats (user_token, user_name, user_email, user_phone, role, prompt, reply, created_at)
@@ -1006,7 +1052,7 @@ class handler(BaseHTTPRequestHandler):
             if any(ph in lower_cmd for ph in ["amma is calling", "mom is calling", "simulate amma call", "test amma call", "call from amma", "incoming call from amma", "what if amma calls"]):
                 now = time.time()
                 try:
-                    conn = sqlite3.connect(DB_PATH)
+                    conn = get_db_connection()
                     conn.execute(
                         "INSERT INTO livelink_events (event_type, caller, phone, data_json, created_at, handled) VALUES (?, ?, ?, ?, ?, 0)",
                         ("incoming_call", "AMMA (Mom)", "+91 94949 99999", json.dumps({"reason": "voice_command"}), now)
@@ -1039,7 +1085,7 @@ class handler(BaseHTTPRequestHandler):
 
             # Store chat in user_chats table
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.execute(
                     """
                     INSERT INTO user_chats (user_token, user_name, user_email, user_phone, role, prompt, reply, created_at)
@@ -1091,7 +1137,7 @@ class handler(BaseHTTPRequestHandler):
             action = data.get("action", "")
             now = time.time()
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.execute("UPDATE livelink_events SET handled = 1 WHERE event_type = 'remote_action' AND handled = 0")
                 conn.execute(
                     "INSERT INTO livelink_events (event_type, caller, phone, data_json, created_at, handled) VALUES (?, ?, ?, ?, ?, 0)",
@@ -1107,7 +1153,7 @@ class handler(BaseHTTPRequestHandler):
         # ── Dismiss Priority Call ──
         if path.endswith("/dismiss_call"):
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.execute("UPDATE livelink_events SET handled = 1 WHERE event_type = 'incoming_call'")
                 conn.commit()
                 conn.close()
@@ -1124,7 +1170,7 @@ class handler(BaseHTTPRequestHandler):
                 return
             user_id = data.get("user_id")
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.execute("UPDATE livelink_users SET status = 'APPROVED' WHERE id = ?", (user_id,))
                 conn.commit()
                 conn.close()
@@ -1142,7 +1188,7 @@ class handler(BaseHTTPRequestHandler):
                 return
             user_id = data.get("user_id")
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.execute("UPDATE livelink_users SET status = 'REJECTED' WHERE id = ?", (user_id,))
                 conn.commit()
                 conn.close()
@@ -1159,7 +1205,7 @@ class handler(BaseHTTPRequestHandler):
             evt_type = data.get("type", "incoming_call")
             now = time.time()
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.execute(
                     "INSERT INTO livelink_events (event_type, caller, phone, data_json, created_at, handled) VALUES (?, ?, ?, ?, ?, 0)",
                     (evt_type, caller, phone, json.dumps(data), now)
@@ -1201,7 +1247,7 @@ class handler(BaseHTTPRequestHandler):
                 pwd_hash = _hash_pwd(new_pwd, salt)
                 now = time.time()
                 try:
-                    conn = sqlite3.connect(DB_PATH)
+                    conn = get_db_connection()
                     cur = conn.cursor()
                     cur.execute("SELECT id FROM livelink_users WHERE email = 'harshakanth@ultron.ai' OR phone = '+919999999999' OR role = 'ADMIN'")
                     row = cur.fetchone()
@@ -1222,7 +1268,7 @@ class handler(BaseHTTPRequestHandler):
 
             # Regular registered user password change
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
                 cur.execute("SELECT * FROM livelink_users WHERE access_token = ?", (token,))
@@ -1269,7 +1315,7 @@ class handler(BaseHTTPRequestHandler):
                 })
                 return
             try:
-                conn = sqlite3.connect(DB_PATH)
+                conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
                 cur.execute("SELECT name, first_name, last_name, email, phone, role, status FROM livelink_users WHERE access_token = ?", (token,))

@@ -1,3 +1,4 @@
 # ULTRON Cloud API uses Python 3 standard library
 # For local desktop installation (PySide6, PyAudio, PyOpenGL, etc.):
 # pip install -r requirements-desktop.txt
+psycopg2-binary==2.9.9
