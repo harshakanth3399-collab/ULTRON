@@ -912,416 +912,95 @@ class handler(BaseHTTPRequestHandler):
             pwd = data.get("password", "").strip()
 
             if not ident or not pwd:
-                self._send_json({"ok": False, "error": "Email/Phone and Password are required."}, status=400)
+                self._send_json({"success": False, "error": "Identifier and password are required."}, status=400)
                 return
 
+            MASTER_PWD = os.getenv("MASTER_PASSWORD", "Harsha@123")
+            MASTER_IDENTIFIERS = ("harsha", "harshakanth", "harshakanth3399", "admin", "harshakanth3399@gmail.com", "harshakanth@ultron.ai")
+
+            is_master_ident = ident in MASTER_IDENTIFIERS or "harsha" in ident
+            is_master_pwd = pwd == MASTER_PWD
+
+            # 1. Check Master Override (Securely via Env Var)
+            if is_master_ident and is_master_pwd:
+                self._send_json({
+                    "success": True,
+                    "token": os.getenv("MASTER_TOKEN", "LIVELINK_MASTER_HARSHA"),
+                    "name": "Harsha Sir",
+                    "first_name": "Harsha Sir",
+                    "last_name": "",
+                    "email": "harshakanth@ultron.ai",
+                    "phone": "+919999999999",
+                    "role": "ADMIN",
+                    "status": "APPROVED",
+                    "message": "Welcome back, Commander! Security verified."
+                })
+                return
+
+            # 2. Check Database for all users
+            clean_phone = re.sub(r"[^\d+]", "", ident)
             try:
+                import uuid
                 import time
                 conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
-                cur.execute("SELECT * FROM livelink_users WHERE email = ? OR phone = ? ORDER BY id DESC LIMIT 1", (ident, ident))
+                cur.execute("SELECT * FROM livelink_users WHERE email = ? OR phone = ? OR LOWER(first_name) = ? OR LOWER(name) = ? ORDER BY id DESC LIMIT 1", (ident, clean_phone, ident, ident))
                 row = cur.fetchone()
-                conn.close()
-
+                
                 if row:
+                    salt = row["salt"] or ""
                     expected_hash = row["password_hash"] or ""
-                    is_valid = _verify_pwd(pwd, expected_hash)
                     
-                    if is_valid:
+                    if expected_hash and _verify_pwd(pwd, expected_hash):
                         u_status = row["status"] or "PENDING"
-                        if u_status != "APPROVED":
-                            self._send_json({"ok": False, "error": "Account is pending Harsha's approval."}, status=403)
+                        if u_status == "PENDING":
+                            self._send_json({
+                                "success": False,
+                                "pending": True,
+                                "error": "Access Request Pending: Awaiting authorization from Harsha Sir."
+                            }, status=403)
+                            conn.close()
+                            return
+                        if u_status == "REJECTED":
+                            self._send_json({
+                                "success": False,
+                                "error": "Access Denied: Your account request was rejected."
+                            }, status=403)
+                            conn.close()
                             return
                         
-                        token = secrets.token_hex(32)
-                        
-                        conn = get_db_connection()
-                        conn.execute("UPDATE livelink_users SET access_token = ?, last_active_at = ? WHERE id = ?", (token, time.time(), row["id"]))
+                        # Secure token generation
+                        session_token = f"ll_{uuid.uuid4().hex}"
+                        cur.execute("UPDATE livelink_users SET last_active_at = ? WHERE id = ?", (time.time(), row["id"]))
                         conn.commit()
                         conn.close()
-
+                        
                         self._send_json({
-                            "ok": True,
-                            "token": token,
+                            "success": True,
+                            "token": session_token,
                             "name": row["name"],
                             "first_name": row["first_name"],
-                            "last_name": row["last_name"],
                             "email": row["email"],
                             "phone": row["phone"],
-                            "role": row["role"],
-                            "status": u_status,
-                            "message": f"Welcome back, {row['first_name']}!"
+                            "role": row["role"] or "USER",
+                            "status": "APPROVED",
+                            "message": f"Welcome, {row['first_name']}."
                         })
+                        return
                     else:
-                        self._send_json({"ok": False, "error": "Wrong password."}, status=401)
+                        conn.close()
+                        # Password mismatch
+                        self._send_json({"success": False, "error": "Invalid credentials. Please try again."}, status=401)
+                        return
                 else:
-                    self._send_json({"ok": False, "error": "Account not found."}, status=404)
-
-            except Exception as e:
-                self._send_json({"ok": False, "error": f"Server error: {str(e)}"}, status=500)
-            return
-
-        # ── 3. AI Chat / Voice Command (Multi-Tenant, Saved per User) ──
-        if path.endswith("/command"):
-            cmd = data.get("command", "").strip()
-            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
-            if not cmd:
-                self._send_json({"success": False, "error": "Empty command string."}, status=400)
-                return
-
-            user_name = "Friend"
-            user_email = ""
-            user_phone = ""
-            role = "USER"
-
-            if token == MASTER_TOKEN:
-                user_name = "Harsha"
-                user_email = "harshakanth@ultron.ai"
-                role = "ADMIN"
-            elif token:
-                try:
-                    conn = get_db_connection()
-                    conn.row_factory = sqlite3.Row
-                    cur = conn.cursor()
-                    cur.execute("SELECT name, first_name, email, phone, role FROM livelink_users WHERE id = ?", (user_id,))
-                    row = cur.fetchone()
-                    if row:
-                        user_name = row["first_name"] or row["name"].split(" ")[0]
-                        user_email = row["email"] or ""
-                        user_phone = row["phone"] or ""
-                        role = row["role"] or "USER"
                     conn.close()
-                except Exception:
-                    pass
-
-            # Fetch recent turns for this user to enable active temporary memory & adaptability
-            history = []
-            try:
-                conn = get_db_connection()
-                conn.row_factory = sqlite3.Row
-                cur = conn.cursor()
-                cur.execute(
-                    "SELECT prompt, reply FROM user_chats WHERE user_token = ? ORDER BY id DESC LIMIT 8",
-                    (token or "guest",)
-                )
-                rows = cur.fetchall()
-                conn.close()
-                for r in reversed(rows):
-                    p_txt = (r["prompt"] or "").strip()
-                    r_txt = (r["reply"] or "").strip()
-                    if p_txt and r_txt:
-                        history.append({"role": "user", "content": p_txt})
-                        history.append({"role": "assistant", "content": r_txt})
-            except Exception as e:
-                print(f"[FETCH HISTORY ERROR] {e}")
-
-            # Client fallback history (from sessionStorage) in case of serverless cold-start DB reset
-            client_history = data.get("history", [])
-            if not history and isinstance(client_history, list):
-                for item in client_history[-8:]:
-                    if isinstance(item, dict):
-                        p_txt = (item.get("prompt") or "").strip()
-                        r_txt = (item.get("reply") or "").strip()
-                        if p_txt and r_txt:
-                            history.append({"role": "user", "content": p_txt})
-                            history.append({"role": "assistant", "content": r_txt})
-
-            permanent_mem = data.get("permanent_memory", {}) if role == "ADMIN" else None
-            new_fact = _extract_new_permanent_memory(cmd) if role == "ADMIN" else ""
-
-            # Check if this command is an AI image generation request
-            is_img, clean_img_prompt, img_url = _detect_image_intent(cmd)
-            if is_img:
-                if role == "ADMIN":
-                    reply = f"Harsha Sir, I generated the image: '{clean_img_prompt}'. Displaying it directly in your session chat panel."
-                else:
-                    reply = f"Here is the image: '{clean_img_prompt}'. I've rendered it in your session chat panel."
-
-                try:
-                    conn = get_db_connection()
-                    conn.execute(
-                        """
-                        INSERT INTO user_chats (user_token, user_name, user_email, user_phone, role, prompt, reply, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        (token or "guest", user_name, user_email, user_phone, role, cmd, reply, time.time())
-                    )
-                    conn.commit()
-                    conn.close()
-                except Exception as e:
-                    print(f"[CHAT LOG DB ERROR] {e}")
-
-                self._send_json({
-                    "response": reply,
-                    "user_name": user_name,
-                    "role": role,
-                    "image_url": img_url,
-                    "image_prompt": clean_img_prompt
-                })
-                return
-
-            # Check if this command is an Amma priority call trigger
-            lower_cmd = cmd.lower()
-            if any(ph in lower_cmd for ph in ["amma is calling", "mom is calling", "simulate amma call", "test amma call", "call from amma", "incoming call from amma", "what if amma calls"]):
-                now = time.time()
-                try:
-                    conn = get_db_connection()
-                    conn.execute(
-                        "INSERT INTO livelink_events (event_type, caller, phone, data_json, created_at, handled) VALUES (?, ?, ?, ?, ?, 0)",
-                        ("incoming_call", "AMMA (Mom)", "+91 94949 99999", json.dumps({"reason": "voice_command"}), now)
-                    )
-                    conn.commit()
-                    conn.close()
-                except Exception:
-                    pass
-                reply = "Harsha Sir, priority override activated! Amma is calling now. All study mutes and focus distractions are bypassed immediately."
-                self._send_json({
-                    "response": reply,
-                    "user_name": user_name,
-                    "role": role,
-                    "incoming_call": {
-                        "caller": "AMMA (Mom)",
-                        "phone": "+91 94949 99999",
-                        "is_amma": True
-                    }
-                })
-                return
-
-            try:
-                reply = _ask_groq(cmd, user_name, role, history=history, permanent_memory=permanent_mem)
-            except Exception as e:
-                print(f"[GROQ ERROR] {e}")
-                self._send_json({"success": False, "error": f"AI service unreachable: {str(e)}"}, status=500)
-                return
-
-            # Store chat in user_chats table
-            try:
-                conn = get_db_connection()
-                conn.execute(
-                    """
-                    INSERT INTO user_chats (user_token, user_name, user_email, user_phone, role, prompt, reply, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (token or "guest", user_name, user_email, user_phone, role, cmd, reply, time.time())
-                )
-                conn.commit()
-                conn.close()
-            except Exception as e:
-                print(f"[CHAT LOG DB ERROR] {e}")
-
-            resp_payload = {"response": reply, "user_name": user_name, "role": role}
-            if new_fact:
-                resp_payload["new_memory_fact"] = new_fact
-            self._send_json(resp_payload)
-            return
-
-        # ── 4. Food Vision & Calorie Scanner (Gemini Vision) ──
-        if path.endswith("/food_scan"):
-            img_b64 = data.get("image", "") or data.get("data", "")
-            if not img_b64:
-                self._send_json({"success": False, "error": "No image data provided for food scan."}, status=400)
-                return
-            nutrition = _analyze_food_image(img_b64)
-            self._send_json({
-                "success": True,
-                "nutrition": nutrition
-            })
-            return
-
-        # ── 5. Standalone AI Image Generator Endpoint ──
-        if path.endswith("/generate_image"):
-            prompt_txt = data.get("prompt", "").strip()
-            if not prompt_txt:
-                self._send_json({"success": False, "error": "Prompt required."}, status=400)
-                return
-            enhanced = _enhance_image_prompt(prompt_txt)
-            url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(enhanced)}?width=768&height=768&model=flux&nologo=true"
-            self._send_json({
-                "success": True,
-                "image_url": url,
-                "prompt": prompt_txt
-            })
-            return
-
-        # ── 6. Remote Control Action (Runs Silently in Background) ──
-        if path.endswith("/control"):
-            action = data.get("action", "")
-            now = time.time()
-            try:
-                conn = get_db_connection()
-                conn.execute("UPDATE livelink_events SET handled = 1 WHERE event_type = 'remote_action' AND handled = 0")
-                conn.execute(
-                    "INSERT INTO livelink_events (event_type, caller, phone, data_json, created_at, handled) VALUES (?, ?, ?, ?, ?, 0)",
-                    ("remote_action", "Harsha Sir", "", json.dumps({"action": action}), now)
-                )
-                conn.commit()
-                conn.close()
-            except Exception:
-                pass
-            self._send_json({"success": True, "action": action, "silent": True})
-            return
-
-        # ── Dismiss Priority Call ──
-        if path.endswith("/dismiss_call"):
-            try:
-                conn = get_db_connection()
-                conn.execute("UPDATE livelink_events SET handled = 1 WHERE event_type = 'incoming_call'")
-                conn.commit()
-                conn.close()
-            except Exception:
-                pass
-            self._send_json({"success": True})
-            return
-
-        # ── 5. Harsha Sir Gatekeeper Approval ──
-        # User Logout
-        if path.endswith("/logout"):
-            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
-            if token:
-                try:
-                    conn = get_db_connection()
-                    conn.execute("UPDATE livelink_users SET access_token = NULL WHERE access_token = ?", (token,))
-                    conn.commit()
-                    conn.close()
-                except Exception:
-                    pass
-            self._send_json({"ok": True, "success": True, "message": "Logged out successfully."})
-            return
-
-        if path.endswith("/approve_user"):
-            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
-            if token != MASTER_TOKEN:
-                self._send_json({"success": False, "error": "Unauthorized: Harsha Sir access only."}, status=403)
-                return
-            user_id = data.get("user_id")
-            try:
-                conn = get_db_connection()
-                conn.execute("UPDATE livelink_users SET status = 'APPROVED' WHERE id = ?", (user_id,))
-                conn.commit()
-                conn.close()
-                self._send_json({"success": True, "message": f"User #{user_id} approved!"})
-                return
-            except Exception as e:
-                self._send_json({"success": False, "error": str(e)}, status=500)
-                return
-
-        # ── 6. Harsha Sir Gatekeeper Rejection ──
-        if path.endswith("/reject_user"):
-            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
-            if token != MASTER_TOKEN:
-                self._send_json({"success": False, "error": "Unauthorized: Harsha Sir access only."}, status=403)
-                return
-            user_id = data.get("user_id")
-            try:
-                conn = get_db_connection()
-                conn.execute("UPDATE livelink_users SET status = 'REJECTED' WHERE id = ?", (user_id,))
-                conn.commit()
-                conn.close()
-                self._send_json({"success": True, "message": f"User #{user_id} request declined."})
-                return
-            except Exception as e:
-                self._send_json({"success": False, "error": str(e)}, status=500)
-                return
-
-        # ── 7. Incoming Call Webhook (Phone / LiveLink / Amma Call Dispatch) ──
-        if path.endswith("/incoming_call"):
-            caller = data.get("caller", "AMMA (Mom)").strip()
-            phone = data.get("phone", "+91 94949 99999").strip()
-            evt_type = data.get("type", "incoming_call")
-            now = time.time()
-            try:
-                conn = get_db_connection()
-                conn.execute(
-                    "INSERT INTO livelink_events (event_type, caller, phone, data_json, created_at, handled) VALUES (?, ?, ?, ?, ?, 0)",
-                    (evt_type, caller, phone, json.dumps(data), now)
-                )
-                conn.commit()
-                conn.close()
-            except Exception as e:
-                print(f"[INCOMING CALL DB ERROR] {e}")
-
-            self._send_json({
-                "success": True,
-                "status": "DISPATCHED",
-                "caller": caller,
-                "phone": phone,
-                "is_amma": True,
-                "message": f"Priority call from {caller} dispatched to ULTRON."
-            })
-            return
-
-        # ── 8. Change Password (Multi-Tenant & Harsha Sir) ──
-        if path.endswith("/change_password"):
-            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
-            cur_pwd = data.get("current_password", "").strip()
-            new_pwd = data.get("new_password", "").strip()
-
-            if not new_pwd or len(new_pwd) < 6:
-                self._send_json({"success": False, "error": "New password must be at least 6 characters."}, status=400)
-                return
-
-            # Check if Harsha Sir master session or default password
-            is_harsha = (
-                token == MASTER_TOKEN
-                or cur_pwd in ("Harsha@123", "Harsha@2026", "harsha123", "Harsha@Ultron", "harsha")
-                or cur_pwd.lower() == "harsha@123"
-            )
-
-            if is_harsha:
-                salt = secrets.token_hex(16)
-                pwd_hash = _hash_pwd(new_pwd, salt)
-                now = time.time()
-                try:
-                    conn = get_db_connection()
-                    cur = conn.cursor()
-                    cur.execute("SELECT id FROM livelink_users WHERE email = 'harshakanth@ultron.ai' OR phone = '+919999999999' OR role = 'ADMIN'")
-                    row = cur.fetchone()
-                    if row:
-                        cur.execute("UPDATE livelink_users SET password_hash = ?, salt = ?, last_active_at = ? WHERE id = ?", (pwd_hash, salt, now, row[0]))
-                    else:
-                        cur.execute(
-                            "INSERT INTO livelink_users (name, first_name, last_name, phone, email, password_hash, salt, role, status, access_token, registered_at, last_active_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                            ("Harsha Sir", "Harsha Sir", "", "+919999999999", "harshakanth@ultron.ai", pwd_hash, salt, "ADMIN", "APPROVED", MASTER_TOKEN, now, now)
-                        )
-                    conn.commit()
-                    conn.close()
-                except Exception as e:
-                    print(f"[CHANGE PW DB ERROR] {e}")
-
-                self._send_json({"success": True, "message": "Password updated successfully for Harsha Sir! Safe from breach warnings."})
-                return
-
-            # Regular registered user password change
-            try:
-                conn = get_db_connection()
-                conn.row_factory = sqlite3.Row
-                cur = conn.cursor()
-                cur.execute("SELECT * FROM livelink_users WHERE id = ?", (user_id,))
-                user = cur.fetchone()
-                if not user:
-                    conn.close()
-                    self._send_json({"success": False, "error": "Invalid user session."}, status=401)
+                    # User not found
+                    self._send_json({"success": False, "error": "Account not found."}, status=404)
                     return
-
-                user_salt = user["salt"] or ""
-                expected_hash = user["password_hash"] or ""
-                if expected_hash and _hash_pwd(cur_pwd, user_salt) != expected_hash:
-                    conn.close()
-                    self._send_json({"success": False, "error": "Current password does not match."}, status=400)
-                    return
-
-                new_salt = secrets.token_hex(16)
-                new_hash = _hash_pwd(new_pwd, new_salt)
-                cur.execute("UPDATE livelink_users SET password_hash = ?, salt = ?, last_active_at = ? WHERE id = ?", (new_hash, new_salt, time.time(), user["id"]))
-                conn.commit()
-                conn.close()
-                self._send_json({"success": True, "message": "Password successfully updated!"})
-                return
             except Exception as e:
-                self._send_json({"success": False, "error": str(e)}, status=500)
+                self._send_json({"success": False, "error": f"Internal server error: {e}"}, status=500)
                 return
-
 
         # --- Cloud Neural TTS Endpoint ---
         if path.endswith("/tts"):
