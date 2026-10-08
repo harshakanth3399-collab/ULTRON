@@ -3184,60 +3184,55 @@
                     
                     // Rank 1: Explicit British Jarvis Male voice
                     
+                  
                   let bestVoice = null;
                   if (typeof window._voiceOverrideIdx !== 'undefined' && window._voiceOverrideIdx >= 0) {
-                      const eng = allVoices.filter(v => v.lang.startsWith('en'));
+                      const eng = allVoices.filter(v => (v.lang||'').startsWith('en'));
                       if (eng[window._voiceOverrideIdx]) bestVoice = eng[window._voiceOverrideIdx];
                   } else {
-                      let bestVoice = englishNonFemale.find(v => {
-                        const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
-                        return n.includes('daniel') || n.includes('arthur') || n.includes('uk english male') || n.includes('oliver') || n.includes('george');
-                    });
+                      bestVoice = englishNonFemale.find(v => {
+                          const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+                          return n.includes('daniel') || n.includes('arthur') || n.includes('uk english male') || n.includes('oliver') || n.includes('george');
+                      });
 
-                    // Rank 1.5: Android Google TTS Hardcoded Male Voice URIs
-                    if (!bestVoice) {
-                        bestVoice = englishNonFemale.find(v => {
-                            const uri = (v.voiceURI || '').toLowerCase();
-                            return uri.includes('en-gb-x-rjs') || uri.includes('en-gb-x-gbd') || 
-                                   uri.includes('en-us-x-tpd') || uri.includes('en-us-x-sfg') || 
-                                   uri.includes('en-in-x-ind') || uri.includes('en-in-x-ene') || 
-                                   uri.includes('en-au-x-aud');
-                        });
-                    }
+                      if (!bestVoice) {
+                          bestVoice = englishNonFemale.find(v => {
+                              const uri = (v.voiceURI || '').toLowerCase();
+                              return uri.includes('en-gb-x-rjs') || uri.includes('en-gb-x-gbd') || 
+                                     uri.includes('en-us-x-tpd') || uri.includes('en-us-x-sfg') || 
+                                     uri.includes('en-in-x-ind') || uri.includes('en-in-x-ene') || 
+                                     uri.includes('en-au-x-aud');
+                          });
+                      }
 
-                    // Rank 2: Explicit US/International Male Voice
-                    if (!bestVoice) bestVoice = englishNonFemale.find(isExplicitMale);
+                      if (!bestVoice) bestVoice = englishNonFemale.find(isExplicitMale);
 
-                    // Rank 3: US Male candidates
-                    if (!bestVoice) {
-                        bestVoice = englishNonFemale.find(v => {
-                            const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
-                            return n.includes('google us english male') || n.includes('guy') || n.includes('david') || n.includes('james') || n.includes('aaron');
-                        });
-                    }
+                      if (!bestVoice) {
+                          bestVoice = englishNonFemale.find(v => {
+                              const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
+                              return n.includes('google us english male') || n.includes('guy') || n.includes('david') || n.includes('james') || n.includes('aaron');
+                          });
+                      }
 
-                    // Rank 4: generic english voice matching male
-                    if (!bestVoice) {
-                        bestVoice = englishNonFemale.find(isExplicitMale);
-                    }
+                      if (!bestVoice) {
+                          bestVoice = englishNonFemale.find(isExplicitMale);
+                      }
 
-                    // Rank 5: Aggressive Pitch Shifting Fallback
-                    if (!bestVoice && englishNonFemale.length > 0) {
-                        bestVoice = englishNonFemale[0];
-                    }
-                    
-                    // Force the pitch extremely low to guarantee Alpha Male resonance
-                    utter.pitch = 0.9; 
+                      if (!bestVoice && englishNonFemale.length > 0) {
+                          bestVoice = englishNonFemale[0];
+                      }
+                  } // CLOSE THE ELSE BLOCK!
 
+                  utter.pitch = 0.9; 
 
+                  if (bestVoice) {
+                      utter.voice = bestVoice;
+                      utter.lang = bestVoice.lang || 'en-GB';
+                  }
+              }
 
-                    if (bestVoice) {
-                        utter.voice = bestVoice;
-                        utter.lang = bestVoice.lang || 'en-GB';
-                    }
-                }
+              utter.onstart = () => {
 
-                utter.onstart = () => {
                     isSpeaking = true;
                     updateBadge('● ULTRON SPEAKING', '#FFB300');
                     document.getElementById('state-text').innerText = "ULTRON IS SPEAKING...";
