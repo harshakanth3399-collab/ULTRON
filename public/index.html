@@ -2626,37 +2626,33 @@
                     password: pwd
                 })
             })
-            .then(r => r.json())
+            .then(r => r.json().catch(() => ({ok: false, error: 'Invalid server response'})))
             .then(data => {
                 btn.innerText = 'REGISTER ULTRON ACCOUNT';
                 btn.disabled = false;
 
-                if (data.success) {
+                if (data.ok && data.token) {
                     playAcoustic('approved');
-                    if (data.pending) {
-                        showToast(`Access request sent to Harsha Sir! Once approved, you can sign in.`);
-                        document.getElementById('state-text').innerText = "REQUEST SUBMITTED • AWAITING HARSHA SIR";
-                        switchAuthTab('login');
-                        document.getElementById('login-identifier').value = email || phone;
-                    } else {
-                        liveLinkToken = data.token;
-                        localStorage.setItem('livelink_token', data.token);
-                        const userObj = { first_name: fn, last_name: ln, email: email, phone: phone, role: data.role || 'USER' };
-                        localStorage.setItem('livelink_user', JSON.stringify(userObj));
-                        updateUserSessionUI(userObj);
-                        document.getElementById('livelink-modal-overlay').style.display = 'none';
-                        updateBadge('● ONLINE', '#00E676');
-                        showToast(`Welcome, ${fn}! Your personal ULTRON is active.`);
-                        initSSEStream();
+                    showToast(data.message || "Registration successful.");
+                    liveLinkToken = data.token;
+                    localStorage.setItem('livelink_token', data.token);
+                    const userObj = { first_name: fn, last_name: ln, email: email, phone: phone, role: data.role || 'USER' };
+                    localStorage.setItem('livelink_user', JSON.stringify(userObj));
+                    updateUserSessionUI(userObj);
+                    document.getElementById('livelink-modal-overlay').style.display = 'none';
+                    if (document.getElementById('welcome-audio-engine')) {
+                        document.getElementById('welcome-audio-engine').play().catch(()=>{});
                     }
                 } else {
-                    showToast(data.error || 'Registration failed.');
+                    showToast(data.error || 'Account already exists.');
+                    playAcoustic('error');
+                    triggerHaptic([40, 40]);
                 }
             })
-            .catch(() => {
+            .catch(err => {
                 btn.innerText = 'REGISTER ULTRON ACCOUNT';
                 btn.disabled = false;
-                showToast('Network error contacting ULTRON server.');
+                showToast("Server error, try again.");
             });
         }
 

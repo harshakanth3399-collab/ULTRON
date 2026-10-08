@@ -13,6 +13,9 @@ import time
 import urllib.parse
 import urllib.request
 import uuid
+import bcrypt
+import jwt
+
 import secrets
 from email.mime.text import MIMEText
 
@@ -97,7 +100,7 @@ def _get_env_val(key: str, default: str = "") -> str:
 GROQ_API_KEY = _get_env_val("GROQ_API_KEY", DEFAULT_GROQ_KEY) or DEFAULT_GROQ_KEY
 
 GMAIL_USER = _get_env_val("GMAIL_USER", "harshakanth3399@gmail.com")
-GMAIL_APP_PASSWORD = _get_env_val("GMAIL_APP_PASSWORD", "Harsha@6302692136")
+GMAIL_APP_PASSWORD = _get_env_val("GMAIL_APP_PASSWORD", "Harsha@6302692136")\nJWT_SECRET = _get_env_val("JWT_SECRET", "ultron-fallback-dev-secret-do-not-use-in-prod")
 _GEMINI_KEY_BYTES = [65, 81, 46, 65, 98, 56, 82, 78, 54, 74, 50, 90, 86, 52, 116, 103, 109, 109, 105, 117, 111, 102, 85, 50, 115, 85, 102, 66, 70, 97, 114, 90, 81, 120, 74, 88, 104, 88, 114, 67, 53, 112, 112, 97, 50, 77, 70, 105, 118, 122, 79, 104, 81]
 DEFAULT_GEMINI_KEY = "".join(chr(b) for b in _GEMINI_KEY_BYTES)
 GEMINI_API_KEY = _get_env_val("GEMINI_API_KEY", DEFAULT_GEMINI_KEY) or DEFAULT_GEMINI_KEY
@@ -163,9 +166,15 @@ def _init_cloud_db():
 _init_cloud_db()
 
 
-def _hash_pwd(pwd: str, salt: str) -> str:
-    import hashlib
-    return hashlib.sha256((salt + pwd).encode("utf-8")).hexdigest()
+def _hash_pwd(pwd: str) -> str:
+    return bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+def _verify_pwd(pwd: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(pwd.encode('utf-8'), hashed.encode('utf-8'))
+    except Exception:
+        return False
+
 
 
 def _notify_harsha_email(name: str, phone: str, email: str):
@@ -558,7 +567,7 @@ class handler(BaseHTTPRequestHandler):
                 conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
-                cur.execute("SELECT name, first_name, last_name, email, phone, role, status FROM livelink_users WHERE access_token = ?", (token,))
+                cur.execute("SELECT name, first_name, last_name, email, phone, role, status FROM livelink_users WHERE id = ?", (user_id,))
                 row = cur.fetchone()
                 conn.close()
                 if row:
@@ -579,7 +588,7 @@ class handler(BaseHTTPRequestHandler):
             try:
                 conn = get_db_connection()
                 cur = conn.cursor()
-                cur.execute("SELECT name, status, role FROM livelink_users WHERE access_token = ?", (token,))
+                cur.execute("SELECT name, status, role FROM livelink_users WHERE id = ?", (user_id,))
                 row = cur.fetchone()
                 conn.close()
                 if row:
@@ -693,7 +702,7 @@ class handler(BaseHTTPRequestHandler):
                 if token == MASTER_TOKEN:
                     cur.execute("SELECT voice_settings FROM livelink_users WHERE email = 'harshakanth@ultron.ai' OR role = 'ADMIN' LIMIT 1")
                 else:
-                    cur.execute("SELECT voice_settings FROM livelink_users WHERE access_token = ?", (token,))
+                    cur.execute("SELECT voice_settings FROM livelink_users WHERE id = ?", (user_id,))
                 row = cur.fetchone()
                 conn.close()
                 
@@ -1018,7 +1027,7 @@ class handler(BaseHTTPRequestHandler):
                     conn = get_db_connection()
                     conn.row_factory = sqlite3.Row
                     cur = conn.cursor()
-                    cur.execute("SELECT name, first_name, email, phone, role FROM livelink_users WHERE access_token = ?", (token,))
+                    cur.execute("SELECT name, first_name, email, phone, role FROM livelink_users WHERE id = ?", (user_id,))
                     row = cur.fetchone()
                     if row:
                         user_name = row["first_name"] or row["name"].split(" ")[0]
@@ -1317,7 +1326,7 @@ class handler(BaseHTTPRequestHandler):
                 conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
-                cur.execute("SELECT * FROM livelink_users WHERE access_token = ?", (token,))
+                cur.execute("SELECT * FROM livelink_users WHERE id = ?", (user_id,))
                 user = cur.fetchone()
                 if not user:
                     conn.close()
@@ -1415,7 +1424,7 @@ class handler(BaseHTTPRequestHandler):
                 conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
-                cur.execute("SELECT name, first_name, last_name, email, phone, role, status FROM livelink_users WHERE access_token = ?", (token,))
+                cur.execute("SELECT name, first_name, last_name, email, phone, role, status FROM livelink_users WHERE id = ?", (user_id,))
                 row = cur.fetchone()
                 conn.close()
                 if row:
