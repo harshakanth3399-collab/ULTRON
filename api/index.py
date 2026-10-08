@@ -13,7 +13,6 @@ import time
 import urllib.parse
 import urllib.request
 import uuid
-import jwt
 
 import secrets
 from email.mime.text import MIMEText
@@ -578,7 +577,7 @@ class handler(BaseHTTPRequestHandler):
                 conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
-                cur.execute("SELECT name, first_name, last_name, email, phone, role, status FROM livelink_users WHERE id = ?", (user_id,))
+                cur.execute("SELECT name, first_name, last_name, email, phone, role, status FROM livelink_users WHERE access_token = ?", (token,))
                 row = cur.fetchone()
                 conn.close()
                 if row:
@@ -599,7 +598,7 @@ class handler(BaseHTTPRequestHandler):
             try:
                 conn = get_db_connection()
                 cur = conn.cursor()
-                cur.execute("SELECT name, status, role FROM livelink_users WHERE id = ?", (user_id,))
+                cur.execute("SELECT name, status, role FROM livelink_users WHERE access_token = ?", (token,))
                 row = cur.fetchone()
                 conn.close()
                 if row:
@@ -713,7 +712,7 @@ class handler(BaseHTTPRequestHandler):
                 if token == MASTER_TOKEN:
                     cur.execute("SELECT voice_settings FROM livelink_users WHERE email = 'harshakanth@ultron.ai' OR role = 'ADMIN' LIMIT 1")
                 else:
-                    cur.execute("SELECT voice_settings FROM livelink_users WHERE id = ?", (user_id,))
+                    cur.execute("SELECT voice_settings FROM livelink_users WHERE access_token = ?", (token,))
                 row = cur.fetchone()
                 conn.close()
                 
@@ -855,8 +854,7 @@ class handler(BaseHTTPRequestHandler):
 
             try:
                 import time
-                import jwt
-                conn = get_db_connection()
+                                conn = get_db_connection()
                 cur = conn.cursor()
                 cur.execute("SELECT id FROM livelink_users WHERE email = ? OR phone = ?", (email, phone))
                 if cur.fetchone():
@@ -871,15 +869,14 @@ class handler(BaseHTTPRequestHandler):
                 role = "USER"
                 status = "APPROVED"
                 
+                token = secrets.token_hex(32)
                 cur.execute(
                     "INSERT INTO livelink_users (name, first_name, last_name, phone, email, password_hash, salt, role, status, access_token, registered_at, last_active_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (name, fn, ln, phone, email, pwd_hash, "", role, status, "PENDING_JWT", now, now)
+                    (name, fn, ln, phone, email, pwd_hash, "", role, status, token, now, now)
                 )
                 user_id = cur.lastrowid
                 conn.commit()
                 conn.close()
-
-                token = jwt.encode({"user_id": user_id, "email": email, "role": role}, JWT_SECRET, algorithm="HS256")
                 
                 _notify_harsha_email(name, phone, email)
 
@@ -910,8 +907,7 @@ class handler(BaseHTTPRequestHandler):
 
             try:
                 import time
-                import jwt
-                conn = get_db_connection()
+                                conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
                 cur.execute("SELECT * FROM livelink_users WHERE email = ? OR phone = ? ORDER BY id DESC LIMIT 1", (ident, ident))
@@ -928,7 +924,7 @@ class handler(BaseHTTPRequestHandler):
                             self._send_json({"ok": False, "error": "Account is pending Harsha's approval."}, status=403)
                             return
                         
-                        token = jwt.encode({"user_id": row["id"], "email": row["email"], "role": row["role"]}, JWT_SECRET, algorithm="HS256")
+                        token = secrets.token_hex(32)
                         
                         conn = get_db_connection()
                         conn.execute("UPDATE livelink_users SET access_token = ?, last_active_at = ? WHERE id = ?", (token, time.time(), row["id"]))
@@ -978,7 +974,7 @@ class handler(BaseHTTPRequestHandler):
                     conn = get_db_connection()
                     conn.row_factory = sqlite3.Row
                     cur = conn.cursor()
-                    cur.execute("SELECT name, first_name, email, phone, role FROM livelink_users WHERE id = ?", (user_id,))
+                    cur.execute("SELECT name, first_name, email, phone, role FROM livelink_users WHERE access_token = ?", (token,))
                     row = cur.fetchone()
                     if row:
                         user_name = row["first_name"] or row["name"].split(" ")[0]
@@ -1177,7 +1173,7 @@ class handler(BaseHTTPRequestHandler):
             user_id = data.get("user_id")
             try:
                 conn = get_db_connection()
-                conn.execute("UPDATE livelink_users SET status = 'APPROVED' WHERE id = ?", (user_id,))
+                conn.execute("UPDATE livelink_users SET status = 'APPROVED' WHERE access_token = ?", (token,))
                 conn.commit()
                 conn.close()
                 self._send_json({"success": True, "message": f"User #{user_id} approved!"})
@@ -1195,7 +1191,7 @@ class handler(BaseHTTPRequestHandler):
             user_id = data.get("user_id")
             try:
                 conn = get_db_connection()
-                conn.execute("UPDATE livelink_users SET status = 'REJECTED' WHERE id = ?", (user_id,))
+                conn.execute("UPDATE livelink_users SET status = 'REJECTED' WHERE access_token = ?", (token,))
                 conn.commit()
                 conn.close()
                 self._send_json({"success": True, "message": f"User #{user_id} request declined."})
@@ -1277,7 +1273,7 @@ class handler(BaseHTTPRequestHandler):
                 conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
-                cur.execute("SELECT * FROM livelink_users WHERE id = ?", (user_id,))
+                cur.execute("SELECT * FROM livelink_users WHERE access_token = ?", (token,))
                 user = cur.fetchone()
                 if not user:
                     conn.close()
@@ -1375,7 +1371,7 @@ class handler(BaseHTTPRequestHandler):
                 conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
-                cur.execute("SELECT name, first_name, last_name, email, phone, role, status FROM livelink_users WHERE id = ?", (user_id,))
+                cur.execute("SELECT name, first_name, last_name, email, phone, role, status FROM livelink_users WHERE access_token = ?", (token,))
                 row = cur.fetchone()
                 conn.close()
                 if row:
