@@ -1296,6 +1296,56 @@ class handler(BaseHTTPRequestHandler):
                 self._send_json({"success": False, "error": str(e)}, status=500)
                 return
 
+
+        # --- Cloud Neural TTS Endpoint ---
+        if path.endswith("/tts"):
+            text = data.get("text", "").strip()
+            voice = data.get("voice", "onyx")
+            speed = data.get("speed", 1.0)
+            
+            if not text:
+                self._send_json({"error": "No text provided"}, status=400)
+                return
+                
+            openai_key = os.environ.get("OPENAI_API_KEY")
+            if not openai_key:
+                self._send_json({"error": "OPENAI_API_KEY not configured on server", "fallback": True}, status=500)
+                return
+                
+            try:
+                import urllib.request
+                import json
+                
+                req = urllib.request.Request(
+                    "https://api.openai.com/v1/audio/speech",
+                    data=json.dumps({
+                        "model": "tts-1",
+                        "input": text,
+                        "voice": voice,
+                        "speed": speed
+                    }).encode("utf-8"),
+                    headers={
+                        "Authorization": f"Bearer {openai_key}",
+                        "Content-Type": "application/json"
+                    },
+                    method="POST"
+                )
+                
+                with urllib.request.urlopen(req, timeout=10.0) as response:
+                    audio_data = response.read()
+                    
+                self.send_response(200)
+                self.send_header("Content-Type", "audio/mpeg")
+                self.send_header("Content-Length", str(len(audio_data)))
+                self.end_headers()
+                self.wfile.write(audio_data)
+                return
+                
+            except Exception as e:
+                print(f"[TTS Error] {e}")
+                self._send_json({"error": str(e), "fallback": True}, status=500)
+                return
+
         # ── 9. Token Verification ──
         if path.endswith("/verify_token"):
             token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
