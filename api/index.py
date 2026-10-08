@@ -127,14 +127,14 @@ def _init_cloud_db():
             )
             """
         )
-        conn.execute(
-            f"""\n                        try:
-                conn.execute("ALTER TABLE livelink_users ADD COLUMN voice_settings TEXT")
-            except Exception:
-                pass
-            conn.commit()
+        try:
+            conn.execute("ALTER TABLE livelink_users ADD COLUMN voice_settings TEXT")
+        except Exception:
+            pass
+        conn.commit()
 
-            CREATE TABLE IF NOT EXISTS user_chats (\n                {"id SERIAL PRIMARY KEY" if os.environ.get("POSTGRES_URL") and HAS_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"},
+        conn.execute(
+            f"""\n            CREATE TABLE IF NOT EXISTS user_chats (\n                {"id SERIAL PRIMARY KEY" if os.environ.get("POSTGRES_URL") and HAS_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"},
                 user_token TEXT NOT NULL,
                 user_name TEXT,
                 user_email TEXT,
@@ -823,7 +823,7 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self._get_path()
-        content_length = int(self.headers.get("Content-Length", 0))
+        content_length = int(self.headers.get("Content-Length") or self.headers.get("content-length") or 0)
         body = self.rfile.read(content_length) if content_length > 0 else b""
         data = {}
         parse_err = ""
