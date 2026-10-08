@@ -125,7 +125,13 @@ def _init_cloud_db():
             """
         )
         conn.execute(
-            f"""\n            CREATE TABLE IF NOT EXISTS user_chats (\n                {"id SERIAL PRIMARY KEY" if os.environ.get("POSTGRES_URL") and HAS_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"},
+            f"""\n                        try:
+                conn.execute("ALTER TABLE livelink_users ADD COLUMN voice_settings TEXT")
+            except Exception:
+                pass
+            conn.commit()
+
+            CREATE TABLE IF NOT EXISTS user_chats (\n                {"id SERIAL PRIMARY KEY" if os.environ.get("POSTGRES_URL") and HAS_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"},
                 user_token TEXT NOT NULL,
                 user_name TEXT,
                 user_email TEXT,
@@ -663,6 +669,42 @@ class handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
             self._send_json({"active_call": False})
+            return
+
+
+        # --- Voice Settings API (GET) ---
+        if path.endswith("/settings/voice"):
+            token = self.headers.get("Authorization", "").replace("Bearer ", "")
+            if not token:
+                token = self.headers.get("X-LiveLink-Token", "")
+            if not token:
+                from urllib.parse import parse_qs, urlparse
+                qs = parse_qs(urlparse(self.path).query)
+                token = qs.get("token", [""])[0]
+                
+            if not token:
+                self._send_json({"error": "Unauthorized"}, status=401)
+                return
+                
+            try:
+                conn = get_db_connection()
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                if token == MASTER_TOKEN:
+                    cur.execute("SELECT voice_settings FROM livelink_users WHERE email = 'harshakanth@ultron.ai' OR role = 'ADMIN' LIMIT 1")
+                else:
+                    cur.execute("SELECT voice_settings FROM livelink_users WHERE access_token = ?", (token,))
+                row = cur.fetchone()
+                conn.close()
+                
+                settings = {"voice": "onyx", "speed": 1.0, "pitch": 1.0, "provider": "openai"}
+                if row and row["voice_settings"]:
+                    import json
+                    settings.update(json.loads(row["voice_settings"]))
+                    
+                self._send_json({"success": True, "settings": settings})
+            except Exception as e:
+                self._send_json({"error": str(e)}, status=500)
             return
 
         # ── Dismiss Priority Call (Mark Handled) ──
@@ -1346,7 +1388,8 @@ class handler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(e), "fallback": True}, status=500)
                 return
 
-        # ── 9. Token Verification ──
+
+# ── 9. Token Verification ──
         if path.endswith("/verify_token"):
             token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
             if token == MASTER_TOKEN:

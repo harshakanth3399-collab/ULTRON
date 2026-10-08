@@ -1021,6 +1021,67 @@
             .action-text { font-size: 11px; }
         }
 
+    
+        .voice-picker-group label {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 10px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .voice-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        .voice-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .voice-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .voice-item.active {
+            background: rgba(0, 204, 255, 0.15);
+            border-color: rgba(0, 204, 255, 0.5);
+        }
+        .voice-item-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .voice-item-name {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+        .voice-item-tags {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 2px;
+        }
+        .slider-group label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 6px;
+        }
+        .slider-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        .flex-1 { flex: 1; }
+
     </style>
 </head>
 <body>
@@ -1909,6 +1970,7 @@
         }
 
         function updateUserSessionUI(user) {
+            fetchVoiceSettings();
             const logoutBtn = document.getElementById('logout-btn-hud');
             const changePwBtn = document.getElementById('change-pw-btn-hud');
             const vaultBtn = document.getElementById('action-vault-btn');
@@ -2424,7 +2486,7 @@
             });
         }
 
-        function handleLoginSubmit(e) {
+        async function handleLoginSubmit(e) {
             e.preventDefault();
             triggerHaptic([30]);
             const ident = document.getElementById('login-identifier').value.trim();
