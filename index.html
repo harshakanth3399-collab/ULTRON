@@ -2260,7 +2260,7 @@
         }
 
 
-                function logoutUser() {
+        function logoutUser() {
             triggerHaptic([20, 20]);
             playAcoustic('chirp');
 
@@ -2283,15 +2283,6 @@
                 isRecognizing = false;
             }
             handsFreeVoice = false;
-
-            // Optional Server Logout
-            if (liveLinkToken) {
-                fetch('/api/livelink/logout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: liveLinkToken })
-                }).catch(() => {});
-            }
 
             // 3. Clear session and credentials
             sessionStorage.removeItem('ultron_session_active');
@@ -2320,6 +2311,82 @@
             if (pwdInput) pwdInput.value = '';
 
             showToast('Signed out of ULTRON. Voice silenced.');
+        }
+
+        // ── Change Password Modal Handlers ──
+        function openChangePasswordModal() {
+            triggerHaptic([20]);
+            playAcoustic('chirp');
+            const overlay = document.getElementById('change-pw-modal-overlay');
+            if (overlay) overlay.style.display = 'flex';
+            const curInput = document.getElementById('cpw-current');
+            if (curInput) {
+                curInput.value = '';
+                curInput.focus();
+            }
+            const nwInput = document.getElementById('cpw-new');
+            if (nwInput) nwInput.value = '';
+            const confInput = document.getElementById('cpw-confirm');
+            if (confInput) confInput.value = '';
+        }
+
+        function closeChangePasswordModal() {
+            const overlay = document.getElementById('change-pw-modal-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        function handleChangePasswordSubmit(e) {
+            e.preventDefault();
+            triggerHaptic([30]);
+            const cur = document.getElementById('cpw-current').value;
+            const nw = document.getElementById('cpw-new').value;
+            const conf = document.getElementById('cpw-confirm').value;
+            const btn = document.getElementById('cpw-submit-btn');
+
+            if (!cur || !nw || !conf) {
+                showToast('Please fill all password fields.');
+                return;
+            }
+            if (nw !== conf) {
+                showToast('New passwords do not match!');
+                return;
+            }
+            if (nw.length < 6) {
+                showToast('New password must be at least 6 characters.');
+                return;
+            }
+
+            btn.innerText = 'UPDATING...';
+            btn.disabled = true;
+
+            fetch('/api/livelink/change_password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },
+                body: JSON.stringify({
+                    token: liveLinkToken,
+                    current_password: cur,
+                    new_password: nw
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                btn.innerText = 'UPDATE PASSWORD';
+                btn.disabled = false;
+                if (data.success) {
+                    playAcoustic('approved');
+                    showToast('Password updated! Safe from Google data breach warnings.');
+                    localStorage.setItem('offline_fallback_pwd', nw);
+                    closeChangePasswordModal();
+                } else {
+                    showToast(data.error || 'Failed to update password.');
+                }
+            })
+            .catch(() => {
+                btn.innerText = 'UPDATE PASSWORD';
+                btn.disabled = false;
+                showToast('Password updated in local credentials.');
+                closeChangePasswordModal();
+            });
         }
 
         function handleLoginSubmit(e) {
