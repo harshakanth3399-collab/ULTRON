@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ultron-livelink-v20261008-a';
+const CACHE_NAME = 'ultron-livelink-v20261008-b';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -25,24 +25,20 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('/api/')) {
-    event.respondWith(fetch(event.request));
-    return;
-  }
-  
-  // Strict Network-first for ALL assets to ensure UI updates show immediately
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-      fetch(event.request, { cache: 'no-store' })
-      .then((response) => {
-          // Cache the latest version if successful
-          if (response && response.status === 200 && response.type === 'basic') {
-              const responseToCache = response.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                  cache.put(event.request, responseToCache);
-              });
-          }
-          return response;
+    fetch(event.request)
+      .then((networkResponse) => {
+        // Cache the latest version
+        const responseClone = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseClone);
+        });
+        return networkResponse;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => {
+        return caches.match(event.request);
+      })
   );
 });
