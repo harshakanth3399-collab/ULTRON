@@ -2284,6 +2284,15 @@
             }
             handsFreeVoice = false;
 
+            // Optional Server Logout
+            if (liveLinkToken) {
+                fetch('/api/livelink/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: liveLinkToken })
+                }).catch(() => {});
+            }
+
             // 3. Clear session and credentials
             sessionStorage.removeItem('ultron_session_active');
             localStorage.removeItem('livelink_token');
@@ -2836,6 +2845,15 @@
         let recognition = null;
         let isRecognizing = false;
         let handsFreeVoice = false;
+
+            // Optional Server Logout
+            if (liveLinkToken) {
+                fetch('/api/livelink/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: liveLinkToken })
+                }).catch(() => {});
+            }
         let silenceTimer = null;
         let availableVoices = [];
         window._activeUtterances = window._activeUtterances || [];
@@ -3024,6 +3042,15 @@
                 isRecognizing = false;
                 if (e.error === 'not-allowed') {
                     handsFreeVoice = false;
+
+            // Optional Server Logout
+            if (liveLinkToken) {
+                fetch('/api/livelink/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: liveLinkToken })
+                }).catch(() => {});
+            }
                     isListening = false;
                     clearSpeechTimers();
                     speechAccumulator = '';
@@ -3083,6 +3110,15 @@
             if (handsFreeVoice) {
                 // Turn OFF hands-free
                 handsFreeVoice = false;
+
+            // Optional Server Logout
+            if (liveLinkToken) {
+                fetch('/api/livelink/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: liveLinkToken })
+                }).catch(() => {});
+            }
                 isListening = false;
                 clearSpeechTimers();
                 speechAccumulator = '';
