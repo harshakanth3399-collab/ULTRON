@@ -2,18 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ULTRON | https://ultron.ai Assistant</title>
     
     <!-- PWA & Mobile Web App Capabilities with Iron Man Icon -->
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <meta name="theme-color" content="#FFB300">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ULTRON">
+    <meta  content="#FFB300">
+    <meta  content="yes">
+    <meta  content="yes">
+    <meta  content="black-translucent">
+    <meta  content="ULTRON">
 
     <!-- Three.js 3D WebGL Graphics Engine (Local First + CDN Fallback) -->
     <script src="three.min.js"></script>
@@ -257,60 +257,7 @@
         }
 
         
-        .action-dock {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 12px;
-            margin-top: 24px;
-            padding: 10px 16px;
-            background: rgba(14, 10, 2, 0.7);
-            border: 1px solid rgba(255, 179, 0, 0.2);
-            border-radius: 20px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            flex-wrap: wrap;
-        }
-        .action-btn {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(255, 179, 0, 0.05);
-            border: 1px solid rgba(255, 179, 0, 0.3);
-            border-radius: 12px;
-            padding: 6px 12px;
-            cursor: pointer;
-            transition: all 0.25s ease;
-        }
-        .action-btn:hover {
-            background: rgba(255, 179, 0, 0.15);
-            border-color: #FFB300;
-            transform: translateY(-2px);
-        }
-        .action-icon {
-            font-size: 14px;
-        }
-        .action-text {
-            color: rgba(255, 255, 255, 0.85);
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-        }
-        @media (max-width: 767px) {
-            .action-dock {
-                gap: 8px;
-                padding: 8px;
-                border-radius: 16px;
-            }
-            .action-btn {
-                padding: 5px 8px;
-                border-radius: 10px;
-            }
-            .action-text {
-                font-size: 9px;
-            }
-        }
+        
 
         /* Sleek Modern Input Bar */
         .input-bar {
@@ -969,52 +916,116 @@
             pointer-events: none !important;
         }
 
+    
+        .priority-dock {
+            position: fixed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            z-index: 200;
+            padding: 8px 16px;
+            background: rgba(14, 10, 2, 0.7);
+            border: 1px solid rgba(255, 179, 0, 0.2);
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: max-content;
+            max-width: 95%;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 179, 0, 0.05);
+            border: 1px solid rgba(255, 179, 0, 0.3);
+            border-radius: 12px;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            color: #FFB300;
+        }
+        .action-btn:hover {
+            background: rgba(255, 179, 0, 0.15);
+            border-color: #FFB300;
+            transform: translateY(-2px);
+        }
+        .action-icon { font-size: 14px; }
+        .action-text { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+
+        
+        .top-dock { top: 20px; }
+        .bottom-dock { bottom: 20px; }
+
+        @media (max-width: 767px) {
+            .top-dock { top: 15px; width: 95%; justify-content: space-evenly; }
+            .bottom-dock { bottom: 15px; width: 95%; justify-content: space-evenly; }
+            .action-btn { padding: 6px 10px; border-radius: 12px; }
+            .action-text { font-size: 10px; }
+        }
+
+            .utility-dock { bottom: 20px; }
+        }
+
+        /* PHONE: Bottom = Core (High Priority), Top = Utility (Low Priority) */
+        @media (max-width: 767px) {
+            .core-dock { bottom: 15px; width: 95%; justify-content: space-evenly; }
+            .utility-dock { top: 15px; width: 95%; padding: 6px 10px; gap: 6px; }
+            .action-btn { padding: 5px 8px; border-radius: 10px; }
+            .action-text { font-size: 9px; }
+        }
+
     </style>
 </head>
 <body>
-    <!-- Minimalist Golden Header -->
-        <!-- Principal Engineer Full Widescreen HUD Header -->
-    <header>
-        <div class="logo" onclick="tapHelmetSecret()" title="ULTRON (Click for Harsha Sir Quick Login)">
-            <img src="icon.png" class="logo-img" alt="ULTRON Icon">
-            <span>ULTRON</span>
-        </div>
-        <div class="header-right">
-            
-            
-            
-            
-            
-            
-            
-            <div class="status-badge" id="badge" onclick="openChangePasswordModal()" style="white-space:nowrap; cursor:pointer;" title="Click to Change Password">● ONLINE</div>
-            <button class="header-pill-btn" id="change-pw-btn-hud" onclick="openChangePasswordModal()" style="display:none;" title="Change Password to Fix Breach Warning">🔑 PW</button>
-            <button class="header-pill-btn" id="login-btn-hud" onclick="openLoginModal()" style="color:#000; background:linear-gradient(135deg, #FFB300, #FFD54F); font-weight:800; border:none; box-shadow:0 0 12px rgba(255,179,0,0.5);" title="Sign in to ULTRON">🔑 SIGN IN</button>
-            <button class="header-pill-btn" id="logout-btn-hud" onclick="logoutUser()" style="display:none; border-color:#FF5252; color:#FF8A80;" title="Sign out of ULTRON">🚪 LOGOUT</button>
-        </div>
-    </header>
+    <div style="position:fixed; top:20px; left:20px; z-index:999; display:flex; align-items:center; gap:10px;">
+        <img src="https://cdn-icons-png.flaticon.com/128/1183/1183141.png" style="width:32px; filter:brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(350deg);">
+        <span style="color:#FFB300; font-weight:900; letter-spacing:3px; font-size:20px;">ULTRON</span>
+    </div>
 
-    <!-- ── ULTRON Live Optical Vision HUD (Video Call Mirror) ── -->
-    <!-- ── ULTRON Live Optical Vision HUD (Real Video Call Mirror Window) ── -->
-    <div id="ultron-vision-hud" class="vision-hud-card" style="display:none;">
-        <div class="vision-hud-header" style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px; background:rgba(25,16,4,0.95); border-bottom:1.5px solid rgba(255,179,0,0.4); flex-shrink:0;">
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span class="vision-live-dot" style="color:#00E676; font-size:14px;">●</span>
-                <span style="font-weight:900; font-size:11px; letter-spacing:1.5px; color:#FFD54F;">ULTRON OPTICAL SENSOR // VIDEO CALL LIVE</span>
-            </div>
-            <button class="vision-hud-close" onclick="toggleOpticalVision(false)" style="background:transparent; border:none; color:#FFB300; font-size:14px; font-weight:800; cursor:pointer;" title="End Video Call">✕</button>
-        </div>
-        <div class="vision-video-wrapper" style="position:relative; flex:1; width:100%; height:100%; min-height:280px; background:#000; overflow:hidden;">
-            <video id="ultron-camera-video" autoplay playsinline muted style="width:100%; height:100%; min-height:280px; object-fit:cover; transform:scaleX(-1); display:block;"></video>
-            <div class="vision-hud-reticle"></div>
-            <div class="vision-hud-scanline"></div>
-            <div style="position:absolute; bottom:12px; left:14px; background:rgba(10,6,2,0.85); border:1px solid #FFB300; border-radius:6px; padding:4px 10px; font-size:10px; color:#FFD54F; font-weight:800; letter-spacing:1px; z-index:10;">
-                ● LIVE MIRROR // HARSHA SIR LOCK
-            </div>
-            <div style="position:absolute; bottom:12px; right:14px; z-index:10;">
-                <button onclick="captureOpticalSnapshot()" style="background:linear-gradient(135deg, #FFB300, #FF6F00); border:none; border-radius:8px; padding:6px 14px; font-size:10px; font-weight:900; color:#000; cursor:pointer; letter-spacing:1px; box-shadow:0 0 14px rgba(255,179,0,0.6);">📸 SNAP & SCAN</button>
-            </div>
-        </div>
+
+    
+    <!-- EXACT 3 UP, 4 DOWN LAYOUT -->
+    <div id="top-dock" class="priority-dock top-dock">
+        <button class="action-btn" onclick="toggleOpticalVision()" title="Toggle Camera Video Feed">
+            <span class="action-icon">👁️</span><span class="action-text">VISION</span>
+        </button>
+        <button class="action-btn" onclick="toggleSessionChatPanel()" title="Open Session Chat">
+            <span class="action-icon">💬</span><span class="action-text">CHAT</span>
+        </button>
+        <button class="action-btn" onclick="toggleQRModal()" title="Pair Phone with Laptop">
+            <span class="action-icon">📱</span><span class="action-text">PAIR</span>
+        </button>
+    </div>
+
+    <div id="bottom-dock" class="priority-dock bottom-dock">
+        <button class="action-btn" onclick="switchDockTab('files')" title="Bi-Directional Drag & Drop Files">
+            <span class="action-icon">📁</span><span class="action-text">FILES</span>
+        </button>
+        <button class="action-btn" onclick="switchDockTab('remote')" title="Laptop & Phone Remote Controls">
+            <span class="action-icon">⚡</span><span class="action-text">REMOTE</span>
+        </button>
+        <button class="action-btn" onclick="toggleZenFocusModal()" title="Zen Focus Deep Study Shield">
+            <span class="action-icon">🛡️</span><span class="action-text">ZEN</span>
+        </button>
+        <button class="action-btn" id="action-vault-btn" onclick="openCommanderVault()" style="display:none;" title="Review Access Requests">
+            <span class="action-icon" style="color:#FFB300;">👑</span><span class="action-text" style="color:#FFB300;">REQUESTS</span>
+        </button>
+    </div>
+
+    <!-- Status & Logout (Moved to top right corners so they don't count towards the 7 main buttons) -->
+    <div style="position:fixed; top:20px; right:20px; z-index:999; display:flex; gap:10px;">
+        <div class="status-badge" id="badge" onclick="openChangePasswordModal()" style="cursor:pointer;" title="Change Password">🔴 OFFLINE</div>
+        <button class="action-btn" id="logout-btn-hud" onclick="logoutUser()" style="display:none; border-color:#FF5252;" title="Sign out">
+            <span class="action-text" style="color:#FF8A80;">LOGOUT</span>
+        </button>
+    </div>
+
     </div>
 
     <!-- 3D Luminous Golden Particle Swarm (Exact Screenshot Representation) -->
@@ -1045,32 +1056,14 @@
             </div>
 
             <div class="input-bar">
-                <input type="text" class="cmd-input" id="cmd-input" autocomplete="new-password" name="ultron_cmd_prompt_xyz" data-1p-ignore="true" data-lpignore="true" spellcheck="false" placeholder="Type command here..." onkeypress="handleKeyPress(event)">
+              <!-- Autofill Trap -->
+              <input type="text" name="fakeusernameremembered" style="display:none" aria-hidden="true">
+              <input type="password" name="fakepasswordremembered" style="display:none" aria-hidden="true">
+
+                <input type="text" class="cmd-input" id="cmd-input"   data-1p-ignore="true" data-lpignore="true" spellcheck="false" placeholder="Type command here..." onkeypress="handleKeyPress(event)">
                 <button class="send-btn" onclick="sendTextCommand()">SEND</button>
             </div>
-            <div class="action-dock">
-                <button class="action-btn" onclick="toggleSessionChatPanel()" title="Open Session Chat">
-                    <span class="action-icon">💬</span><span class="action-text">CHAT</span>
-                </button>
-                <button class="action-btn" onclick="toggleOpticalVision()" title="Toggle Camera Video Feed">
-                    <span class="action-icon">👁️</span><span class="action-text">VISION</span>
-                </button>
-                <button class="action-btn" onclick="switchDockTab('files')" title="Bi-Directional Drag & Drop Files">
-                    <span class="action-icon">📁</span><span class="action-text">FILES</span>
-                </button>
-                <button class="action-btn" onclick="switchDockTab('remote')" title="Laptop & Phone Remote Controls">
-                    <span class="action-icon">⚡</span><span class="action-text">REMOTE</span>
-                </button>
-                <button class="action-btn" onclick="toggleZenFocusModal()" title="Zen Focus Deep Study Shield">
-                    <span class="action-icon">🛡️</span><span class="action-text">ZEN</span>
-                </button>
-                <button class="action-btn" id="action-vault-btn" onclick="openCommanderVault()" style="display:none;" title="Review Access Requests">
-                    <span class="action-icon" style="color:#FFB300;">👑</span><span class="action-text" style="color:#FFB300;">REQUESTS</span>
-                </button>
-                <button class="action-btn" onclick="toggleQRModal()" title="Pair Phone with Laptop">
-                    <span class="action-icon">📱</span><span class="action-text">PAIR</span>
-                </button>
-            </div>
+            
 
         </div>
     </div>
@@ -1149,11 +1142,11 @@
 
         <!-- ── Direct Session Chat Input Bar for Quiet Places ── -->
         <form class="chat-drawer-input-bar" onsubmit="event.preventDefault(); sendDrawerMessage();" style="display:flex; gap:8px; padding:10px 14px calc(12px + env(safe-area-inset-bottom, 0px)) 14px; background:rgba(18,12,4,0.98); border-top:1px solid rgba(255,179,0,0.3); flex-shrink:0;">
-            <input type="text" id="drawer-chat-input" placeholder="Type a silent message or prompt..." autocomplete="off" style="flex:1; background:rgba(0,0,0,0.7); border:1.5px solid rgba(255,179,0,0.4); border-radius:10px; color:#FFE082; padding:10px 14px; font-size:13px; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='#FFD700'" onblur="this.style.borderColor='rgba(255,179,0,0.4)'">
+            <input type="text" id="drawer-chat-input" placeholder="Type a silent message or prompt..."  style="flex:1; background:rgba(0,0,0,0.7); border:1.5px solid rgba(255,179,0,0.4); border-radius:10px; color:#FFE082; padding:10px 14px; font-size:13px; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='#FFD700'" onblur="this.style.borderColor='rgba(255,179,0,0.4)'">
             <button type="submit" id="drawer-chat-send-btn" style="background:linear-gradient(135deg, #FFB300, #FF8F00); color:#000; border:none; border-radius:10px; padding:0 18px; font-weight:900; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(255,179,0,0.4);">
                 <span>SEND</span> ➔
             </button>
-        </form>
+        </div>
     </div>
 
     <!-- ── Change Password Modal ── -->
@@ -1180,7 +1173,7 @@
                     <input type="password" class="livelink-input" id="cpw-confirm" placeholder="Re-enter new password" required>
                 </div>
                 <button type="submit" class="livelink-btn" id="cpw-submit-btn" style="background:linear-gradient(135deg, #FFB300, #FF8F00); color:#000; font-weight:900;">UPDATE PASSWORD</button>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -1345,23 +1338,23 @@
             </div>
 
             <!-- 1. SIGN IN FORM (Strictly shown when SIGN IN tab is active) -->
-            <form class="livelink-form active-form" id="livelink-login-form" style="display:flex;" onsubmit="handleLoginSubmit(event)">
+            <div class="livelink-form active-form" id="livelink-login-form" style="display:flex;">
                 <div>
                     <label class="form-label">Email, Mobile Number or Username *</label>
-                    <input type="text" class="livelink-input" id="login-identifier" placeholder="e.g. harsha, email, or mobile" required autocomplete="username">
+                    <input type="text" class="livelink-input" id="login-identifier" placeholder="e.g. harsha, email, or mobile" required >
                 </div>
                 <div>
                     <label class="form-label">Password *</label>
-                    <input type="password" class="livelink-input" id="login-password" placeholder="Enter your password" required autocomplete="current-password">
+                    <input type="password" class="livelink-input" id="login-password" placeholder="Enter your password" required >
                 </div>
-                <button type="submit" class="livelink-btn" id="login-submit-btn">SIGN IN TO ULTRON</button>
+                <button type="button" class="livelink-btn" id="login-submit-btn" onclick="handleLoginSubmit(new Event('submit'))">SIGN IN TO ULTRON</button>
                 <div style="margin-top: 14px; display:flex; justify-content:flex-end; align-items:center;">
                     <button type="button" onclick="switchAuthTab('register')" style="background:none; border:none; color:#FFB300; font-size:12px; font-weight:600; cursor:pointer;">New here? Create Account →</button>
                 </div>
-            </form>
+            </div>
 
             <!-- 2. REGISTRATION FORM (Strictly shown ONLY when CREATE ACCOUNT tab is clicked) -->
-            <form class="livelink-form" id="livelink-register-form" style="display:none;" onsubmit="handleRegisterSubmit(event)">
+            <div class="livelink-form" id="livelink-register-form" style="display:none;">
                 <div style="display:flex; gap:10px;">
                     <div style="flex:1;">
                         <label class="form-label">First Name *</label>
@@ -1388,11 +1381,11 @@
                     <label class="form-label">Confirm Password *</label>
                     <input type="password" class="livelink-input" id="reg-password-confirm" placeholder="Confirm your password" required>
                 </div>
-                <button type="submit" class="livelink-btn" id="reg-submit-btn">REGISTER ULTRON ACCOUNT</button>
+                <button type="button" class="livelink-btn" id="reg-submit-btn" onclick="handleRegisterSubmit(new Event('submit'))">REGISTER ULTRON ACCOUNT</button>
                 <div style="margin-top: 12px; text-align: center;">
                     <button type="button" onclick="switchAuthTab('login')" style="background:none; border:none; color:#FFB300; font-size:12px; cursor:pointer; text-decoration:underline;">Already have an account? Sign In →</button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -2962,24 +2955,20 @@
                 document.getElementById('mic-btn').classList.add('active');
             };
 
+            
             recog.onresult = (e) => {
                 if (isSpeaking) return;
-                let currentInterim = '';
-                for (let i = e.resultIndex; i < e.results.length; ++i) {
-                    if (e.results[i].isFinal) {
-                        const chunk = e.results[i][0].transcript.trim();
-                        if (chunk) {
-                            speechAccumulator += (speechAccumulator ? ' ' : '') + chunk;
-                        }
-                    } else {
-                        currentInterim += e.results[i][0].transcript;
-                    }
+                let finalStr = '';
+                for (let i = 0; i < e.results.length; ++i) {
+                    finalStr += e.results[i][0].transcript;
                 }
-                const currentFullText = (speechAccumulator + ' ' + currentInterim).trim();
+                const currentFullText = finalStr.trim();
                 if (currentFullText) {
+                    speechAccumulator = currentFullText; // Overwrite entirely to prevent Android duplication
                     document.getElementById('cmd-input').value = currentFullText;
                     document.getElementById('user-text').innerText = "You: " + currentFullText;
                     scrollChatToBottom();
+
 
                     clearSpeechTimers();
                     countdownRemaining = 4;
@@ -3194,7 +3183,13 @@
                     
                     
                     // Rank 1: Explicit British Jarvis Male voice
-                    let bestVoice = englishNonFemale.find(v => {
+                    
+                  let bestVoice = null;
+                  if (typeof window._voiceOverrideIdx !== 'undefined' && window._voiceOverrideIdx >= 0) {
+                      const eng = allVoices.filter(v => v.lang.startsWith('en'));
+                      if (eng[window._voiceOverrideIdx]) bestVoice = eng[window._voiceOverrideIdx];
+                  } else {
+                      let bestVoice = englishNonFemale.find(v => {
                         const n = (v.name + ' ' + (v.voiceURI || '')).toLowerCase();
                         return n.includes('daniel') || n.includes('arthur') || n.includes('uk english male') || n.includes('oliver') || n.includes('george');
                     });
@@ -3232,7 +3227,7 @@
                     }
                     
                     // Force the pitch extremely low to guarantee Alpha Male resonance
-                    utter.pitch = 0.15; 
+                    utter.pitch = 0.9; 
 
 
 
@@ -3322,6 +3317,27 @@
 
             // ── Senior Engineer Executive Interceptors (Email, Pitch, Jobs) ──
             const lowerPrompt = val.toLowerCase().trim();
+
+            if (lowerPrompt === 'voice' || lowerPrompt === 'change voice') {
+                if (typeof window._voiceOverrideIdx === 'undefined') window._voiceOverrideIdx = -1;
+                window._voiceOverrideIdx++;
+                const available = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+                if (window._voiceOverrideIdx >= available.length) window._voiceOverrideIdx = 0;
+                
+                const selected = available[window._voiceOverrideIdx];
+                if (selected) {
+                    const msg = "Voice changed to " + selected.name;
+                    document.getElementById('ai-text').innerText = "ULTRON: " + msg;
+                    
+                    const utter = new SpeechSynthesisUtterance(msg);
+                    utter.voice = selected;
+                    utter.pitch = 0.8;
+                    window.speechSynthesis.speak(utter);
+                }
+                if (!overrideVal) input.value = "";
+                return;
+            }
+
 
             if (lowerPrompt.includes('adjust pitch') || lowerPrompt.includes('change pitch') || lowerPrompt.includes('the pitch') || lowerPrompt.includes('pitch')) {
                 currentVoicePitch = 0.82;
