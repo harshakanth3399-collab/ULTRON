@@ -169,7 +169,7 @@
             background: rgba(255, 179, 0, 0.08);
             border: 1px solid rgba(255, 179, 0, 0.45);
             color: #FFB300;
-            box-shadow: 0 0 12px rgba(255, 179, 0, 0.18);
+            
         }
 
         /* 3D Golden Particle Orb Container */
@@ -223,7 +223,7 @@
             border-radius: 50%;
             background: rgba(15, 10, 0, 0.6);
             border: 2px solid #FFB300;
-            box-shadow: 0 0 30px rgba(255, 179, 0, 0.35), inset 0 0 15px rgba(255, 179, 0, 0.15);
+            
             display: flex;
             justify-content: center;
             align-items: center;
@@ -232,16 +232,16 @@
         }
         .mic-btn:hover {
             transform: scale(1.06);
-            box-shadow: 0 0 40px rgba(255, 179, 0, 0.65), inset 0 0 20px rgba(255, 179, 0, 0.3);
+            
             border-color: #FFD54F;
         }
         .mic-btn.active {
-            box-shadow: 0 0 50px rgba(255, 179, 0, 0.85), inset 0 0 25px rgba(255, 179, 0, 0.5);
+            
             border-color: #FFE082;
             animation: pulse-gold-ring 1.5s infinite alternate;
         }
         @keyframes pulse-gold-ring {
-            from { transform: scale(1.0); box-shadow: 0 0 30px rgba(255, 179, 0, 0.4); }
+            from { transform: scale(1.0);  }
             to { transform: scale(1.05); box-shadow: 0 0 55px rgba(255, 179, 0, 0.9); }
         }
 
@@ -272,9 +272,7 @@
             backdrop-filter: blur(16px);
         }
         
-        .cmd-input::placeholder {
-            color: rgba(255, 215, 100, 0.4);
-        }
+        
         .send-btn {
             background: linear-gradient(135deg, #FFB300, #FF8F00);
             border: none;
@@ -286,11 +284,11 @@
             cursor: pointer;
             letter-spacing: 1px;
             transition: all 0.2s;
-            box-shadow: 0 0 12px rgba(255, 179, 0, 0.4);
+            
         }
         .send-btn:hover {
             transform: scale(1.04);
-            box-shadow: 0 0 18px rgba(255, 179, 0, 0.7);
+            
         }
 
         /* ── Slide-Out Session Chat Panel (Left Drawer) ── */
@@ -985,19 +983,7 @@
             flex-direction: column;
         }
 
-        .cmd-input {
-            flex-grow: 1;
-            background: rgba(220, 240, 255, 0.9);
-            border: 2px solid rgba(0, 229, 255, 0.5);
-            padding: 14px 18px;
-            font-size: 16px; /* Prevents iOS auto-zoom */
-            color: #000;
-            font-weight: 700;
-            border-radius: 8px 0 0 8px;
-            outline: none;
-            transition: all 0.3s;
-            appearance: none;
-        }
+        
         
         .livelink-input {
             font-size: 16px;
@@ -1012,7 +998,7 @@
         }
 
         @media (max-width: 767px) {
-            .cmd-input { font-size: 16px; }
+            
             .action-btn { 
                 padding: 10px 10px;
                 min-height: 44px; /* Minimum thumb tap target */
@@ -1081,6 +1067,39 @@
             margin-bottom: 15px;
         }
         .flex-1 { flex: 1; }
+
+    
+        .cmd-input {
+            flex-grow: 1;
+            background: #0d0d0d;
+            border: 1px solid rgba(255, 180, 0, 0.4);
+            padding: 14px 18px;
+            font-size: 16px; /* Prevents iOS auto-zoom */
+            color: #ffffff;
+            font-weight: 500;
+            border-radius: 8px 0 0 8px;
+            outline: none !important;
+            transition: all 0.2s;
+            appearance: none;
+            -webkit-appearance: none;
+            color-scheme: dark;
+        }
+        .cmd-input:focus {
+            border-color: rgba(255, 180, 0, 0.8);
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        .cmd-input::placeholder {
+            color: rgba(255, 180, 0, 0.5);
+        }
+        .cmd-input:-webkit-autofill,
+        .cmd-input:-webkit-autofill:hover, 
+        .cmd-input:-webkit-autofill:focus, 
+        .cmd-input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px #0d0d0d inset !important;
+            -webkit-text-fill-color: #ffffff !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
 
     </style>
 </head>
@@ -3096,10 +3115,17 @@
 
                     silenceTimer = setTimeout(() => {
                         clearSpeechTimers();
-                        if (!isSpeaking && (handsFreeVoice || isRecognizing) && currentFullText) {
-                            const toSend = currentFullText;
-                            speechAccumulator = '';
-                            sendTextCommand(toSend);
+                        if (!isSpeaking && (handsFreeVoice || isRecognizing)) {
+                            if (currentFullText) {
+                                const toSend = currentFullText;
+                                speechAccumulator = '';
+                                sendTextCommand(toSend);
+                            } else {
+                                const msg = "I didn't catch that. Could you repeat?";
+                                document.getElementById('ai-text').innerText = "ULTRON: " + msg;
+                                appendToChatStream('ai', msg);
+                                speakMobileResponse(msg);
+                            }
                         }
                     }, 4000); // 4.0 seconds allows continuous multi-sentence thoughts without premature cutoff!
                 }
@@ -3383,6 +3409,13 @@
             updateBadge('● PROCESSING...', '#FF9100');
             document.getElementById('state-text').innerText = "PROCESSING COMMAND...";
 
+            const reqBody = {
+                command: val,
+                token: liveLinkToken,
+                history: getSessionHistory(),
+                permanent_memory: getPermanentMemory()
+            };
+            console.log("--> API REQUEST /command:", reqBody);
             fetch('/api/command', {
                 method: 'POST',
                 headers: {
@@ -3390,22 +3423,24 @@
                     'Authorization': `Bearer ${liveLinkToken}`,
                     'X-LiveLink-Token': liveLinkToken
                 },
-                body: JSON.stringify({
-                    command: val,
-                    token: liveLinkToken,
-                    history: getSessionHistory(),
-                    permanent_memory: getPermanentMemory()
-                })
+                body: JSON.stringify(reqBody)
             })
             .then(res => {
+                console.log("<-- API RESPONSE /command status:", res.status);
                 if (res.status === 403) {
                     showToast('Access restricted! Awaiting permission from Harsha.');
                     checkGatekeeperStatus();
                     return { reply: 'Access restricted. You must be authorized by Harsha.' };
                 }
+                if (!res.ok) {
+                    return res.json().then(errData => {
+                        throw new Error(errData.error || `HTTP ${res.status}`);
+                    });
+                }
                 return res.json();
             })
             .then(data => {
+                console.log("<-- API RESPONSE DATA /command:", data); {
                 const rep = data.reply || data.response;
                 if (rep) {
                     document.getElementById('ai-text').innerText = "ULTRON: " + rep;
@@ -3449,8 +3484,12 @@
                 }
             })
             .catch(err => {
-                offlineCommandQueue.push(val);
-                showToast("Connection drop. Command queued for retry.");
+                console.error("API ERROR /command:", err);
+                const errMsg = "AI service unreachable: " + err.message;
+                document.getElementById('ai-text').innerText = "ULTRON: " + errMsg;
+                appendToChatStream('ai', errMsg);
+                speakMobileResponse(errMsg);
+                showToast(errMsg);
                 if (handsFreeVoice) setTimeout(startHandsFreeVoice, 2000);
             });
         }
@@ -4387,6 +4426,7 @@
     <!-- ── Mobile Phone Bottom Navigation Dock (Thumb-Friendly Experience) ── -->
     
 
+<div id="version-stamp" style="position:fixed; bottom:2px; right:4px; font-size:9px; color:rgba(255,255,255,0.2); z-index:9999; pointer-events:none;">v2026-10-08-a</div>
 </body>
 </html>
 

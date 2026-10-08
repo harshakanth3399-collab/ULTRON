@@ -995,7 +995,7 @@ class handler(BaseHTTPRequestHandler):
             cmd = data.get("command", "").strip()
             token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
             if not cmd:
-                self._send_json({"response": "I didn't catch that. Could you repeat?"})
+                self._send_json({"success": False, "error": "Empty command string."}, status=400)
                 return
 
             user_name = "Friend"
@@ -1120,10 +1120,8 @@ class handler(BaseHTTPRequestHandler):
                 reply = _ask_groq(cmd, user_name, role, history=history, permanent_memory=permanent_mem)
             except Exception as e:
                 print(f"[GROQ ERROR] {e}")
-                if role == "ADMIN":
-                    reply = "Harsha Sir, I am fully online and attentive. I have noted your directive."
-                else:
-                    reply = f"Hello {user_name}, I am here and ready to help you."
+                self._send_json({"success": False, "error": f"AI service unreachable: {str(e)}"}, status=500)
+                return
 
             # Store chat in user_chats table
             try:
