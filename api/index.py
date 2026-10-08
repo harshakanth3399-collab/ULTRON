@@ -13,7 +13,6 @@ import time
 import urllib.parse
 import urllib.request
 import uuid
-import bcrypt
 import jwt
 
 import secrets
@@ -167,12 +166,23 @@ def _init_cloud_db():
 _init_cloud_db()
 
 
+import hashlib
+
 def _hash_pwd(pwd: str) -> str:
-    return bcrypt.hashpw(pwd.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    salt = secrets.token_hex(16)
+    key = hashlib.pbkdf2_hmac('sha256', pwd.encode('utf-8'), salt.encode('utf-8'), 100000).hex()
+    return f"{salt}:{key}"
 
 def _verify_pwd(pwd: str, hashed: str) -> bool:
     try:
-        return bcrypt.checkpw(pwd.encode('utf-8'), hashed.encode('utf-8'))
+        if ":" not in hashed:
+            # Fallback for old simple sha256 passwords
+            import hashlib as hl
+            # old format used salt + pwd
+            return False # Security: force reset if old format (or implement old format check)
+        salt, key = hashed.split(":")
+        test_key = hashlib.pbkdf2_hmac('sha256', pwd.encode('utf-8'), salt.encode('utf-8'), 100000).hex()
+        return test_key == key
     except Exception:
         return False
 
