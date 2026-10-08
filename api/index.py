@@ -839,7 +839,7 @@ class handler(BaseHTTPRequestHandler):
             parse_err = str(e)
 
         if path.endswith("/test_headers"):
-            self._send_json({"headers": dict(self.headers), "body": body.decode('utf-8', errors='ignore'), "data": data, "cl": content_length})
+            self._send_json({"headers": dict(self.headers), "body": body.decode('utf-8', errors='ignore'), "data": data, "cl": content_length, "parse_err": parse_err})
             return
             
         # 1. User Registration
