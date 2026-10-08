@@ -1,5 +1,4 @@
-// ULTRON LiveLink Service Worker
-const CACHE_NAME = 'ultron-livelink-v1';
+const CACHE_NAME = 'ultron-livelink-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -11,15 +10,34 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Let dynamic API requests pass through to the live laptop server
   if (event.request.url.includes('/api/')) {
     event.respondWith(fetch(event.request));
     return;
   }
+  
+  // Network-first with cache-busting for HTML
+  if (event.request.mode === 'navigate' || event.request.url.includes('index.html')) {
+      event.respondWith(
+          fetch(event.request, { cache: 'no-cache' })
+          .catch(() => caches.match(event.request))
+      );
+      return;
+  }
+
   event.respondWith(
     fetch(event.request).catch(() => caches.match(event.request))
   );
