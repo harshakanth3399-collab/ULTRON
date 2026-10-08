@@ -822,11 +822,14 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = self._get_path()
-        cl = self.headers.get("Content-Length") or self.headers.get("content-length") or "0"
+        content_length = 0
         try:
-            content_length = int(cl)
-        except ValueError:
-            content_length = 0
+            for k, v in self.headers.items():
+                if k.lower() == "content-length":
+                    content_length = int(v)
+                    break
+        except Exception:
+            pass
         body = self.rfile.read(content_length) if content_length > 0 else b""
         data = {}
         parse_err = ""
