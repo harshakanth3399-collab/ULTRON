@@ -5,9 +5,16 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 30
+    },
+    "api/test_sqlite.py": {
+      "maxDuration": 10
     }
   },
   "rewrites": [
+    {
+      "source": "/api/test_sqlite",
+      "destination": "/api/test_sqlite.py"
+    },
     {
       "source": "/api/(.*)",
       "destination": "/api/index.py?_path=/api/$1"
