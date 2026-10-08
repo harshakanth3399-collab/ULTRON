@@ -100,7 +100,8 @@ def _get_env_val(key: str, default: str = "") -> str:
 GROQ_API_KEY = _get_env_val("GROQ_API_KEY", DEFAULT_GROQ_KEY) or DEFAULT_GROQ_KEY
 
 GMAIL_USER = _get_env_val("GMAIL_USER", "harshakanth3399@gmail.com")
-GMAIL_APP_PASSWORD = _get_env_val("GMAIL_APP_PASSWORD", "Harsha@6302692136")\nJWT_SECRET = _get_env_val("JWT_SECRET", "ultron-fallback-dev-secret-do-not-use-in-prod")
+GMAIL_APP_PASSWORD = _get_env_val("GMAIL_APP_PASSWORD", "Harsha@6302692136")
+JWT_SECRET = _get_env_val("JWT_SECRET", "ultron-fallback-dev-secret-do-not-use-in-prod")
 _GEMINI_KEY_BYTES = [65, 81, 46, 65, 98, 56, 82, 78, 54, 74, 50, 90, 86, 52, 116, 103, 109, 109, 105, 117, 111, 102, 85, 50, 115, 85, 102, 66, 70, 97, 114, 90, 81, 120, 74, 88, 104, 88, 114, 67, 53, 112, 112, 97, 50, 77, 70, 105, 118, 122, 79, 104, 81]
 DEFAULT_GEMINI_KEY = "".join(chr(b) for b in _GEMINI_KEY_BYTES)
 GEMINI_API_KEY = _get_env_val("GEMINI_API_KEY", DEFAULT_GEMINI_KEY) or DEFAULT_GEMINI_KEY
@@ -821,188 +822,128 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             parse_err = str(e)
 
-        # ── 1. User Registration ──
-        
-        if path.endswith("/debug_post"):
-            self._send_json({"body_str": body.decode("utf-8") if isinstance(body, bytes) else str(body), "data": data, "err": parse_err})
-            return
-
+        # 1. User Registration
         if path.endswith("/register"):
             fn = data.get("first_name", "").strip()
             ln = data.get("last_name", "").strip()
-            phone = re.sub(r"[^\d+]", "", data.get("phone", "").strip())
+            phone = data.get("phone", "").strip()
             email = data.get("email", "").strip().lower()
             password = data.get("password", "").strip()
 
             if not fn or not ln:
-                self._send_json({"success": False, "error": "First Name and Last Name are required."}, status=400)
+                self._send_json({"ok": False, "error": "First Name and Last Name are required."}, status=400)
                 return
-            if len(re.sub(r"\D", "", phone)) < 10:
-                self._send_json({"success": False, "error": "A valid 10-digit mobile number is required."}, status=400)
+            if len(phone) < 10:
+                self._send_json({"ok": False, "error": "A valid 10-digit mobile number is required."}, status=400)
                 return
             if "@" not in email or "." not in email:
-                self._send_json({"success": False, "error": "A valid email address is required."}, status=400)
+                self._send_json({"ok": False, "error": "A valid email address is required."}, status=400)
                 return
             if len(password) < 6:
-                self._send_json({"success": False, "error": "Password must be at least 6 characters."}, status=400)
+                self._send_json({"ok": False, "error": "Password must be at least 6 characters."}, status=400)
                 return
 
-            full_name = f"{fn} {ln}".strip()
-            salt = uuid.uuid4().hex[:16]
-            pwd_hash = _hash_pwd(password, salt)
-            now = time.time()
-            token = f"ll_{uuid.uuid4().hex}"
-            role = "ADMIN" if "harsha" in full_name.lower() or "harsha" in email else "USER"
-
             try:
+                import time
+                import jwt
                 conn = get_db_connection()
                 cur = conn.cursor()
                 cur.execute("SELECT id FROM livelink_users WHERE email = ? OR phone = ?", (email, phone))
                 if cur.fetchone():
                     conn.close()
-                    self._send_json({"success": False, "error": "An account with this email or mobile already exists. Please Sign In."}, status=400)
+                    self._send_json({"ok": False, "error": "Account already exists with this email or phone."}, status=409)
                     return
-
-                user_status = "APPROVED" if role == "ADMIN" else "PENDING"
+                
+                pwd_hash = _hash_pwd(password)
+                now = time.time()
+                name = f"{fn} {ln}".strip()
+                
+                role = "USER"
+                status = "APPROVED"
+                
                 cur.execute(
-                    """
-                    INSERT INTO livelink_users
-                    (name, first_name, last_name, phone, email, password_hash, salt, role, status, access_token, registered_at, last_active_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (full_name, fn, ln, phone, email, pwd_hash, salt, role, user_status, token, now, now),
+                    "INSERT INTO livelink_users (name, first_name, last_name, phone, email, password_hash, salt, role, status, access_token, registered_at, last_active_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (name, fn, ln, phone, email, pwd_hash, "", role, status, "PENDING_JWT", now, now)
                 )
+                user_id = cur.lastrowid
                 conn.commit()
                 conn.close()
+
+                token = jwt.encode({"user_id": user_id, "email": email, "role": role}, JWT_SECRET, algorithm="HS256")
+                
+                _notify_harsha_email(name, phone, email)
+
+                self._send_json({
+                    "ok": True,
+                    "token": token,
+                    "name": name,
+                    "first_name": fn,
+                    "last_name": ln,
+                    "email": email,
+                    "phone": phone,
+                    "role": role,
+                    "status": status,
+                    "message": "Registration successful."
+                })
             except Exception as e:
-                print(f"[REGISTRATION DB ERROR] {e}")
-
-            # Notify Harsha Sir via email
-            try:
-                _notify_harsha_email(full_name, phone, email)
-            except Exception:
-                pass
-
-            if user_status == "PENDING":
-                self._send_json({
-                    "success": True,
-                    "pending": True,
-                    "status": "PENDING",
-                    "token": token,
-                    "name": full_name,
-                    "first_name": fn,
-                    "last_name": ln,
-                    "email": email,
-                    "phone": phone,
-                    "role": role,
-                    "message": f"Hello {fn}, your access request has been sent to Harsha Sir. Once approved, you can start using your personal ULTRON!"
-                })
-            else:
-                self._send_json({
-                    "success": True,
-                    "status": "APPROVED",
-                    "token": token,
-                    "name": full_name,
-                    "first_name": fn,
-                    "last_name": ln,
-                    "email": email,
-                    "phone": phone,
-                    "role": role,
-                    "message": f"Welcome Harsha Sir! All systems operational."
-                })
+                self._send_json({"ok": False, "error": f"Server error: {str(e)}"}, status=500)
             return
 
-        # ── 2. User Sign In ──
+        # 2. User Sign In
         if path.endswith("/login"):
             ident = data.get("identifier", "").strip().lower()
             pwd = data.get("password", "").strip()
 
-            # Harsha Sir Master Secure Login (Supports 'harsha', emails with '@', phone, or name)
-            is_harsha_ident = (
-                ident in ("harsha", "harshakanth", "harshakanth3399", "admin", "harshakanth3399@gmail.com", "harshakanth@ultron.ai")
-                or "harsha" in ident
-            )
-            is_harsha_pwd = (
-                pwd in ("Harsha@123", "Harsha@2026", "harsha123", "Harsha@Ultron", "harsha")
-                or pwd.lower() == "harsha@123"
-            )
-            # Check if Harsha Sir custom password exists in database
-            harsha_custom_match = False
-            try:
-                conn = get_db_connection()
-                conn.row_factory = sqlite3.Row
-                cur = conn.cursor()
-                cur.execute("SELECT * FROM livelink_users WHERE email = 'harshakanth@ultron.ai' OR phone = '+919999999999' OR role = 'ADMIN' ORDER BY id DESC LIMIT 1")
-                h_row = cur.fetchone()
-                conn.close()
-                if h_row:
-                    h_salt = h_row["salt"] or ""
-                    h_hash = h_row["password_hash"] or ""
-                    if h_hash and _hash_pwd(pwd, h_salt) == h_hash:
-                        harsha_custom_match = True
-            except Exception:
-                pass
-
-            if is_harsha_ident and (is_harsha_pwd or harsha_custom_match):
-                self._send_json({
-                    "success": True,
-                    "token": MASTER_TOKEN,
-                    "name": "Harsha Sir",
-                    "first_name": "Harsha Sir",
-                    "last_name": "",
-                    "email": "harshakanth@ultron.ai",
-                    "phone": "+919999999999",
-                    "role": "ADMIN",
-                    "status": "APPROVED",
-                    "message": "Welcome back, Harsha Sir! All systems operational."
-                })
+            if not ident or not pwd:
+                self._send_json({"ok": False, "error": "Email/Phone and Password are required."}, status=400)
                 return
 
-            clean_phone = re.sub(r"[^\d+]", "", ident)
             try:
+                import time
+                import jwt
                 conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
-                cur.execute("SELECT * FROM livelink_users WHERE email = ? OR phone = ? OR LOWER(first_name) = ? OR LOWER(name) = ? ORDER BY id DESC LIMIT 1", (ident, clean_phone, ident, ident))
+                cur.execute("SELECT * FROM livelink_users WHERE email = ? OR phone = ? ORDER BY id DESC LIMIT 1", (ident, ident))
                 row = cur.fetchone()
                 conn.close()
 
                 if row:
-                    salt = row["salt"] or ""
                     expected_hash = row["password_hash"] or ""
-                    if expected_hash and _hash_pwd(pwd, salt) == expected_hash:
+                    is_valid = _verify_pwd(pwd, expected_hash)
+                    
+                    if is_valid:
                         u_status = row["status"] or "PENDING"
-                        if u_status == "PENDING":
-                            self._send_json({
-                                "success": False,
-                                "pending": True,
-                                "error": "Access Request Pending: Awaiting authorization from Harsha Sir."
-                            }, status=403)
+                        if u_status != "APPROVED":
+                            self._send_json({"ok": False, "error": "Account is pending Harsha's approval."}, status=403)
                             return
-                        if u_status == "REJECTED":
-                            self._send_json({
-                                "success": False,
-                                "error": "Access Request Declined by Harsha Sir."
-                            }, status=403)
-                            return
+                        
+                        token = jwt.encode({"user_id": row["id"], "email": row["email"], "role": row["role"]}, JWT_SECRET, algorithm="HS256")
+                        
+                        conn = get_db_connection()
+                        conn.execute("UPDATE livelink_users SET access_token = ?, last_active_at = ? WHERE id = ?", (token, time.time(), row["id"]))
+                        conn.commit()
+                        conn.close()
 
                         self._send_json({
-                            "success": True,
-                            "status": "APPROVED",
-                            "token": row["access_token"],
+                            "ok": True,
+                            "token": token,
                             "name": row["name"],
-                            "first_name": row["first_name"] or row["name"].split(" ")[0],
-                            "last_name": row["last_name"] or "",
+                            "first_name": row["first_name"],
+                            "last_name": row["last_name"],
                             "email": row["email"],
                             "phone": row["phone"],
-                            "role": row["role"] or "USER",
-                            "message": f"Hello {row['first_name'] or row['name']}, I am ULTRON, your personal AI assistant. How can I help you today?"
+                            "role": row["role"],
+                            "status": u_status,
+                            "message": f"Welcome back, {row['first_name']}!"
                         })
-                        return
-            except Exception:
-                pass
+                    else:
+                        self._send_json({"ok": False, "error": "Wrong password."}, status=401)
+                else:
+                    self._send_json({"ok": False, "error": "Account not found."}, status=404)
 
-            self._send_json({"success": False, "error": "Incorrect Email/Phone or Password."}, status=401)
+            except Exception as e:
+                self._send_json({"ok": False, "error": f"Server error: {str(e)}"}, status=500)
             return
 
         # ── 3. AI Chat / Voice Command (Multi-Tenant, Saved per User) ──
