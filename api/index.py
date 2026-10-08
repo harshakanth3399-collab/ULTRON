@@ -835,6 +835,10 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             parse_err = str(e)
 
+                if path.endswith("/test_headers"):
+            self._send_json(dict(self.headers))
+            return
+            
         # 1. User Registration
         if path.endswith("/register"):
             fn = data.get("first_name", "").strip()
