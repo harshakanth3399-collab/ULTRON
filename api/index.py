@@ -718,8 +718,7 @@ class handler(BaseHTTPRequestHandler):
                 
                 settings = {"voice": "onyx", "speed": 1.0, "pitch": 1.0, "provider": "openai"}
                 if row and row["voice_settings"]:
-                    import json
-                    settings.update(json.loads(row["voice_settings"]))
+                        settings.update(json.loads(row["voice_settings"]))
                     
                 self._send_json({"success": True, "settings": settings})
             except Exception as e:
@@ -1327,7 +1326,6 @@ class handler(BaseHTTPRequestHandler):
                 
             try:
                 import urllib.request
-                import json
                 
                 req = urllib.request.Request(
                     "https://api.openai.com/v1/audio/speech",
