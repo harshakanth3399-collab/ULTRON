@@ -838,7 +838,7 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             parse_err = str(e)
 
-                if path.endswith("/test_headers"):
+        if path.endswith("/test_headers"):
             self._send_json(dict(self.headers))
             return
             
