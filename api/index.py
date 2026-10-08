@@ -806,15 +806,16 @@ class handler(BaseHTTPRequestHandler):
         content_length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(content_length) if content_length > 0 else b""
         data = {}
+        parse_err = ""
         try:
             data = json.loads(body.decode("utf-8")) if body else {}
-        except Exception:
-            pass
+        except Exception as e:
+            parse_err = str(e)
 
         # ── 1. User Registration ──
         
         if path.endswith("/debug_post"):
-            self._send_json({"body_str": body.decode("utf-8") if body else "EMPTY", "data": data, "headers": dict(self.headers)})
+            self._send_json({"body_str": body.decode("utf-8") if isinstance(body, bytes) else str(body), "data": data, "err": parse_err})
             return
 
         if path.endswith("/register"):
