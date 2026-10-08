@@ -1175,6 +1175,20 @@ class handler(BaseHTTPRequestHandler):
             return
 
         # ── 5. Harsha Sir Gatekeeper Approval ──
+        # User Logout
+        if path.endswith("/logout"):
+            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
+            if token:
+                try:
+                    conn = get_db_connection()
+                    conn.execute("UPDATE livelink_users SET access_token = NULL WHERE access_token = ?", (token,))
+                    conn.commit()
+                    conn.close()
+                except Exception:
+                    pass
+            self._send_json({"ok": True, "success": True, "message": "Logged out successfully."})
+            return
+
         if path.endswith("/approve_user"):
             token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
             if token != MASTER_TOKEN:
