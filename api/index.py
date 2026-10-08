@@ -812,6 +812,11 @@ class handler(BaseHTTPRequestHandler):
             pass
 
         # ── 1. User Registration ──
+        
+        if path.endswith("/debug_post"):
+            self._send_json({"body_str": body.decode("utf-8") if body else "EMPTY", "data": data, "headers": dict(self.headers)})
+            return
+
         if path.endswith("/register"):
             fn = data.get("first_name", "").strip()
             ln = data.get("last_name", "").strip()
