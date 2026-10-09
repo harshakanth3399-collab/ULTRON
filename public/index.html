@@ -954,7 +954,7 @@
         .bottom-dock { bottom: 20px; }
 
         @media (max-width: 767px) {
-            .top-dock { top: 15px; width: 95%; justify-content: space-evenly; }
+            .top-dock { top: 60px; width: 95%; justify-content: space-evenly; }
             .bottom-dock { bottom: 15px; width: 95%; justify-content: space-evenly; }
             .action-btn { padding: 6px 10px; border-radius: 12px; }
             .action-text { font-size: 10px; }
@@ -1805,7 +1805,8 @@
                 deferredPrompt.userChoice.then((choice) => {
                     if (choice && choice.outcome === 'accepted') {
                         showToast('ULTRON installed to phone successfully!');
-                        document.getElementById('pwa-install-btn').style.display = 'none';
+                        const pEl = document.getElementById('pwa-install-btn');
+                        if (pEl) pEl.style.display = 'none';
                     }
                     deferredPrompt = null;
                 });
@@ -1858,8 +1859,10 @@
                         showToast(`Access granted by Harsha! Welcome, ${data.name}.`);
                         sendPushNotification("ULTRON LiveLink", "Access granted by Harsha! ULTRON is unlocked.");
                     } else if (data.status === 'DENIED' || data.status === 'REVOKED') {
-                        document.getElementById('pending-box').style.display = 'none';
-                        document.getElementById('livelink-form').style.display = 'flex';
+                        const pBox = document.getElementById('pending-box');
+                        if (pBox) pBox.style.display = 'none';
+                        const llForm = document.getElementById('livelink-form');
+                        if (llForm) llForm.style.display = 'flex';
                         updateBadge('● RESTRICTED', '#FF3D00');
                         showToast('Access was denied by Harsha.');
                     }
@@ -4426,7 +4429,7 @@
     <!-- ── Mobile Phone Bottom Navigation Dock (Thumb-Friendly Experience) ── -->
     
 
-<div id="build-stamp" style="position:fixed; bottom:5px; right:5px; font-size:10px; color:rgba(255,180,0,0.8); z-index:99999; pointer-events:none; font-family:monospace; background:rgba(0,0,0,0.8); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,180,0,0.4);">Phase0-v2</div>
+<div id="build-stamp" style="position:fixed; bottom:5px; right:5px; font-size:10px; color:rgba(255,180,0,0.8); z-index:99999; pointer-events:none; font-family:monospace; background:rgba(0,0,0,0.8); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,180,0,0.4);">Phase0-v3</div>
 </body>
 </html>
 
