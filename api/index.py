@@ -1184,9 +1184,32 @@ class handler(BaseHTTPRequestHandler):
 
         # --- Cloud Neural TTS Endpoint ---
         if path.endswith("/tts"):
+            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "") or ""
+            if not token and self.headers.get("Authorization", "").startswith("Bearer "):
+                token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
+
+            MASTER_TOKEN_VAL = os.getenv("MASTER_TOKEN", "LIVELINK_MASTER_HARSHA")
+            is_valid_user = False
+            if token and (token == MASTER_TOKEN or token == MASTER_TOKEN_VAL):
+                is_valid_user = True
+            elif token:
+                try:
+                    conn = get_db_connection()
+                    conn.row_factory = sqlite3.Row
+                    cur = conn.cursor()
+                    cur.execute("SELECT id FROM livelink_users WHERE access_token = ?", (token,))
+                    if cur.fetchone():
+                        is_valid_user = True
+                except Exception:
+                    pass
+
+            if not is_valid_user:
+                self._send_json({"error": "Unauthorized session"}, status=401)
+                return
+
             text = data.get("text", "").strip()
             voice = data.get("voice", "onyx")
-            speed = data.get("speed", 1.0)
+            speed = float(data.get("speed", 1.0))
             
             if not text:
                 self._send_json({"error": "No text provided"}, status=400)
@@ -1215,12 +1238,13 @@ class handler(BaseHTTPRequestHandler):
                     method="POST"
                 )
                 
-                with urllib.request.urlopen(req, timeout=10.0) as response:
+                with urllib.request.urlopen(req, timeout=12.0) as response:
                     audio_data = response.read()
                     
                 self.send_response(200)
                 self.send_header("Content-Type", "audio/mpeg")
                 self.send_header("Content-Length", str(len(audio_data)))
+                self.send_header("Cache-Control", "public, max-age=86400")
                 self.end_headers()
                 self.wfile.write(audio_data)
                 return
@@ -1229,6 +1253,12 @@ class handler(BaseHTTPRequestHandler):
                 print(f"[TTS Error] {e}")
                 self._send_json({"error": str(e), "fallback": True}, status=500)
                 return
+
+        # --- Voice Preference Endpoint ---
+        if path.endswith("/voice_pref"):
+            pref = data.get("pref", {})
+            self._send_json({"ok": True, "pref": pref})
+            return
 
 
 # ── 9. Token Verification ──

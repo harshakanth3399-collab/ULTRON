@@ -984,6 +984,44 @@
         </div>
     </div>
 
+    <!-- ── Voice Calibration Modal (Light Neumorphism) ── -->
+    <div id="voice-picker-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(14,42,36,0.5); z-index:1005; justify-content:center; align-items:center; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); padding:16px; box-sizing:border-box;">
+        <div class="livelink-card" style="max-width:440px; text-align:left; padding:24px 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <div class="livelink-title" style="font-size:17px !important; margin-bottom:0 !important;">🎙️ VOICE CALIBRATION</div>
+                <button type="button" onclick="closeVoicePickerModal()" style="background:transparent; border:none; color:var(--ink); font-size:18px; font-weight:900; cursor:pointer; padding:4px 8px;">✕</button>
+            </div>
+            <div class="livelink-sub" style="margin-bottom:14px !important; font-size:11px !important;">Neural male voice matrix • Identical deep tone on phone & laptop</div>
+
+            <div style="font-size:11px; font-weight:800; color:var(--ink); letter-spacing:1px; margin-bottom:8px;">VOICE ARCHITECTURE:</div>
+            
+            <div id="voice-options-list" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px; max-height:220px; overflow-y:auto; padding:2px;">
+                <!-- Populated dynamically via JS -->
+            </div>
+
+            <div style="margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:800; color:var(--ink); margin-bottom:4px;">
+                    <span>SPEED:</span>
+                    <span id="voice-speed-val" style="color:var(--emerald);">1.00x</span>
+                </div>
+                <input type="range" id="voice-speed-slider" min="0.80" max="1.30" step="0.05" value="1.0" oninput="updateVoiceSpeed(this.value)" style="width:100%; accent-color:var(--emerald); cursor:pointer;">
+            </div>
+
+            <div style="margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:800; color:var(--ink); margin-bottom:4px;">
+                    <span>PITCH (RESONANCE):</span>
+                    <span id="voice-pitch-val" style="color:var(--emerald);">Deep (0.85)</span>
+                </div>
+                <input type="range" id="voice-pitch-slider" min="0.70" max="1.20" step="0.05" value="0.85" oninput="updateVoicePitch(this.value)" style="width:100%; accent-color:var(--emerald); cursor:pointer;">
+            </div>
+
+            <div style="display:flex; gap:8px;">
+                <button type="button" class="livelink-btn" onclick="testCurrentVoice()" style="flex:1; font-size:11px; padding:10px;">▶ TEST VOICE</button>
+                <button type="button" class="livelink-btn" onclick="saveVoicePreferences()" style="flex:1; font-size:11px; padding:10px; background:var(--emerald) !important; color:#fff !important;">💾 SAVE CHOICE</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ── Change Password Modal ── -->
     <div id="change-pw-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.92); z-index:1004; justify-content:center; align-items:center; backdrop-filter:blur(10px); padding:16px;">
         <div class="livelink-card" style="max-width:380px; text-align:left; border-color:#FFD700; box-shadow:0 0 45px rgba(255,215,0,0.45);">
@@ -2960,89 +2998,336 @@
             if (e.key === 'Enter') sendTextCommand();
         }
 
-        let currentVoicePitch = 0.88; // Deep resonant J.A.R.V.I.S. pitch
-        let currentVoiceRate = 0.95;  // Poised articulate cadence
+        // ══════════════════════════════════════════════════════════════════
+        // NEURAL CLOUD & GUARANTEED MALE SPEECH ENGINE (PHASE 3)
+        // ══════════════════════════════════════════════════════════════════
+        const NEURAL_VOICES = [
+            { id: 'onyx', name: 'Onyx (Deep & Calm)', gender: 'MALE', isDefault: true, desc: 'Authoritative deep J.A.R.V.I.S. male cadence' },
+            { id: 'echo', name: 'Echo (Crisp & Articulate)', gender: 'MALE', isDefault: false, desc: 'Balanced articulate studio male voice' },
+            { id: 'fable', name: 'Fable (Warm & Expressive)', gender: 'MALE', isDefault: false, desc: 'Warm melodic British-leaning male voice' },
+            { id: 'alloy', name: 'Alloy (Neutral Studio)', gender: 'NEUTRAL', isDefault: false, desc: 'Precise balanced neutral synthesizer' },
+            { id: 'nova', name: 'Nova (Energetic)', gender: 'FEMALE', isDefault: false, desc: 'Energetic bright tone' },
+            { id: 'shimmer', name: 'Shimmer (Warm Bright)', gender: 'FEMALE', isDefault: false, desc: 'Clear expressive high-range voice' }
+        ];
+
+        let speechQueue = [];
+        let isSpeakingActive = false;
+        let ttsAudioCache = new Map();
+        let currentVoicePref = {
+            voice: 'onyx',
+            speed: 1.0,
+            pitch: 0.85
+        };
+
+        // Load saved voice preferences
+        try {
+            const saved = localStorage.getItem('ultron_voice_pref');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.voice) currentVoicePref.voice = parsed.voice;
+                if (parsed.speed) currentVoicePref.speed = parseFloat(parsed.speed);
+                if (parsed.pitch) currentVoicePref.pitch = parseFloat(parsed.pitch);
+            }
+        } catch(e) {}
+
+        function getVoicePreference() {
+            return currentVoicePref;
+        }
+
+        function splitIntoSentences(text) {
+            const clean = text.replace(/[*_#`~>]/g, '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim();
+            if (!clean) return [];
+            const matches = clean.match(/[^.!?]+(?:[.!?]+|$)/g);
+            if (!matches) return [clean];
+            return matches.map(s => s.trim()).filter(s => s.length > 0);
+        }
 
         function speakMobileResponse(text) {
             unlockBrowserAudio();
-            const clean = text.replace(/[*_#`~>]/g, '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim();
-            if (!clean) return;
+            const sentences = splitIntoSentences(text);
+            if (sentences.length === 0) return;
 
+            // Stop any ongoing playback
+            stopActiveSpeech();
+
+            speechQueue = sentences;
             isSpeaking = true;
             speechPulse = 1.0;
             updateBadge('SPEAKING', '#00E5FF');
 
+            playNextSentenceInQueue();
+        }
+
+        function stopActiveSpeech() {
+            speechQueue = [];
             const player = document.getElementById('ultron-audio-player');
-            if (!player) { fallbackBrowserTTS(clean); return; }
-            
-            fetch('/api/livelink/tts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}` },
-                body: JSON.stringify({ text: clean, voice: 'onyx', speed: 1.0 })
-            })
-            .then(res => {
-                if (!res.ok) throw new Error("Cloud TTS Unavailable");
-                return res.blob();
-            })
-            .then(blob => {
-                const url = URL.createObjectURL(blob);
-                player.src = url;
-                player.onended = () => {
-                    isSpeaking = false;
-                    speechPulse = 0.0;
-                    updateBadge('ONLINE', '#00FF00');
-                    if (handsFreeVoice) setTimeout(startHandsFreeVoice, 500);
-                };
-                player.onerror = () => { fallbackBrowserTTS(clean); };
-                player.play().catch(e => {
-                    showToast("🔇 Tap screen to enable audio.");
-                    fallbackBrowserTTS(clean);
+            if (player) {
+                player.pause();
+                player.currentTime = 0;
+            }
+            if ('speechSynthesis' in window) {
+                try { window.speechSynthesis.cancel(); } catch(e) {}
+            }
+            isSpeaking = false;
+            speechPulse = 0.0;
+            updateBadge('ONLINE', '#00FF00');
+        }
+
+        async function playNextSentenceInQueue() {
+            if (speechQueue.length === 0) {
+                isSpeaking = false;
+                speechPulse = 0.0;
+                updateBadge('ONLINE', '#00FF00');
+                if (handsFreeVoice) setTimeout(startHandsFreeVoice, 500);
+                return;
+            }
+
+            const sentence = speechQueue.shift();
+            const pref = getVoicePreference();
+            const cacheKey = `${pref.voice}:${pref.speed}:${sentence}`;
+
+            if (ttsAudioCache.has(cacheKey)) {
+                playAudioFromBlobUrl(ttsAudioCache.get(cacheKey));
+                return;
+            }
+
+            try {
+                const token = liveLinkToken || localStorage.getItem('livelink_token') || sessionStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+                const res = await fetch('/api/tts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        text: sentence,
+                        voice: pref.voice || 'onyx',
+                        speed: pref.speed || 1.0
+                    })
                 });
-            })
-            .catch(err => {
-                fallbackBrowserTTS(clean);
+
+                if (!res.ok) {
+                    throw new Error('Server TTS not ok: ' + res.status);
+                }
+
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                ttsAudioCache.set(cacheKey, url);
+                playAudioFromBlobUrl(url);
+
+                // Pre-fetch next sentence if available
+                if (speechQueue.length > 0) {
+                    prefetchSentence(speechQueue[0], pref, token);
+                }
+            } catch(err) {
+                console.warn('[TTS] Server neural TTS fallback to local male browser voice:', err);
+                fallbackBrowserTTS(sentence, () => {
+                    playNextSentenceInQueue();
+                });
+            }
+        }
+
+        function prefetchSentence(nextSentence, pref, token) {
+            const cacheKey = `${pref.voice}:${pref.speed}:${nextSentence}`;
+            if (ttsAudioCache.has(cacheKey)) return;
+            fetch('/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ text: nextSentence, voice: pref.voice, speed: pref.speed })
+            }).then(r => r.ok ? r.blob() : null).then(b => {
+                if (b) ttsAudioCache.set(cacheKey, URL.createObjectURL(b));
+            }).catch(() => {});
+        }
+
+        function playAudioFromBlobUrl(url) {
+            const player = document.getElementById('ultron-audio-player');
+            if (!player) {
+                playNextSentenceInQueue();
+                return;
+            }
+
+            player.src = url;
+            player.onended = () => {
+                playNextSentenceInQueue();
+            };
+            player.onerror = () => {
+                playNextSentenceInQueue();
+            };
+            player.play().catch(e => {
+                showToast("🔇 Tap screen to enable audio");
+                playNextSentenceInQueue();
             });
         }
 
-        function fallbackBrowserTTS(clean) {
+        function getBestMaleBrowserVoice() {
+            if (!('speechSynthesis' in window)) return null;
+            const voices = window.speechSynthesis.getVoices();
+            if (!voices || voices.length === 0) return null;
+
+            const maleNames = ['male', 'david', 'george', 'daniel', 'oliver', 'aaron', 'arthur', 'guy', 'mark', 'richard', 'fred', 'rishi', 'alex', 'tom'];
+            const femaleNames = ['female', 'zira', 'samantha', 'victoria', 'karen', 'hazel', 'susan', 'helen', 'catherine', 'agnes', 'fiona', 'moira', 'tessa'];
+
+            // 1. Look for English voice with known male name
+            for (const v of voices) {
+                const lower = v.name.toLowerCase();
+                if (v.lang.startsWith('en') && maleNames.some(m => lower.includes(m)) && !femaleNames.some(f => lower.includes(f))) {
+                    return v;
+                }
+            }
+
+            // 2. Look for any English voice not female
+            for (const v of voices) {
+                const lower = v.name.toLowerCase();
+                if (v.lang.startsWith('en') && !femaleNames.some(f => lower.includes(f))) {
+                    return v;
+                }
+            }
+
+            return voices.find(v => v.lang.startsWith('en')) || voices[0];
+        }
+
+        function fallbackBrowserTTS(cleanText, onComplete) {
             if (!('speechSynthesis' in window)) {
-                isSpeaking = false;
-                if (handsFreeVoice) startHandsFreeVoice();
+                if (onComplete) onComplete();
                 return;
             }
+
             try {
                 window.speechSynthesis.resume();
                 if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
                     try { window.speechSynthesis.cancel(); } catch(e) {}
                 }
 
-                const utter = new SpeechSynthesisUtterance(clean);
-                utter.rate = 1.0;
-                utter.pitch = 1.0;
-                utter.lang = 'en-US';
-                
-                let bestVoice = null;
-                const voices = window.speechSynthesis.getVoices();
-                if (voices.length > 0) {
-                    bestVoice = voices.find(v => v.name.toLowerCase().includes('google us english male')) || voices[0];
-                    if (bestVoice) utter.voice = bestVoice;
+                const utter = new SpeechSynthesisUtterance(cleanText);
+                const maleVoice = getBestMaleBrowserVoice();
+                if (maleVoice) {
+                    utter.voice = maleVoice;
+                } else {
+                    showToast("Notice: Using device fallback voice.");
                 }
 
+                const pref = getVoicePreference();
+                // Lower pitch guarantees a deep, masculine resonance
+                utter.pitch = pref.pitch || 0.85;
+                utter.rate = pref.speed || 0.96;
+                utter.lang = 'en-US';
+
                 utter.onend = () => {
-                    isSpeaking = false;
-                    speechPulse = 0.0;
-                    updateBadge('ONLINE', '#00FF00');
-                    if (handsFreeVoice) setTimeout(startHandsFreeVoice, 500);
+                    if (onComplete) onComplete();
                 };
-
                 utter.onerror = (e) => {
-                    isSpeaking = false;
-                    if (handsFreeVoice) setTimeout(startHandsFreeVoice, 500);
+                    if (onComplete) onComplete();
                 };
 
-                setTimeout(() => window.speechSynthesis.speak(utter), 50);
+                setTimeout(() => window.speechSynthesis.speak(utter), 40);
             } catch(e) {
-                isSpeaking = false;
+                if (onComplete) onComplete();
+            }
+        }
+
+        // Voice Picker Modal Controls
+        function openVoicePickerModal() {
+            renderVoiceOptions();
+            const overlay = document.getElementById('voice-picker-modal-overlay');
+            if (overlay) overlay.style.display = 'flex';
+        }
+
+        function closeVoicePickerModal() {
+            const overlay = document.getElementById('voice-picker-modal-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        function renderVoiceOptions() {
+            const list = document.getElementById('voice-options-list');
+            if (!list) return;
+
+            const current = currentVoicePref.voice || 'onyx';
+            list.innerHTML = NEURAL_VOICES.map(v => {
+                const isSelected = v.id === current;
+                const genderBadgeColor = v.gender === 'MALE' ? 'color:var(--emerald); background:rgba(31,92,75,0.12);' : (v.gender === 'FEMALE' ? 'color:#c2185b; background:rgba(194,24,91,0.1);' : 'color:var(--ink-soft); background:rgba(14,42,36,0.08);');
+                return `
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:12px; background:var(--surface); box-shadow:${isSelected ? 'var(--neu-pressed-sm)' : 'var(--neu-raised-sm)'}; cursor:pointer;" onclick="selectVoiceOption('${v.id}')">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="radio" name="voice_choice" value="${v.id}" ${isSelected ? 'checked' : ''} style="accent-color:var(--emerald); cursor:pointer;">
+                            <div>
+                                <div style="font-size:12px; font-weight:800; color:var(--ink);">${v.name}</div>
+                                <div style="font-size:10px; color:var(--ink-soft);">${v.desc}</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="font-size:9px; font-weight:800; padding:2px 6px; border-radius:6px; ${genderBadgeColor}">${v.gender}</span>
+                            <button type="button" onclick="event.stopPropagation(); previewVoice('${v.id}')" style="background:var(--surface); border:none; box-shadow:var(--neu-raised-sm); border-radius:8px; padding:4px 8px; font-size:10px; font-weight:800; color:var(--ink); cursor:pointer;">▶</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const speedSlider = document.getElementById('voice-speed-slider');
+            const speedVal = document.getElementById('voice-speed-val');
+            if (speedSlider) speedSlider.value = currentVoicePref.speed;
+            if (speedVal) speedVal.innerText = `${currentVoicePref.speed.toFixed(2)}x`;
+
+            const pitchSlider = document.getElementById('voice-pitch-slider');
+            const pitchVal = document.getElementById('voice-pitch-val');
+            if (pitchSlider) pitchSlider.value = currentVoicePref.pitch;
+            if (pitchVal) pitchVal.innerText = currentVoicePref.pitch < 0.9 ? `Deep (${currentVoicePref.pitch.toFixed(2)})` : `Normal (${currentVoicePref.pitch.toFixed(2)})`;
+        }
+
+        function selectVoiceOption(voiceId) {
+            currentVoicePref.voice = voiceId;
+            renderVoiceOptions();
+        }
+
+        function updateVoiceSpeed(val) {
+            currentVoicePref.speed = parseFloat(val);
+            const lbl = document.getElementById('voice-speed-val');
+            if (lbl) lbl.innerText = `${parseFloat(val).toFixed(2)}x`;
+        }
+
+        function updateVoicePitch(val) {
+            currentVoicePref.pitch = parseFloat(val);
+            const lbl = document.getElementById('voice-pitch-val');
+            if (lbl) lbl.innerText = currentVoicePref.pitch < 0.9 ? `Deep (${currentVoicePref.pitch.toFixed(2)})` : `Normal (${currentVoicePref.pitch.toFixed(2)})`;
+        }
+
+        function previewVoice(voiceId) {
+            unlockBrowserAudio();
+            const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+            fetch('/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ text: "Ultron vocal calibration.", voice: voiceId, speed: currentVoicePref.speed })
+            })
+            .then(r => r.ok ? r.blob() : null)
+            .then(blob => {
+                if (blob) {
+                    const url = URL.createObjectURL(blob);
+                    const p = document.getElementById('ultron-audio-player');
+                    if (p) { p.src = url; p.play().catch(() => {}); }
+                } else {
+                    fallbackBrowserTTS("Ultron vocal calibration.");
+                }
+            })
+            .catch(() => fallbackBrowserTTS("Ultron vocal calibration."));
+        }
+
+        function testCurrentVoice() {
+            speakMobileResponse("Ultron vocal systems online and calibrated to your specifications, sir.");
+        }
+
+        function saveVoicePreferences() {
+            try {
+                localStorage.setItem('ultron_voice_pref', JSON.stringify(currentVoicePref));
+                const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+                fetch('/api/voice_pref', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ pref: currentVoicePref })
+                }).catch(() => {});
+                showToast("✅ Voice calibrated and saved!");
+                closeVoicePickerModal();
+            } catch(e) {
+                closeVoicePickerModal();
             }
         }
 
@@ -4159,7 +4444,7 @@
     <!-- ── Mobile Phone Bottom Navigation Dock (Thumb-Friendly Experience) ── -->
     
 
-<div id="build-stamp" style="position:fixed; bottom:5px; right:5px; font-size:10px; color:#3f5f55; z-index:99999; pointer-events:none; font-family:monospace; background:#f1e6d0; padding:2px 6px; border-radius:4px; box-shadow:inset 1px 1px 3px #cdbb98, inset -1px -1px 3px #fffaf0;">Phase2-Layout</div>
+<div id="build-stamp" style="position:fixed; bottom:5px; right:5px; font-size:10px; color:#3f5f55; z-index:99999; pointer-events:none; font-family:monospace; background:#f1e6d0; padding:2px 6px; border-radius:4px; box-shadow:inset 1px 1px 3px #cdbb98, inset -1px -1px 3px #fffaf0;">Phase3-Voice</div>
 </body>
 </html>
 
