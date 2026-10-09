@@ -1237,6 +1237,7 @@ class handler(BaseHTTPRequestHandler):
             mapped_voice = VOICE_MAP.get(voice, voice)
 
             audio_data = None
+            last_tts_err = "No audio generated"
             # 1. Primary: High-fidelity Azure/Edge neural TTS (Supports all 10 voices with distinct tones, speed, pitch)
             try:
                 import asyncio
@@ -1262,6 +1263,7 @@ class handler(BaseHTTPRequestHandler):
                 finally:
                     loop.close()
             except Exception as e:
+                last_tts_err = f"Edge-TTS error: {str(e)}"
                 print(f"[Edge-TTS Error] {e}")
 
             # 2. Secondary fallback: OpenAI TTS if configured
@@ -1288,6 +1290,7 @@ class handler(BaseHTTPRequestHandler):
                         with urllib.request.urlopen(req, timeout=10.0) as response:
                             audio_data = response.read()
                     except Exception as oai_err:
+                        last_tts_err += f" | OpenAI error: {str(oai_err)}"
                         print(f"[OpenAI TTS Error] {oai_err}")
 
             if audio_data:
@@ -1299,7 +1302,7 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.write(audio_data)
                 return
             else:
-                self._send_json({"error": "TTS engine unavailable", "fallback": True}, status=500)
+                self._send_json({"error": f"TTS engine unavailable: {last_tts_err}", "fallback": True}, status=500)
                 return
 
         # --- Voice Preference Endpoint ---
