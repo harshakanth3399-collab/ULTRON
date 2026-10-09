@@ -2,4 +2,4 @@
 # For local desktop installation (PySide6, PyAudio, PyOpenGL, etc.):
 # pip install -r requirements-desktop.txt
 psycopg2-binary==2.9.9
-
+edge-tts>=6.1.12

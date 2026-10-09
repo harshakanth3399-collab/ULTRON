@@ -226,16 +226,24 @@
 
         .visualizer-container {
             position: relative !important;
-            width: clamp(180px, 38vmin, 380px) !important;
-            height: clamp(180px, 38vmin, 380px) !important;
+            width: clamp(260px, 50vmin, 560px) !important;
+            height: clamp(260px, 50vmin, 560px) !important;
             max-width: 90vw !important;
+            max-height: 52vh !important;
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
             margin: auto !important;
             z-index: 10 !important;
             overflow: visible !important;
-            flex-shrink: 0 !important;
+            flex-shrink: 1 !important;
+        }
+        @media (max-width: 640px) or (max-height: 720px) {
+            .visualizer-container {
+                width: clamp(180px, 45vmin, 320px) !important;
+                height: clamp(180px, 45vmin, 320px) !important;
+                max-height: 42vh !important;
+            }
         }
         #webgl-canvas {
             width: 100% !important;
@@ -978,19 +986,19 @@
         </div>
 
         <!-- ── Quick Action Suggestion Pills (Above Input Bar) ── -->
-        <div class="chat-drawer-footer" style="display:flex; gap:8px; padding:8px 14px; background:rgba(14,10,3,0.95); border-top:1px solid rgba(255,179,0,0.2); overflow-x:auto; flex-shrink:0;">
-            <button type="button" class="quick-action-pill">📸 Snap Food</button>
-            <button type="button" class="quick-action-pill">🎨 Draw Image</button>
-            <button type="button" class="quick-action-pill">🎓 Exam Tutor</button>
+        <div class="chat-drawer-footer" style="display:flex; gap:8px; padding:8px 14px; background:var(--surface); border-top:1px solid var(--shadow-dark); overflow-x:auto; flex-shrink:0;">
+            <button type="button" class="quick-action-pill" onclick="handleQuickPill('food')">📸 Snap Food</button>
+            <button type="button" class="quick-action-pill" onclick="handleQuickPill('image')">🎨 Draw Image</button>
+            <button type="button" class="quick-action-pill" onclick="handleQuickPill('tutor')">🎓 Exam Tutor</button>
         </div>
 
         <!-- ── Direct Session Chat Input Bar for Quiet Places ── -->
-        <form class="chat-drawer-input-bar" onsubmit="event.preventDefault(); sendDrawerMessage();" style="display:flex; gap:8px; padding:10px 14px calc(12px + env(safe-area-inset-bottom, 0px)) 14px; background:rgba(18,12,4,0.98); border-top:1px solid rgba(255,179,0,0.3); flex-shrink:0;">
-            <input type="text" id="drawer-chat-input" placeholder="Type a silent message or prompt..."  style="flex:1; background:rgba(0,0,0,0.7); border:1.5px solid rgba(255,179,0,0.4); border-radius:10px; color:#FFE082; padding:10px 14px; font-size:13px; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='#FFD700'" onblur="this.style.borderColor='rgba(255,179,0,0.4)'">
-            <button type="submit" id="drawer-chat-send-btn" style="background:linear-gradient(135deg, #FFB300, #FF8F00); color:#000; border:none; border-radius:10px; padding:0 18px; font-weight:900; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(255,179,0,0.4);">
+        <form class="chat-drawer-input-bar" onsubmit="event.preventDefault(); sendDrawerMessage();" style="display:flex; gap:8px; padding:10px 14px calc(12px + env(safe-area-inset-bottom, 0px)) 14px; background:var(--surface); border-top:1px solid var(--shadow-dark); flex-shrink:0;">
+            <input type="text" id="drawer-chat-input" placeholder="Type a silent message or prompt..." style="flex:1; background:var(--surface); border:none; border-radius:12px; box-shadow:var(--neu-pressed-sm); color:var(--ink); padding:10px 14px; font-size:14px; outline:none;">
+            <button type="submit" id="drawer-chat-send-btn" style="background:var(--surface); color:var(--emerald); border:none; border-radius:12px; box-shadow:var(--neu-raised-sm); padding:0 18px; font-weight:900; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:4px;">
                 <span>SEND</span> ➔
             </button>
-        </div>
+        </form>
     </div>
 
     <!-- ── Voice Calibration Modal (Light Neumorphism) ── -->
@@ -1032,14 +1040,14 @@
     </div>
 
     <!-- ── Change Password Modal ── -->
-    <div id="change-pw-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.92); z-index:1004; justify-content:center; align-items:center; backdrop-filter:blur(10px); padding:16px;">
-        <div class="livelink-card" style="max-width:380px; text-align:left; border-color:#FFD700; box-shadow:0 0 45px rgba(255,215,0,0.45);">
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,215,0,0.3); padding-bottom:10px; margin-bottom:14px;">
+    <div id="change-pw-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(14,42,36,0.5); z-index:1004; justify-content:center; align-items:center; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); padding:16px;">
+        <div class="livelink-card" style="max-width:380px; text-align:left; padding:24px 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
                 <div>
-                    <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:#FFD700;">🔑 CHANGE PASSWORD</div>
-                    <div style="font-size:10px; color:rgba(255,215,100,0.7);">Update credentials & fix breach warnings</div>
+                    <div class="livelink-title" style="font-size:16px !important; margin-bottom:2px !important;">🔑 CHANGE PASSWORD</div>
+                    <div class="livelink-sub" style="margin-bottom:0 !important; font-size:11px !important;">Update credentials & fix breach warnings</div>
                 </div>
-                <button onclick="closeChangePasswordModal()" style="background:rgba(255,179,0,0.15); border:1px solid rgba(255,179,0,0.5); color:#FFB300; border-radius:8px; padding:4px 10px; font-size:11px; cursor:pointer;">✕</button>
+                <button onclick="closeChangePasswordModal()" style="background:transparent; border:none; color:var(--ink); font-size:18px; font-weight:900; cursor:pointer; padding:4px 8px;">✕</button>
             </div>
             <form onsubmit="handleChangePasswordSubmit(event)">
                 <div style="margin-bottom:10px;">
@@ -1054,24 +1062,20 @@
                     <label class="form-label">Confirm New Password *</label>
                     <input type="password" class="livelink-input" id="cpw-confirm" placeholder="Re-enter new password" required>
                 </div>
-                <button type="submit" class="livelink-btn" id="cpw-submit-btn" style="background:linear-gradient(135deg, #FFB300, #FF8F00); color:#000; font-weight:900;">UPDATE PASSWORD</button>
-            </div>
+                <button type="submit" class="livelink-btn" id="cpw-submit-btn" style="background:var(--emerald) !important; color:#fff !important; font-weight:900;">UPDATE PASSWORD</button>
+            </form>
         </div>
     </div>
 
-
-
     <!-- ── ZEN FOCUS Controller Modal ── -->
-    <div id="zen-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.92); z-index:1003; justify-content:center; align-items:center; backdrop-filter:blur(12px); padding:16px;">
-        <div class="livelink-card" style="max-width:420px; border-color:#FFB300; box-shadow:0 0 45px rgba(255,179,0,0.45); text-align:left;">
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,179,0,0.3); padding-bottom:10px; margin-bottom:12px;">
+    <div id="zen-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(14,42,36,0.5); z-index:1003; justify-content:center; align-items:center; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); padding:16px;">
+        <div class="livelink-card" style="max-width:420px; text-align:left; padding:24px 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                 <div>
-                    <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:#FFD700; display:flex; align-items:center; gap:6px;">
-                        🛡️ ZEN FOCUS PROTOCOL
-                    </div>
-                    <div style="font-size:10px; color:rgba(255,215,100,0.7); letter-spacing:1px;">Study Shield & Distraction Silencer</div>
+                    <div class="livelink-title" style="font-size:16px !important; margin-bottom:2px !important;">🛡️ ZEN FOCUS PROTOCOL</div>
+                    <div class="livelink-sub" style="margin-bottom:0 !important; font-size:11px !important;">Study Shield & Distraction Silencer</div>
                 </div>
-                <button onclick="toggleZenFocusModal()" style="background:rgba(255,179,0,0.15); border:1px solid rgba(255,179,0,0.5); color:#FFB300; border-radius:8px; padding:4px 10px; font-size:11px; cursor:pointer;">✕</button>
+                <button onclick="toggleZenFocusModal()" style="background:transparent; border:none; color:var(--ink); font-size:18px; font-weight:900; cursor:pointer; padding:4px 8px;">✕</button>
             </div>
 
             <!-- Zen Mode Power Toggle -->
@@ -3011,21 +3015,34 @@
         // NEURAL CLOUD & GUARANTEED MALE SPEECH ENGINE (PHASE 3)
         // ══════════════════════════════════════════════════════════════════
         const NEURAL_VOICES = [
-            { id: 'onyx', name: 'Onyx (Deep & Calm)', gender: 'MALE', isDefault: true, desc: 'Authoritative deep J.A.R.V.I.S. male cadence' },
-            { id: 'echo', name: 'Echo (Crisp & Articulate)', gender: 'MALE', isDefault: false, desc: 'Balanced articulate studio male voice' },
-            { id: 'fable', name: 'Fable (Warm & Expressive)', gender: 'MALE', isDefault: false, desc: 'Warm melodic British-leaning male voice' },
-            { id: 'alloy', name: 'Alloy (Neutral Studio)', gender: 'NEUTRAL', isDefault: false, desc: 'Precise balanced neutral synthesizer' },
-            { id: 'nova', name: 'Nova (Energetic)', gender: 'FEMALE', isDefault: false, desc: 'Energetic bright tone' },
-            { id: 'shimmer', name: 'Shimmer (Warm Bright)', gender: 'FEMALE', isDefault: false, desc: 'Clear expressive high-range voice' }
+            { id: 'en-US-GuyNeural', name: 'Guy', gender: 'MALE', mood: 'Deep & Calm', isDefault: true, desc: 'Deep calm J.A.R.V.I.S. baseline voice' },
+            { id: 'en-GB-RyanNeural', name: 'Ryan', gender: 'MALE', mood: 'Authoritative', isDefault: false, desc: 'Crisp sophisticated British male cadence' },
+            { id: 'en-US-ChristopherNeural', name: 'Christopher', gender: 'MALE', mood: 'Warm & Resonant', isDefault: false, desc: 'Deep rich baritone, steady and reassuring' },
+            { id: 'en-US-EricNeural', name: 'Eric', gender: 'MALE', mood: 'Friendly', isDefault: false, desc: 'Approachable natural conversational male' },
+            { id: 'en-US-BrianNeural', name: 'Brian', gender: 'MALE', mood: 'Narrator', isDefault: false, desc: 'Articulate clear audiobook narrator tone' },
+            { id: 'en-US-RogerNeural', name: 'Roger', gender: 'MALE', mood: 'Casual & Relaxed', isDefault: false, desc: 'Laid-back, easygoing everyday male cadence' },
+            { id: 'en-US-SteffanNeural', name: 'Steffan', gender: 'MALE', mood: 'Soft & Gentle', isDefault: false, desc: 'Mellow quiet supportive male resonance' },
+            { id: 'en-AU-WilliamNeural', name: 'William', gender: 'MALE', mood: 'Energetic', isDefault: false, desc: 'Bright confident dynamic male voice' },
+            { id: 'en-US-JennyNeural', name: 'Jenny', gender: 'FEMALE', mood: 'Warm & Natural', isDefault: false, desc: 'Expressive friendly natural female tone' },
+            { id: 'en-US-AriaNeural', name: 'Aria', gender: 'FEMALE', mood: 'Crisp & Clear', isDefault: false, desc: 'Focused articulate studio female tone' }
         ];
 
         let speechQueue = [];
         let isSpeakingActive = false;
         let ttsAudioCache = new Map();
         let currentVoicePref = {
-            voice: 'onyx',
+            voice: 'en-US-GuyNeural',
             speed: 1.0,
             pitch: 0.85
+        };
+
+        const LEGACY_VOICE_MAP = {
+            'onyx': 'en-US-GuyNeural',
+            'echo': 'en-US-EricNeural',
+            'fable': 'en-GB-RyanNeural',
+            'alloy': 'en-US-ChristopherNeural',
+            'nova': 'en-US-JennyNeural',
+            'shimmer': 'en-US-AriaNeural'
         };
 
         // Load saved voice preferences
@@ -3033,7 +3050,7 @@
             const saved = localStorage.getItem('ultron_voice_pref');
             if (saved) {
                 const parsed = JSON.parse(saved);
-                if (parsed.voice) currentVoicePref.voice = parsed.voice;
+                if (parsed.voice) currentVoicePref.voice = LEGACY_VOICE_MAP[parsed.voice] || parsed.voice;
                 if (parsed.speed) currentVoicePref.speed = parseFloat(parsed.speed);
                 if (parsed.pitch) currentVoicePref.pitch = parseFloat(parsed.pitch);
             }
@@ -3093,7 +3110,7 @@
 
             const sentence = speechQueue.shift();
             const pref = getVoicePreference();
-            const cacheKey = `${pref.voice}:${pref.speed}:${sentence}`;
+            const cacheKey = `${pref.voice}:${pref.speed}:${pref.pitch}:${sentence}`;
 
             if (ttsAudioCache.has(cacheKey)) {
                 playAudioFromBlobUrl(ttsAudioCache.get(cacheKey));
@@ -3110,8 +3127,10 @@
                     },
                     body: JSON.stringify({
                         text: sentence,
-                        voice: pref.voice || 'onyx',
-                        speed: pref.speed || 1.0
+                        voice: pref.voice || 'en-US-GuyNeural',
+                        speed: pref.speed || 1.0,
+                        pitch: pref.pitch || 0.85,
+                        token: token
                     })
                 });
 
@@ -3130,6 +3149,7 @@
                 }
             } catch(err) {
                 console.warn('[TTS] Server neural TTS fallback to local male browser voice:', err);
+                showToast("Notice: Using device male voice fallback.");
                 fallbackBrowserTTS(sentence, () => {
                     playNextSentenceInQueue();
                 });
@@ -3137,12 +3157,18 @@
         }
 
         function prefetchSentence(nextSentence, pref, token) {
-            const cacheKey = `${pref.voice}:${pref.speed}:${nextSentence}`;
+            const cacheKey = `${pref.voice}:${pref.speed}:${pref.pitch}:${nextSentence}`;
             if (ttsAudioCache.has(cacheKey)) return;
             fetch('/api/tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ text: nextSentence, voice: pref.voice, speed: pref.speed })
+                body: JSON.stringify({
+                    text: nextSentence,
+                    voice: pref.voice || 'en-US-GuyNeural',
+                    speed: pref.speed || 1.0,
+                    pitch: pref.pitch || 0.85,
+                    token: token
+                })
             }).then(r => r.ok ? r.blob() : null).then(b => {
                 if (b) ttsAudioCache.set(cacheKey, URL.createObjectURL(b));
             }).catch(() => {});
@@ -3211,8 +3237,6 @@
                 const maleVoice = getBestMaleBrowserVoice();
                 if (maleVoice) {
                     utter.voice = maleVoice;
-                } else {
-                    showToast("Notice: Using device fallback voice.");
                 }
 
                 const pref = getVoicePreference();
@@ -3250,23 +3274,24 @@
             const list = document.getElementById('voice-options-list');
             if (!list) return;
 
-            const current = currentVoicePref.voice || 'onyx';
+            const current = currentVoicePref.voice || 'en-US-GuyNeural';
             list.innerHTML = NEURAL_VOICES.map(v => {
                 const isSelected = v.id === current;
-                const genderBadgeColor = v.gender === 'MALE' ? 'color:var(--emerald); background:rgba(31,92,75,0.12);' : (v.gender === 'FEMALE' ? 'color:#c2185b; background:rgba(194,24,91,0.1);' : 'color:var(--ink-soft); background:rgba(14,42,36,0.08);');
+                const genderBadgeColor = v.gender === 'MALE' ? 'color:var(--emerald); background:rgba(31,92,75,0.14);' : 'color:#c2185b; background:rgba(194,24,91,0.12);';
                 return `
-                    <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:12px; background:var(--surface); box-shadow:${isSelected ? 'var(--neu-pressed-sm)' : 'var(--neu-raised-sm)'}; cursor:pointer;" onclick="selectVoiceOption('${v.id}')">
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border-radius:12px; background:var(--surface); box-shadow:${isSelected ? 'var(--neu-pressed-sm)' : 'var(--neu-raised-sm)'}; border:${isSelected ? '1.5px solid var(--emerald)' : '1px solid transparent'}; cursor:pointer;" onclick="selectVoiceOption('${v.id}')">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <input type="radio" name="voice_choice" value="${v.id}" ${isSelected ? 'checked' : ''} style="accent-color:var(--emerald); cursor:pointer;">
                             <div>
-                                <div style="font-size:12px; font-weight:800; color:var(--ink);">${v.name}</div>
+                                <div style="display:flex; align-items:center; gap:6px;">
+                                    <span style="font-size:12px; font-weight:800; color:var(--ink);">${v.name}</span>
+                                    <span style="font-size:9px; font-weight:800; padding:1px 5px; border-radius:4px; ${genderBadgeColor}">${v.gender}</span>
+                                    <span style="font-size:10px; color:var(--champagne-deep); font-weight:700;">• ${v.mood}</span>
+                                </div>
                                 <div style="font-size:10px; color:var(--ink-soft);">${v.desc}</div>
                             </div>
                         </div>
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <span style="font-size:9px; font-weight:800; padding:2px 6px; border-radius:6px; ${genderBadgeColor}">${v.gender}</span>
-                            <button type="button" onclick="event.stopPropagation(); previewVoice('${v.id}')" style="background:var(--surface); border:none; box-shadow:var(--neu-raised-sm); border-radius:8px; padding:4px 8px; font-size:10px; font-weight:800; color:var(--ink); cursor:pointer;">▶</button>
-                        </div>
+                        <button type="button" id="voice-prev-btn-${v.id}" onclick="event.stopPropagation(); previewVoice('${v.id}')" style="background:var(--surface); border:none; box-shadow:var(--neu-raised-sm); border-radius:8px; padding:6px 10px; font-size:10px; font-weight:800; color:var(--ink); cursor:pointer; flex-shrink:0;">▶ Preview</button>
                     </div>
                 `;
             }).join('');
@@ -3285,39 +3310,86 @@
         function selectVoiceOption(voiceId) {
             currentVoicePref.voice = voiceId;
             renderVoiceOptions();
+            try {
+                localStorage.setItem('ultron_voice_pref', JSON.stringify(currentVoicePref));
+                const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+                fetch('/api/voice_pref', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ pref: currentVoicePref, token: token })
+                }).catch(() => {});
+            } catch(e) {}
         }
 
         function updateVoiceSpeed(val) {
             currentVoicePref.speed = parseFloat(val);
             const lbl = document.getElementById('voice-speed-val');
             if (lbl) lbl.innerText = `${parseFloat(val).toFixed(2)}x`;
+            try {
+                localStorage.setItem('ultron_voice_pref', JSON.stringify(currentVoicePref));
+                const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+                fetch('/api/voice_pref', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ pref: currentVoicePref, token: token })
+                }).catch(() => {});
+            } catch(e) {}
         }
 
         function updateVoicePitch(val) {
             currentVoicePref.pitch = parseFloat(val);
             const lbl = document.getElementById('voice-pitch-val');
             if (lbl) lbl.innerText = currentVoicePref.pitch < 0.9 ? `Deep (${currentVoicePref.pitch.toFixed(2)})` : `Normal (${currentVoicePref.pitch.toFixed(2)})`;
+            try {
+                localStorage.setItem('ultron_voice_pref', JSON.stringify(currentVoicePref));
+                const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+                fetch('/api/voice_pref', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ pref: currentVoicePref, token: token })
+                }).catch(() => {});
+            } catch(e) {}
         }
 
         function previewVoice(voiceId) {
             unlockBrowserAudio();
+            const btn = document.getElementById(`voice-prev-btn-${voiceId}`);
+            if (btn) btn.innerText = "⏳ Loading...";
             const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+            const sampleText = "Ultron vocal synthesizer online. How may I assist you today, Commander?";
+
             fetch('/api/tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ text: "Ultron vocal calibration.", voice: voiceId, speed: currentVoicePref.speed })
+                body: JSON.stringify({
+                    text: sampleText,
+                    voice: voiceId,
+                    speed: currentVoicePref.speed,
+                    pitch: currentVoicePref.pitch,
+                    token: token
+                })
             })
-            .then(r => r.ok ? r.blob() : null)
+            .then(r => {
+                if (!r.ok) throw new Error("TTS server returned " + r.status);
+                return r.blob();
+            })
             .then(blob => {
-                if (blob) {
-                    const url = URL.createObjectURL(blob);
-                    const p = document.getElementById('ultron-audio-player');
-                    if (p) { p.src = url; p.play().catch(() => {}); }
-                } else {
-                    fallbackBrowserTTS("Ultron vocal calibration.");
+                if (btn) btn.innerText = "▶ Preview";
+                const url = URL.createObjectURL(blob);
+                const p = document.getElementById('ultron-audio-player');
+                if (p) {
+                    p.src = url;
+                    p.play().catch(() => {
+                        showToast("🔇 Tap screen to enable audio");
+                    });
                 }
             })
-            .catch(() => fallbackBrowserTTS("Ultron vocal calibration."));
+            .catch(err => {
+                console.warn("[TTS] Preview error:", err);
+                if (btn) btn.innerText = "⚠️ Retry";
+                showToast("Server TTS error. Falling back to device male voice.");
+                fallbackBrowserTTS(sampleText);
+            });
         }
 
         function testCurrentVoice() {
@@ -3331,7 +3403,7 @@
                 fetch('/api/voice_pref', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ pref: currentVoicePref })
+                    body: JSON.stringify({ pref: currentVoicePref, token: token })
                 }).catch(() => {});
                 showToast("✅ Voice calibrated and saved!");
                 closeVoicePickerModal();
@@ -3920,24 +3992,40 @@
         }
         setInterval(checkActivePriorityCalls, 4500);
 
-        function quickPromptDraw() {
+        function handleQuickPill(type) {
+            triggerHaptic([20]);
+            playAcoustic('chirp');
             const dInput = document.getElementById('drawer-chat-input');
             const mInput = document.getElementById('cmd-input');
             const target = (isChatPanelOpen && dInput) ? dInput : (mInput || dInput);
-            if (target) {
-                target.value = "Generate an image of ";
-                target.focus();
+
+            if (type === 'food') {
+                if (target) {
+                    target.value = "Analyze food in front of me for calories and nutrients: ";
+                    target.focus();
+                }
+                showToast("📸 Food Scan: Type your meal or activate VISION camera.");
+            } else if (type === 'image') {
+                if (target) {
+                    target.value = "Generate an image of ";
+                    target.focus();
+                }
+                showToast("🎨 Draw Image: Enter a prompt to generate artwork.");
+            } else if (type === 'tutor') {
+                if (target) {
+                    target.value = "Explain for my exam with formulas and step-by-step intuition: ";
+                    target.focus();
+                }
+                showToast("🎓 Exam Tutor: Enter the topic you want to study.");
             }
         }
 
+        function quickPromptDraw() {
+            handleQuickPill('image');
+        }
+
         function quickPromptTutor() {
-            const dInput = document.getElementById('drawer-chat-input');
-            const mInput = document.getElementById('cmd-input');
-            const target = (isChatPanelOpen && dInput) ? dInput : (mInput || dInput);
-            if (target) {
-                target.value = "Explain for my exam with formulas and analogies: ";
-                target.focus();
-            }
+            handleQuickPill('tutor');
         }
 
         function escapeHtml(text) {
@@ -4453,7 +4541,7 @@
     <!-- ── Mobile Phone Bottom Navigation Dock (Thumb-Friendly Experience) ── -->
     
 
-<div id="build-stamp" style="position:fixed; bottom:5px; right:5px; font-size:10px; color:#3f5f55; z-index:99999; pointer-events:none; font-family:monospace; background:#f1e6d0; padding:2px 6px; border-radius:4px; box-shadow:inset 1px 1px 3px #cdbb98, inset -1px -1px 3px #fffaf0;">Phase2-Layout • Phase3-Voice</div>
+<div id="build-stamp" style="position:fixed; bottom:5px; right:5px; font-size:10px; color:#3f5f55; z-index:99999; pointer-events:none; font-family:monospace; background:#f1e6d0; padding:2px 6px; border-radius:4px; box-shadow:inset 1px 1px 3px #cdbb98, inset -1px -1px 3px #fffaf0;">Phase4-Voices-Orb-Buttons</div>
 </body>
 </html>
 

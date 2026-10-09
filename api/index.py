@@ -998,6 +998,13 @@ class handler(BaseHTTPRequestHandler):
                         conn.commit()
                         conn.close()
                         
+                        voice_pref_val = None
+                        try:
+                            if "voice_settings" in row.keys() and row["voice_settings"]:
+                                voice_pref_val = json.loads(row["voice_settings"])
+                        except Exception:
+                            pass
+
                         self._send_json({
                             "success": True,
                             "token": session_token,
@@ -1007,6 +1014,7 @@ class handler(BaseHTTPRequestHandler):
                             "phone": row["phone"],
                             "role": row["role"] or "USER",
                             "status": "APPROVED",
+                            "voice_settings": voice_pref_val,
                             "message": f"Welcome, {row['first_name']}."
                         })
                         return
@@ -1208,49 +1216,79 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             text = data.get("text", "").strip()
-            voice = data.get("voice", "onyx")
+            voice = data.get("voice", "en-US-GuyNeural")
             speed = float(data.get("speed", 1.0))
+            pitch = float(data.get("pitch", 0.85))
             
             if not text:
                 self._send_json({"error": "No text provided"}, status=400)
                 return
-                
-            openai_key = os.environ.get("OPENAI_API_KEY")
-            audio_data = None
-            
-            # 1. Try OpenAI TTS (Deep male 'onyx' or user selected voice)
-            if openai_key:
-                try:
-                    import urllib.request
-                    req = urllib.request.Request(
-                        "https://api.openai.com/v1/audio/speech",
-                        data=json.dumps({
-                            "model": "tts-1",
-                            "input": text,
-                            "voice": voice,
-                            "speed": speed
-                        }).encode("utf-8"),
-                        headers={
-                            "Authorization": f"Bearer {openai_key}",
-                            "Content-Type": "application/json"
-                        },
-                        method="POST"
-                    )
-                    with urllib.request.urlopen(req, timeout=10.0) as response:
-                        audio_data = response.read()
-                except Exception as e:
-                    print(f"[OpenAI TTS Error] {e}, attempting free neural fallback...")
 
-            # 2. Free neural fallback if OpenAI quota is exceeded (429) or unconfigured
-            if not audio_data:
+            # Map legacy OpenAI voice tokens to high-fidelity neural voices
+            VOICE_MAP = {
+                "onyx": "en-US-GuyNeural",
+                "echo": "en-US-EricNeural",
+                "fable": "en-GB-RyanNeural",
+                "alloy": "en-US-ChristopherNeural",
+                "nova": "en-US-JennyNeural",
+                "shimmer": "en-US-AriaNeural",
+                "default": "en-US-GuyNeural"
+            }
+            mapped_voice = VOICE_MAP.get(voice, voice)
+
+            audio_data = None
+            # 1. Primary: High-fidelity Azure/Edge neural TTS (Supports all 10 voices with distinct tones, speed, pitch)
+            try:
+                import asyncio
+                import edge_tts
+
+                rate_pct = int(round((speed - 1.0) * 100))
+                rate_str = f"{rate_pct:+d}%"
+                pitch_hz = int(round((pitch - 1.0) * 50))
+                pitch_str = f"{pitch_hz:+d}Hz"
+
+                async def _stream_edge():
+                    comm = edge_tts.Communicate(text, mapped_voice, rate=rate_str, pitch=pitch_str)
+                    buf = b""
+                    async for chunk in comm.stream():
+                        if chunk["type"] == "audio":
+                            buf += chunk["data"]
+                    return buf
+
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
                 try:
-                    import urllib.request, urllib.parse
-                    g_url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=" + urllib.parse.quote(text[:250])
-                    req = urllib.request.Request(g_url, headers={"User-Agent": "Mozilla/5.0"})
-                    with urllib.request.urlopen(req, timeout=8.0) as g_resp:
-                        audio_data = g_resp.read()
-                except Exception as g_err:
-                    print(f"[Fallback TTS Error] {g_err}")
+                    audio_data = loop.run_until_complete(_stream_edge())
+                finally:
+                    loop.close()
+            except Exception as e:
+                print(f"[Edge-TTS Error] {e}")
+
+            # 2. Secondary fallback: OpenAI TTS if configured
+            if not audio_data:
+                openai_key = os.environ.get("OPENAI_API_KEY")
+                if openai_key:
+                    try:
+                        import urllib.request
+                        oai_voice = voice if voice in ["alloy", "echo", "fable", "onyx", "nova", "shimmer"] else "onyx"
+                        req = urllib.request.Request(
+                            "https://api.openai.com/v1/audio/speech",
+                            data=json.dumps({
+                                "model": "tts-1",
+                                "input": text,
+                                "voice": oai_voice,
+                                "speed": speed
+                            }).encode("utf-8"),
+                            headers={
+                                "Authorization": f"Bearer {openai_key}",
+                                "Content-Type": "application/json"
+                            },
+                            method="POST"
+                        )
+                        with urllib.request.urlopen(req, timeout=10.0) as response:
+                            audio_data = response.read()
+                    except Exception as oai_err:
+                        print(f"[OpenAI TTS Error] {oai_err}")
 
             if audio_data:
                 self.send_response(200)
@@ -1266,7 +1304,18 @@ class handler(BaseHTTPRequestHandler):
 
         # --- Voice Preference Endpoint ---
         if path.endswith("/voice_pref"):
+            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "") or ""
+            if not token and self.headers.get("Authorization", "").startswith("Bearer "):
+                token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
             pref = data.get("pref", {})
+            if token and pref:
+                try:
+                    conn = get_db_connection()
+                    conn.execute("UPDATE livelink_users SET voice_settings = ? WHERE access_token = ?", (json.dumps(pref), token))
+                    conn.commit()
+                    conn.close()
+                except Exception as e:
+                    pass
             self._send_json({"ok": True, "pref": pref})
             return
 
