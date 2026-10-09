@@ -4,4 +4,7 @@ version = "2.0.0"
 description = "ULTRON AI Assistant - Vercel Cloud API"
 requires-python = ">=3.9"
 # No external dependencies - uses Python standard library only
-dependencies = []
+dependencies = [
+    "edge-tts>=7.2.8",
+    "psycopg2-binary>=2.9.12",
+]
