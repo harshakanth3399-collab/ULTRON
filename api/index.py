@@ -1216,31 +1216,43 @@ class handler(BaseHTTPRequestHandler):
                 return
                 
             openai_key = os.environ.get("OPENAI_API_KEY")
-            if not openai_key:
-                self._send_json({"error": "OPENAI_API_KEY not configured on server", "fallback": True}, status=500)
-                return
-                
-            try:
-                import urllib.request
-                
-                req = urllib.request.Request(
-                    "https://api.openai.com/v1/audio/speech",
-                    data=json.dumps({
-                        "model": "tts-1",
-                        "input": text,
-                        "voice": voice,
-                        "speed": speed
-                    }).encode("utf-8"),
-                    headers={
-                        "Authorization": f"Bearer {openai_key}",
-                        "Content-Type": "application/json"
-                    },
-                    method="POST"
-                )
-                
-                with urllib.request.urlopen(req, timeout=12.0) as response:
-                    audio_data = response.read()
-                    
+            audio_data = None
+            
+            # 1. Try OpenAI TTS (Deep male 'onyx' or user selected voice)
+            if openai_key:
+                try:
+                    import urllib.request
+                    req = urllib.request.Request(
+                        "https://api.openai.com/v1/audio/speech",
+                        data=json.dumps({
+                            "model": "tts-1",
+                            "input": text,
+                            "voice": voice,
+                            "speed": speed
+                        }).encode("utf-8"),
+                        headers={
+                            "Authorization": f"Bearer {openai_key}",
+                            "Content-Type": "application/json"
+                        },
+                        method="POST"
+                    )
+                    with urllib.request.urlopen(req, timeout=10.0) as response:
+                        audio_data = response.read()
+                except Exception as e:
+                    print(f"[OpenAI TTS Error] {e}, attempting free neural fallback...")
+
+            # 2. Free neural fallback if OpenAI quota is exceeded (429) or unconfigured
+            if not audio_data:
+                try:
+                    import urllib.request, urllib.parse
+                    g_url = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=" + urllib.parse.quote(text[:250])
+                    req = urllib.request.Request(g_url, headers={"User-Agent": "Mozilla/5.0"})
+                    with urllib.request.urlopen(req, timeout=8.0) as g_resp:
+                        audio_data = g_resp.read()
+                except Exception as g_err:
+                    print(f"[Fallback TTS Error] {g_err}")
+
+            if audio_data:
                 self.send_response(200)
                 self.send_header("Content-Type", "audio/mpeg")
                 self.send_header("Content-Length", str(len(audio_data)))
@@ -1248,10 +1260,8 @@ class handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(audio_data)
                 return
-                
-            except Exception as e:
-                print(f"[TTS Error] {e}")
-                self._send_json({"error": str(e), "fallback": True}, status=500)
+            else:
+                self._send_json({"error": "TTS engine unavailable", "fallback": True}, status=500)
                 return
 
         # --- Voice Preference Endpoint ---
