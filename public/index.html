@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta  content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ULTRON | https://ultron.ai Assistant</title>
     
@@ -24,23 +24,19 @@
     </script>
     <style>
         /* ══════════════════════════════════════════════════════════════════
-           ULTRON NEUMORPHISM DESIGN SYSTEM
-           Palette: Emerald Ink (#0e2a24) + Champagne (#f1e2c3)
+           ULTRON LIGHT NEUMORPHISM DESIGN SYSTEM
+           Emerald Ink (#0e2a24) + Soft Champagne (#f1e6d0)
            ══════════════════════════════════════════════════════════════════ */
         :root {
-            /* Emerald Ink + Champagne Palette */
-            --bg: #0e2a24;
-            --surface: #0e2a24;
-            --surface-sunken: #09201b;
-            --surface-raised: #12332c;
-
-            --shadow-dark: #07191a;
-            --shadow-light: #173f35;
-
-            --champagne: #f1e2c3;
-            --champagne-soft: #cdb98f;
-            --champagne-deep: #d9c08f;
-            --champagne-muted: rgba(205, 185, 143, 0.5);
+            /* Palette: Emerald Ink + Champagne */
+            --bg: #f1e6d0;
+            --surface: #f1e6d0;
+            --shadow-light: #fffaf0;
+            --shadow-dark: #cdbb98;
+            --ink: #0e2a24;
+            --ink-soft: #3f5f55;
+            --emerald: #1f5c4b;
+            --champagne-deep: #c7a96a;
 
             /* Neumorphism Shadows */
             --neu-raised: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
@@ -49,11 +45,13 @@
             --neu-pressed-sm: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
             --neu-pressed-deep: inset 7px 7px 14px var(--shadow-dark), inset -7px -7px 14px var(--shadow-light);
 
-            /* Legacy compatibility mapped to emerald + champagne */
-            --gold-primary: var(--champagne);
-            --gold-bright: var(--champagne-deep);
+            /* Fallback Aliases */
+            --gold-primary: var(--ink);
+            --gold-bright: var(--emerald);
             --gold-glow: transparent;
             --bg-pitch-black: var(--bg);
+            --champagne: var(--ink);
+            --champagne-soft: var(--ink-soft);
         }
 
         * {
@@ -64,10 +62,30 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        /* Thin Champagne & Emerald Scrollbars */
+        *::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        *::-webkit-scrollbar-track {
+            background: var(--bg);
+        }
+        *::-webkit-scrollbar-thumb {
+            background: var(--emerald);
+            border-radius: 6px;
+        }
+        *::-webkit-scrollbar-thumb:hover {
+            background: var(--ink);
+        }
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--emerald) var(--bg);
+        }
+
         html, body {
             background-color: var(--bg) !important;
             background: var(--bg) !important;
-            color: var(--champagne) !important;
+            color: var(--ink) !important;
             min-height: 100vh;
             min-height: 100dvh;
             display: flex;
@@ -82,7 +100,7 @@
             position: relative;
         }
 
-        /* ── Minimalist Neumorphic Header ── */
+        /* ── Minimalist Header ── */
         header {
             width: 100% !important;
             max-width: 100% !important;
@@ -106,7 +124,7 @@
             font-size: 21px;
             font-weight: 900;
             letter-spacing: 4px;
-            color: var(--champagne) !important;
+            color: var(--ink) !important;
             text-shadow: none !important;
             display: flex;
             align-items: center;
@@ -140,11 +158,11 @@
             display: none !important;
         }
 
-        /* ── Neumorphic Raised Nav Pills & Buttons ── */
+        /* ── Nav Pills & Action Buttons ── */
         .header-pill-btn, .action-btn {
             background: var(--surface) !important;
             border: none !important;
-            color: var(--champagne) !important;
+            color: var(--ink) !important;
             border-radius: 18px !important;
             padding: 8px 16px !important;
             min-height: 44px !important;
@@ -167,14 +185,21 @@
             background: var(--surface) !important;
             border: none !important;
             box-shadow: var(--neu-pressed-sm) !important;
-            color: var(--champagne-deep) !important;
+            color: var(--emerald) !important;
             text-shadow: none !important;
             transform: none !important;
         }
 
         .action-icon {
-            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             color: inherit !important;
+        }
+        .action-icon svg {
+            width: 15px;
+            height: 15px;
+            stroke: currentColor;
         }
         .action-text {
             font-size: 11px;
@@ -191,7 +216,7 @@
             letter-spacing: 2px !important;
             background: var(--surface) !important;
             border: none !important;
-            color: var(--champagne-deep) !important;
+            color: var(--emerald) !important;
             box-shadow: var(--neu-pressed-sm) !important;
             text-shadow: none !important;
             display: inline-flex !important;
@@ -200,25 +225,23 @@
             min-height: 44px !important;
         }
 
-        /* ── 3D Particle Orb Container ── */
+        /* ── 3D Visualizer Orb Container ── */
         .visualizer-container {
             position: relative;
-            width: min(350px, 42vh);
-            height: min(350px, 42vh);
+            width: min(340px, 40vh);
+            height: min(340px, 40vh);
+            max-width: 90vw;
             display: flex;
             justify-content: center;
             align-items: center;
-            margin: 12px auto 6px auto;
+            margin: 12px auto 8px auto;
             z-index: 10;
             overflow: visible;
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        body.chat-panel-open .visualizer-container {
-            transform: translateX(180px);
         }
         #webgl-canvas {
-            width: 100%;
-            height: 100%;
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
         }
 
         /* ── State Label ── */
@@ -226,7 +249,7 @@
             font-size: 13px;
             font-weight: 700;
             letter-spacing: 3.5px;
-            color: var(--champagne-soft) !important;
+            color: var(--ink-soft) !important;
             text-shadow: none !important;
             text-transform: uppercase;
             margin-bottom: 24px;
@@ -270,7 +293,7 @@
             width: 32px;
             height: 32px;
             fill: none;
-            stroke: var(--champagne) !important;
+            stroke: var(--ink) !important;
             stroke-width: 2.2;
             stroke-linecap: round;
             stroke-linejoin: round;
@@ -278,10 +301,10 @@
             transition: stroke 0.2s ease;
         }
         .mic-btn.active .mic-icon, .mic-btn:active .mic-icon {
-            stroke: var(--champagne-deep) !important;
+            stroke: var(--emerald) !important;
         }
 
-        /* ── Neumorphic Soft Inset Command Bar ── */
+        /* ── Neumorphic Inset Command Bar ── */
         .input-bar {
             width: 100%;
             display: flex;
@@ -302,9 +325,9 @@
             box-shadow: none !important;
             padding: 12px 6px !important;
             font-size: 16px !important;
-            color: var(--champagne) !important;
+            color: var(--ink) !important;
             font-weight: 500;
-            color-scheme: dark !important;
+            color-scheme: light !important;
             appearance: none;
             -webkit-appearance: none;
         }
@@ -314,7 +337,7 @@
             box-shadow: none !important;
         }
         .cmd-input::placeholder {
-            color: var(--champagne-soft) !important;
+            color: var(--ink-soft) !important;
             opacity: 0.8;
         }
         .cmd-input:-webkit-autofill,
@@ -322,7 +345,7 @@
         .cmd-input:-webkit-autofill:focus, 
         .cmd-input:-webkit-autofill:active {
             -webkit-box-shadow: 0 0 0 1000px var(--surface) inset !important;
-            -webkit-text-fill-color: var(--champagne) !important;
+            -webkit-text-fill-color: var(--ink) !important;
             transition: background-color 5000s ease-in-out 0s;
         }
 
@@ -331,7 +354,7 @@
             border: none !important;
             border-radius: 18px !important;
             padding: 10px 22px !important;
-            color: var(--champagne) !important;
+            color: var(--emerald) !important;
             font-weight: 800;
             font-size: 12px;
             letter-spacing: 1.2px;
@@ -344,36 +367,38 @@
             justify-content: center !important;
         }
         .send-btn:hover {
-            color: var(--champagne-deep) !important;
+            color: var(--ink) !important;
             box-shadow: var(--neu-raised-sm) !important;
         }
         .send-btn:active {
             box-shadow: var(--neu-pressed-sm) !important;
-            color: var(--champagne-deep) !important;
+            color: var(--ink) !important;
         }
 
-        /* ── Slide-Out Session Chat Panel ── */
+        /* ── Slide-Out Session Chat Panel (Drawer) ── */
         #session-chat-panel {
-            position: fixed;
-            top: 72px;
-            left: 20px;
-            width: 380px;
-            height: calc(100vh - 90px);
+            position: fixed !important;
+            top: calc(75px + env(safe-area-inset-top, 0px)) !important;
+            left: 16px !important;
+            width: min(420px, calc(100vw - 32px)) !important;
+            max-width: calc(100vw - 32px) !important;
+            height: calc(100vh - 165px) !important;
             background: var(--surface) !important;
             border: none !important;
             border-radius: 22px !important;
             box-shadow: var(--neu-raised) !important;
-            z-index: 150;
-            display: flex;
-            flex-direction: column;
-            transform: translateX(-120%);
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            overflow: hidden;
-            pointer-events: none;
+            z-index: 150 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            transform: translateX(calc(-100% - 30px)) !important;
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            overflow: hidden !important;
+            pointer-events: none !important;
+            box-sizing: border-box !important;
         }
         #session-chat-panel.active {
-            transform: translateX(0);
-            pointer-events: auto;
+            transform: translateX(0) !important;
+            pointer-events: auto !important;
         }
 
         .chat-drawer-header {
@@ -389,12 +414,12 @@
             font-size: 14px;
             font-weight: 900;
             letter-spacing: 2px;
-            color: var(--champagne) !important;
+            color: var(--ink) !important;
             text-shadow: none !important;
         }
         .chat-drawer-sub {
             font-size: 10px;
-            color: var(--champagne-soft) !important;
+            color: var(--ink-soft) !important;
             letter-spacing: 1px;
         }
         .chat-drawer-actions {
@@ -404,7 +429,7 @@
         .chat-action-btn {
             background: var(--surface) !important;
             border: none !important;
-            color: var(--champagne) !important;
+            color: var(--ink) !important;
             border-radius: 12px !important;
             padding: 6px 12px !important;
             font-size: 10px !important;
@@ -418,7 +443,7 @@
         }
         .chat-action-btn:active {
             box-shadow: var(--neu-pressed-sm) !important;
-            color: var(--champagne-deep) !important;
+            color: var(--emerald) !important;
         }
 
         .chat-stream-body {
@@ -444,7 +469,7 @@
             border-radius: 18px 18px 4px 18px !important;
             box-shadow: var(--neu-pressed-sm) !important;
             padding: 12px 16px !important;
-            color: var(--champagne) !important;
+            color: var(--ink) !important;
         }
         /* AI received message = soft raised */
         .stream-ai {
@@ -454,25 +479,100 @@
             border-radius: 18px 18px 18px 4px !important;
             box-shadow: var(--neu-raised-sm) !important;
             padding: 12px 16px !important;
-            color: var(--champagne) !important;
+            color: var(--ink) !important;
         }
 
+        .stream-sender {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: var(--emerald);
+            margin-bottom: 4px;
+        }
+        .stream-timestamp {
+            font-size: 9px;
+            color: var(--ink-soft);
+            margin-top: 4px;
+            align-self: flex-end;
+        }
+
+        /* Quick Action Suggestion Pills */
         .chat-drawer-footer {
-            padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px)) 16px !important;
+            padding: 10px 14px !important;
             border-top: 1px solid var(--shadow-dark) !important;
             background: var(--surface) !important;
+            display: flex !important;
+            gap: 8px !important;
+            overflow-x: auto !important;
+            flex-shrink: 0 !important;
         }
-        .chat-drawer-input-bar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .quick-action-pill {
             background: var(--surface) !important;
-            border-radius: 20px !important;
+            border: none !important;
+            border-radius: 16px !important;
+            color: var(--ink) !important;
+            box-shadow: var(--neu-raised-sm) !important;
+            min-height: 44px !important;
+            padding: 6px 14px !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            white-space: nowrap !important;
+            cursor: pointer !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .quick-action-pill:active {
             box-shadow: var(--neu-pressed-sm) !important;
-            padding: 4px 6px 4px 14px !important;
+            color: var(--emerald) !important;
         }
 
-        /* ── Floating HUD Tool Panels ── */
+        .chat-drawer-input-bar {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            background: var(--surface) !important;
+            border-top: 1px solid var(--shadow-dark) !important;
+            padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px)) 14px !important;
+            flex-shrink: 0 !important;
+        }
+        #drawer-chat-input {
+            flex: 1 !important;
+            background: var(--surface) !important;
+            border: none !important;
+            border-radius: 16px !important;
+            box-shadow: var(--neu-pressed-sm) !important;
+            padding: 10px 14px !important;
+            font-size: 13px !important;
+            color: var(--ink) !important;
+            outline: none !important;
+            color-scheme: light !important;
+        }
+        #drawer-chat-input::placeholder {
+            color: var(--ink-soft) !important;
+        }
+        #drawer-chat-send-btn {
+            background: var(--surface) !important;
+            border: none !important;
+            border-radius: 16px !important;
+            box-shadow: var(--neu-raised-sm) !important;
+            padding: 10px 18px !important;
+            color: var(--emerald) !important;
+            font-weight: 900 !important;
+            font-size: 13px !important;
+            min-height: 44px !important;
+            cursor: pointer !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 4px !important;
+        }
+        #drawer-chat-send-btn:active {
+            box-shadow: var(--neu-pressed-sm) !important;
+            color: var(--ink) !important;
+        }
+
+        /* ── Floating Tool Panels ── */
         .synergy-panel {
             position: fixed !important;
             top: 72px !important;
@@ -488,7 +588,7 @@
             overflow-y: auto !important;
             display: none !important;
             padding: 20px !important;
-            color: var(--champagne) !important;
+            color: var(--ink) !important;
         }
         .synergy-panel.active-panel {
             display: block !important;
@@ -510,9 +610,9 @@
             left: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
-            background: rgba(7, 25, 26, 0.88) !important;
-            backdrop-filter: blur(12px) !important;
-            -webkit-backdrop-filter: blur(12px) !important;
+            background: rgba(14, 42, 36, 0.45) !important;
+            backdrop-filter: blur(10px) !important;
+            -webkit-backdrop-filter: blur(10px) !important;
             z-index: 9999 !important;
             justify-content: center !important;
             align-items: center !important;
@@ -539,20 +639,20 @@
             position: relative !important;
             box-sizing: border-box !important;
             margin: auto !important;
-            color: var(--champagne) !important;
+            color: var(--ink) !important;
         }
 
         .livelink-title, .modal-title {
             font-size: 20px !important;
             font-weight: 900 !important;
             letter-spacing: 3px !important;
-            color: var(--champagne) !important;
+            color: var(--ink) !important;
             text-shadow: none !important;
             margin-bottom: 6px !important;
         }
         .livelink-sub, .modal-sub {
             font-size: 11px !important;
-            color: var(--champagne-soft) !important;
+            color: var(--ink-soft) !important;
             letter-spacing: 1px !important;
             margin-bottom: 20px !important;
             line-height: 1.5 !important;
@@ -583,7 +683,7 @@
             background: var(--surface) !important;
             border: none !important;
             border-radius: 14px !important;
-            color: var(--champagne-soft) !important;
+            color: var(--ink-soft) !important;
             font-size: 11px !important;
             font-weight: 800 !important;
             letter-spacing: 1px !important;
@@ -597,7 +697,7 @@
         .auth-tab-btn.active {
             background: var(--surface) !important;
             border: none !important;
-            color: var(--champagne-deep) !important;
+            color: var(--emerald) !important;
             box-shadow: var(--neu-pressed-sm) !important;
         }
 
@@ -615,7 +715,7 @@
             font-size: 11px !important;
             font-weight: 800 !important;
             letter-spacing: 1px !important;
-            color: var(--champagne-soft) !important;
+            color: var(--ink-soft) !important;
             text-transform: uppercase !important;
             margin-bottom: 6px !important;
             display: block !important;
@@ -627,12 +727,12 @@
             border: none !important;
             border-radius: 14px !important;
             padding: 12px 16px !important;
-            color: var(--champagne) !important;
+            color: var(--ink) !important;
             font-size: 14px !important;
             outline: none !important;
             box-shadow: var(--neu-pressed-sm) !important;
             transition: all 0.2s !important;
-            color-scheme: dark !important;
+            color-scheme: light !important;
         }
         .livelink-input:focus, .modal-input:focus {
             box-shadow: var(--neu-pressed-deep) !important;
@@ -640,17 +740,17 @@
             outline: none !important;
         }
         .livelink-input::placeholder, .modal-input::placeholder {
-            color: var(--champagne-soft) !important;
+            color: var(--ink-soft) !important;
             opacity: 0.7;
         }
 
-        .livelink-btn, .modal-submit-btn {
+        .livelink-btn, .modal-submit-btn, #cpw-submit-btn {
             background: var(--surface) !important;
             border: none !important;
             border-radius: 16px !important;
             padding: 12px 20px !important;
             min-height: 44px !important;
-            color: var(--champagne) !important;
+            color: var(--emerald) !important;
             font-weight: 900 !important;
             font-size: 13px !important;
             letter-spacing: 2px !important;
@@ -663,19 +763,19 @@
             align-items: center !important;
             justify-content: center !important;
         }
-        .livelink-btn:hover, .modal-submit-btn:hover {
-            color: var(--champagne-deep) !important;
+        .livelink-btn:hover, .modal-submit-btn:hover, #cpw-submit-btn:hover {
+            color: var(--ink) !important;
             box-shadow: var(--neu-raised-sm) !important;
         }
-        .livelink-btn:active, .modal-submit-btn:active {
+        .livelink-btn:active, .modal-submit-btn:active, #cpw-submit-btn:active {
             box-shadow: var(--neu-pressed-sm) !important;
-            color: var(--champagne-deep) !important;
+            color: var(--ink) !important;
         }
 
         /* ── Voice Settings & Picker ── */
         .voice-picker-group label {
             font-size: 11px !important;
-            color: var(--champagne-soft) !important;
+            color: var(--ink-soft) !important;
             margin-bottom: 10px;
             display: block;
             text-transform: uppercase;
@@ -701,14 +801,14 @@
             cursor: pointer;
             box-shadow: var(--neu-raised-sm) !important;
             transition: all 0.2s ease;
-            color: var(--champagne) !important;
+            color: var(--ink) !important;
         }
         .voice-item:hover {
-            color: var(--champagne-deep) !important;
+            color: var(--emerald) !important;
         }
         .voice-item.active {
             box-shadow: var(--neu-pressed-sm) !important;
-            color: var(--champagne-deep) !important;
+            color: var(--emerald) !important;
         }
         .voice-item-info {
             display: flex;
@@ -721,20 +821,20 @@
         }
         .voice-item-tags {
             font-size: 10px;
-            color: var(--champagne-soft) !important;
+            color: var(--ink-soft) !important;
             margin-top: 2px;
         }
         .slider-group label {
             display: flex;
             justify-content: space-between;
             font-size: 11px;
-            color: var(--champagne-soft) !important;
+            color: var(--ink-soft) !important;
             margin-bottom: 8px;
         }
         .slider-group input[type="range"] {
             width: 100%;
             margin-bottom: 16px;
-            accent-color: var(--champagne-deep);
+            accent-color: var(--emerald);
         }
 
         /* ── Toasts ── */
@@ -744,7 +844,7 @@
             left: 50%;
             transform: translateX(-50%);
             background: var(--surface) !important;
-            color: var(--champagne) !important;
+            color: var(--ink) !important;
             border: none !important;
             border-radius: 16px !important;
             padding: 10px 20px !important;
@@ -757,8 +857,7 @@
             animation: fadeIn 0.3s ease;
         }
 
-        /* ── Mobile Docks & Responsive Positioning ── */
-        /* Priority action docks: centered */
+        /* ── Priority Action Docks (Centered Top & Bottom) ── */
         .priority-dock {
             position: fixed !important;
             left: 50% !important;
@@ -785,34 +884,6 @@
         .bottom-dock {
             bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important;
         }
-
-        .mobile-dock-btn {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
-            border: none;
-            color: var(--champagne-soft);
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 0.8px;
-            cursor: pointer;
-            padding: 6px 4px;
-            min-height: 44px !important;
-            transition: transform 0.15s, color 0.15s;
-        }
-        .mobile-dock-btn .dock-icon {
-            font-size: 18px;
-            margin-bottom: 2px;
-        }
-        .mobile-dock-btn:active, .mobile-dock-btn.active {
-            color: var(--champagne-deep) !important;
-            transform: scale(0.95);
-        }
-
-        /* docks handled above */
 
         @media (min-width: 768px) {
             .desktop-hidden { display: none !important; }
@@ -846,26 +917,36 @@
             }
 
             .top-dock {
-                top: calc(env(safe-area-inset-top, 20px) + 45px) !important;
-                width: 95%;
-                justify-content: space-evenly;
+                top: calc(env(safe-area-inset-top, 20px) + 55px) !important;
+                width: 95% !important;
+                max-width: 95% !important;
+                justify-content: space-evenly !important;
+                padding: 6px 8px !important;
+                gap: 6px !important;
             }
             .bottom-dock {
-                bottom: 15px;
-                width: 95%;
-                justify-content: space-evenly;
+                bottom: calc(15px + env(safe-area-inset-bottom, 0px)) !important;
+                width: 95% !important;
+                max-width: 95% !important;
+                justify-content: space-evenly !important;
+                padding: 6px 8px !important;
+                gap: 6px !important;
             }
             .action-btn {
-                padding: 6px 10px;
-                border-radius: 14px;
-                min-height: 44px;
+                padding: 6px 10px !important;
+                font-size: 10px !important;
+                min-height: 44px !important;
+                border-radius: 14px !important;
             }
-            .action-text { font-size: 10px; }
+            .action-text {
+                font-size: 10px !important;
+            }
 
             #session-chat-panel {
                 top: 0 !important;
                 left: 0 !important;
                 width: 100vw !important;
+                max-width: 100vw !important;
                 height: 100vh !important;
                 height: 100dvh !important;
                 border-radius: 0 !important;
@@ -876,15 +957,14 @@
                 padding-top: env(safe-area-inset-top, 0px) !important;
                 padding-bottom: 0 !important;
                 box-sizing: border-box !important;
-                pointer-events: none;
+                pointer-events: none !important;
             }
             #session-chat-panel.active {
                 transform: translateY(0) !important;
-                pointer-events: auto;
+                pointer-events: auto !important;
             }
         }
 
-        /* Hide simulated Amma override banner by default */
         #amma-override-banner {
             display: none;
             position: fixed !important;
@@ -892,7 +972,7 @@
             left: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
-            background: rgba(7, 25, 26, 0.92) !important;
+            background: rgba(14, 42, 36, 0.92) !important;
             backdrop-filter: blur(14px) !important;
             -webkit-backdrop-filter: blur(14px) !important;
             z-index: 10000 !important;
@@ -907,7 +987,7 @@
             left: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
-            background: rgba(7, 25, 26, 0.92) !important;
+            background: rgba(14, 42, 36, 0.92) !important;
             backdrop-filter: blur(14px) !important;
             -webkit-backdrop-filter: blur(14px) !important;
             z-index: 9000 !important;
@@ -935,28 +1015,28 @@
     <!-- EXACT 3 UP, 4 DOWN LAYOUT -->
     <div id="top-dock" class="priority-dock top-dock">
         <button class="action-btn" onclick="toggleOpticalVision()" title="Toggle Camera Video Feed">
-            <span class="action-icon">👁️</span><span class="action-text">VISION</span>
+            <span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="action-text">VISION</span>
         </button>
         <button class="action-btn" onclick="toggleSessionChatPanel()" title="Open Session Chat">
-            <span class="action-icon">💬</span><span class="action-text">CHAT</span>
+            <span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="action-text">CHAT</span>
         </button>
         <button class="action-btn" onclick="toggleQRModal()" title="Pair Phone with Laptop">
-            <span class="action-icon">📱</span><span class="action-text">PAIR</span>
+            <span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span><span class="action-text">PAIR</span>
         </button>
     </div>
 
     <div id="bottom-dock" class="priority-dock bottom-dock">
         <button class="action-btn" onclick="switchDockTab('files')" title="Bi-Directional Drag & Drop Files">
-            <span class="action-icon">📁</span><span class="action-text">FILES</span>
+            <span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span class="action-text">FILES</span>
         </button>
         <button class="action-btn" onclick="switchDockTab('remote')" title="Laptop & Phone Remote Controls">
-            <span class="action-icon">⚡</span><span class="action-text">REMOTE</span>
+            <span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span><span class="action-text">REMOTE</span>
         </button>
         <button class="action-btn" onclick="toggleZenFocusModal()" title="Zen Focus Deep Study Shield">
-            <span class="action-icon">🛡️</span><span class="action-text">ZEN</span>
+            <span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span class="action-text">ZEN</span>
         </button>
         <button class="action-btn" id="action-vault-btn" onclick="openCommanderVault()" style="display:none;" title="Review Access Requests">
-            <span class="action-icon" style="color:#FFB300;">👑</span><span class="action-text" style="color:#FFB300;">REQUESTS</span>
+            <span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg></span><span class="action-text">REQUESTS</span>
         </button>
     </div>
 
@@ -1880,7 +1960,7 @@
                         actionVaultBtn.innerHTML = `<span class="action-icon" style="color:#FF3D00;">🚨</span><span class="action-text" style="color:#FF3D00;">REQUESTS (${count})</span>`;
                     } else {
                         actionVaultBtn.classList.remove('glow-pulse');
-                        actionVaultBtn.innerHTML = `<span class="action-icon" style="color:#FFB300;">👑</span><span class="action-text" style="color:#FFB300;">REQUESTS</span>`;
+                        actionVaultBtn.innerHTML = `<span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg></span><span class="action-text">REQUESTS</span>`;
                     }
                 }
 
@@ -2596,11 +2676,10 @@
             c.width = 128; c.height = 128;
             const ctx = c.getContext('2d');
             const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-            g.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');     // Blinding radiant white core
-            g.addColorStop(0.20, 'rgba(255, 245, 170, 1.0)');   // High-luminance gold
-            g.addColorStop(0.45, 'rgba(255, 200, 20, 0.90)');   // Saturated radiant amber
-            g.addColorStop(0.70, 'rgba(255, 150, 0, 0.40)');    // Warm golden corona
-            g.addColorStop(1.0, 'rgba(255, 100, 0, 0.0)');      // Transparent boundary
+            g.addColorStop(0.0, 'rgba(14, 42, 36, 1.0)');
+            g.addColorStop(0.25, 'rgba(31, 92, 75, 0.95)');
+            g.addColorStop(0.60, 'rgba(199, 169, 106, 0.65)');
+            g.addColorStop(1.0, 'rgba(199, 169, 106, 0.0)');
             ctx.fillStyle = g;
             ctx.fillRect(0, 0, 128, 128);
             return new THREE.CanvasTexture(c);
@@ -2636,10 +2715,10 @@
                 const colors = new Float32Array(orbParticleCount * 3);
 
                 // High-luminance palette: blinding white sparks, intense gold & glowing amber
-                const whiteSpark = new THREE.Color(0xFFFFFF);
-                const brightGold = new THREE.Color(0xFFF176);
-                const richGold   = new THREE.Color(0xFFD54F);
-                const deepAmber  = new THREE.Color(0xFFB300);
+                const emeraldDark = new THREE.Color(0x0E2A24);
+                const emeraldDeep = new THREE.Color(0x1F5C4B);
+                const emeraldMid  = new THREE.Color(0x2E7D66);
+                const champagneDeep = new THREE.Color(0xC7A96A);
 
                 for (let i = 0; i < orbParticleCount; i++) {
                     const u = Math.random();
@@ -2659,14 +2738,14 @@
                     pos[i * 3 + 2] = basePositions[i * 3 + 2] = z;
 
                     let c;
-                    if (u < 0.35) {
-                        c = whiteSpark;
+                    if (u < 0.40) {
+                        c = emeraldDeep;
                     } else if (u < 0.70) {
-                        c = brightGold;
-                    } else if (u < 0.90) {
-                        c = richGold;
+                        c = emeraldDark;
+                    } else if (u < 0.88) {
+                        c = emeraldMid;
                     } else {
-                        c = deepAmber;
+                        c = champagneDeep;
                     }
 
                     colors[i * 3]     = c.r;
@@ -2679,12 +2758,12 @@
 
                 // Increased size and additive blending for intense radiant brightness
                 const particleMaterial = new THREE.PointsMaterial({
-                    size: 0.052,
+                    size: 0.055,
                     map: createGlowSpriteTexture(),
                     vertexColors: true,
                     transparent: true,
-                    opacity: 1.0,
-                    blending: THREE.AdditiveBlending,
+                    opacity: 0.95,
+                    blending: THREE.NormalBlending,
                     depthWrite: false
                 });
 
@@ -3061,7 +3140,7 @@
 
             isSpeaking = true;
             speechPulse = 1.0;
-            updateBadge('dY"E SPEAKING', '#00E5FF');
+            updateBadge('SPEAKING', '#00E5FF');
 
             const player = document.getElementById('ultron-audio-player');
             if (!player) { fallbackBrowserTTS(clean); return; }
@@ -3081,7 +3160,7 @@
                 player.onended = () => {
                     isSpeaking = false;
                     speechPulse = 0.0;
-                    updateBadge('dY"? ONLINE', '#00FF00');
+                    updateBadge('ONLINE', '#00FF00');
                     if (handsFreeVoice) setTimeout(startHandsFreeVoice, 500);
                 };
                 player.onerror = () => { fallbackBrowserTTS(clean); };
@@ -3122,7 +3201,7 @@
                 utter.onend = () => {
                     isSpeaking = false;
                     speechPulse = 0.0;
-                    updateBadge('dY"? ONLINE', '#00FF00');
+                    updateBadge('ONLINE', '#00FF00');
                     if (handsFreeVoice) setTimeout(startHandsFreeVoice, 500);
                 };
 
@@ -3342,7 +3421,7 @@
             sendTextCommand(val);
         }
 
-        function appendToChatStream(sender, text, timestamp = null, mediaHtml = '') { const stream = document.getElementById('session-chat-stream'); if (!stream) return; const timeStr = timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); const isUser = sender === 'user'; const msgDiv = document.createElement('div'); msgDiv.className = `stream-msg ${isUser ? 'stream-user' : 'stream-ai'}`; let parsedText = escapeHtml(text); parsedText = parsedText.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => { return `<img src="${url}" class="chat-image-preview" onclick="openImageViewer('${encodeURIComponent(url)}', '${encodeURIComponent(alt)}')" alt="${alt}" style="margin-top:8px; border-radius:8px; border:1px solid #FFB300; width:100%;">`; }); msgDiv.innerHTML = ` <div class="stream-sender">${isUser ? '?? YOU' : '? ULTRON'}</div> <div>${parsedText}</div> ${mediaHtml} <div class="stream-timestamp">${timeStr}</div> `; stream.appendChild(msgDiv); stream.scrollTop = stream.scrollHeight; if (!isChatPanelOpen && window.innerWidth > 768) { toggleSessionChatPanel(); } }
+        function appendToChatStream(sender, text, timestamp = null, mediaHtml = '') { const stream = document.getElementById('session-chat-stream'); if (!stream) return; const timeStr = timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); const isUser = sender === 'user'; const msgDiv = document.createElement('div'); msgDiv.className = `stream-msg ${isUser ? 'stream-user' : 'stream-ai'}`; let parsedText = escapeHtml(text); parsedText = parsedText.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => { return `<img src="${url}" class="chat-image-preview" onclick="openImageViewer('${encodeURIComponent(url)}', '${encodeURIComponent(alt)}')" alt="${alt}" style="margin-top:8px; border-radius:8px; border:1px solid #FFB300; width:100%;">`; }); msgDiv.innerHTML = ` <div class="stream-sender">${isUser ? 'YOU' : 'ULTRON'}</div> <div>${parsedText}</div> ${mediaHtml} <div class="stream-timestamp">${timeStr}</div> `; stream.appendChild(msgDiv); stream.scrollTop = stream.scrollHeight; if (!isChatPanelOpen && window.innerWidth > 768) { toggleSessionChatPanel(); } }
 
         function clearSessionChatStream() {
             const stream = document.getElementById('session-chat-stream');
@@ -4250,7 +4329,7 @@
     <!-- ── Mobile Phone Bottom Navigation Dock (Thumb-Friendly Experience) ── -->
     
 
-<div id="build-stamp" style="position:fixed; bottom:5px; right:5px; font-size:10px; color:#cdb98f; z-index:99999; pointer-events:none; font-family:monospace; background:#07191a; padding:2px 6px; border-radius:4px; border:1px solid #173f35;">Phase1-NeuUI-Final</div>
+<div id="build-stamp" style="position:fixed; bottom:5px; right:5px; font-size:10px; color:#3f5f55; z-index:99999; pointer-events:none; font-family:monospace; background:#f1e6d0; padding:2px 6px; border-radius:4px; box-shadow:inset 1px 1px 3px #cdbb98, inset -1px -1px 3px #fffaf0;">Phase1-NeuUI-light</div>
 </body>
 </html>
 
