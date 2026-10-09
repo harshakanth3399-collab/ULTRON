@@ -48,6 +48,9 @@ def get_db_connection():
             @property
             def rowcount(self):
                 return self.cursor.rowcount
+            @property
+            def lastrowid(self):
+                return getattr(self.cursor, 'lastrowid', 1)
                 
         class SqliteToPostgresConnection:
             def __init__(self, pg_conn):
