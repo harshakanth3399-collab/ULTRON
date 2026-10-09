@@ -366,9 +366,6 @@
         /* Desktop & Tablet (> 640px) */
         @media (min-width: 641px) {
             .priority-dock {
-                position: fixed !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
                 padding: 8px 16px !important;
                 background: var(--surface) !important;
                 border-radius: 20px !important;
@@ -377,17 +374,31 @@
                 max-width: 95vw !important;
             }
             .top-dock {
+                position: fixed !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
                 top: calc(75px + env(safe-area-inset-top, 0px)) !important;
+                z-index: 200 !important;
             }
             .bottom-dock {
-                bottom: calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+                position: static !important;
+                transform: none !important;
+                margin: auto !important;
+                z-index: 100 !important;
             }
             .bottom-nav-shell {
                 display: flex !important;
                 justify-content: center !important;
                 align-items: center !important;
                 width: 100% !important;
+                min-height: 54px !important;
                 flex-shrink: 0 !important;
+                position: relative !important;
+                z-index: 100 !important;
+            }
+            .command-section {
+                margin-bottom: 12px !important;
+                z-index: 50 !important;
             }
         }
 
