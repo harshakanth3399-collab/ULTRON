@@ -1,4 +1,5 @@
-const CACHE_NAME = 'ultron-livelink-v20261008-a';
+// ULTRON LiveLink Service Worker - Safe Network-First
+const CACHE_NAME = 'ultron-livelink-v0-safe';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -15,7 +16,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log("Deleting old cache:", cacheName);
+            console.log('[SW] Deleting obsolete cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -25,23 +26,23 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Pass dynamic API requests directly to the network
   if (event.request.url.includes('/api/')) {
     event.respondWith(fetch(event.request));
     return;
   }
-  
-  // Strict Network-first for ALL assets to ensure UI updates show immediately
+
+  // Network-first for all other requests: fetch fresh version, fallback to cache if offline
   event.respondWith(
-      fetch(event.request, { cache: 'no-store' })
-      .then((response) => {
-          // Cache the latest version if successful
-          if (response && response.status === 200 && response.type === 'basic') {
-              const responseToCache = response.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                  cache.put(event.request, responseToCache);
-              });
-          }
-          return response;
+    fetch(event.request, { cache: 'no-cache' })
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return networkResponse;
       })
       .catch(() => caches.match(event.request))
   );

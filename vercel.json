@@ -5,19 +5,9 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 30
-    },
-    "api/test_sqlite.py": {
-      "maxDuration": 10
-    },
-    "api/test_headers.py": {
-      "maxDuration": 10
     }
   },
   "rewrites": [
-    {
-      "source": "/api/test_headers",
-      "destination": "/api/test_headers.py"
-    },
     {
       "source": "/api/(.*)",
       "destination": "/api/index.py?_path=/api/$1"
@@ -28,6 +18,19 @@
     }
   ],
   "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate, max-age=0" },
+        { "key": "Service-Worker-Allowed", "value": "/" }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate, max-age=0" }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [
