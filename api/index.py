@@ -516,6 +516,33 @@ def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER", histor
             print(f"[GROQ ERROR model={model}] {e}")
             continue
 
+    # Fallback to OpenAI if configured
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    if openai_key:
+        try:
+            req = urllib.request.Request(
+                "https://api.openai.com/v1/chat/completions",
+                data=json.dumps({
+                    "model": "gpt-4o-mini",
+                    "messages": messages,
+                    "temperature": 0.7,
+                    "max_tokens": 300
+                }).encode("utf-8"),
+                headers={
+                    "Authorization": f"Bearer {openai_key}",
+                    "Content-Type": "application/json"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=9.0) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                choice = data.get("choices", [{}])[0]
+                msg = choice.get("message", {})
+                content = (msg.get("content") or "").strip()
+                if content:
+                    return content
+        except Exception as e:
+            print(f"[OPENAI CHAT ERROR] {e}")
+
     if role == "ADMIN":
         return f"Harsha Sir, I processed your directive: '{prompt}'. Ready for your command."
     return f"Hello {user_name}, I understand. How may I assist you with this?"
@@ -996,6 +1023,164 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 self._send_json({"success": False, "error": f"Internal server error: {e}"}, status=500)
                 return
+
+        # ── 3. AI Chat / Voice Command (Multi-Tenant, Saved per User) ──
+        if path.endswith("/command"):
+            cmd = data.get("command", "").strip() or data.get("prompt", "").strip() or data.get("text", "").strip()
+            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "") or ""
+            if not token and self.headers.get("Authorization", "").startswith("Bearer "):
+                token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
+
+            if not cmd:
+                self._send_json({"ok": False, "error": "No command provided.", "response": "I didn't catch that. Could you repeat?"}, status=400)
+                return
+
+            user_name = "Friend"
+            user_email = ""
+            user_phone = ""
+            role = "USER"
+
+            MASTER_TOKEN_VAL = os.getenv("MASTER_TOKEN", "LIVELINK_MASTER_HARSHA")
+            if token and (token == MASTER_TOKEN or token == MASTER_TOKEN_VAL):
+                user_name = "Harsha Sir"
+                user_email = "harshakanth@ultron.ai"
+                role = "ADMIN"
+            elif token:
+                try:
+                    conn = get_db_connection()
+                    conn.row_factory = sqlite3.Row
+                    cur = conn.cursor()
+                    cur.execute("SELECT name, first_name, email, phone, role FROM livelink_users WHERE access_token = ?", (token,))
+                    row = cur.fetchone()
+                    if row:
+                        user_name = row["first_name"] or (row["name"].split(" ")[0] if row["name"] else "Friend")
+                        user_email = row["email"] or ""
+                        user_phone = row["phone"] or ""
+                        role = row["role"] or "USER"
+                    conn.close()
+                except Exception:
+                    pass
+
+            # Fetch recent turns for this user for active memory & adaptability
+            history = []
+            try:
+                conn = get_db_connection()
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT prompt, reply FROM user_chats WHERE user_token = ? ORDER BY id DESC LIMIT 8",
+                    (token or "guest",)
+                )
+                rows = cur.fetchall()
+                conn.close()
+                for r in reversed(rows):
+                    p_txt = (r["prompt"] or "").strip()
+                    r_txt = (r["reply"] or "").strip()
+                    if p_txt and r_txt:
+                        history.append({"role": "user", "content": p_txt})
+                        history.append({"role": "assistant", "content": r_txt})
+            except Exception:
+                pass
+
+            client_history = data.get("history", [])
+            if not history and isinstance(client_history, list):
+                for item in client_history[-8:]:
+                    if isinstance(item, dict):
+                        p_txt = (item.get("prompt") or "").strip()
+                        r_txt = (item.get("reply") or "").strip()
+                        if p_txt and r_txt:
+                            history.append({"role": "user", "content": p_txt})
+                            history.append({"role": "assistant", "content": r_txt})
+
+            permanent_mem = data.get("permanent_memory", {}) if role == "ADMIN" else None
+            new_fact = _extract_new_permanent_memory(cmd) if role == "ADMIN" else ""
+
+            # Check if this command is an AI image generation request
+            is_img, clean_img_prompt, img_url = _detect_image_intent(cmd)
+            if is_img:
+                if role == "ADMIN":
+                    reply = f"Harsha Sir, I generated the image: '{clean_img_prompt}'. Displaying it directly in your session chat panel."
+                else:
+                    reply = f"Here is the image: '{clean_img_prompt}'. I've rendered it in your session chat panel."
+
+                try:
+                    conn = get_db_connection()
+                    conn.execute(
+                        """
+                        INSERT INTO user_chats (user_token, user_name, user_email, user_phone, role, prompt, reply, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (token or "guest", user_name, user_email, user_phone, role, cmd, reply, time.time())
+                    )
+                    conn.commit()
+                    conn.close()
+                except Exception:
+                    pass
+
+                self._send_json({
+                    "ok": True,
+                    "reply": reply,
+                    "response": reply,
+                    "user_name": user_name,
+                    "role": role,
+                    "image_url": img_url,
+                    "image_prompt": clean_img_prompt
+                })
+                return
+
+            # Check if this command is an Amma priority call trigger
+            lower_cmd = cmd.lower()
+            if any(ph in lower_cmd for ph in ["amma is calling", "mom is calling", "simulate amma call", "test amma call", "call from amma", "incoming call from amma"]):
+                reply = "Harsha Sir, priority override activated! Amma is calling now. All study mutes and focus distractions are bypassed immediately."
+                self._send_json({
+                    "ok": True,
+                    "reply": reply,
+                    "response": reply,
+                    "user_name": user_name,
+                    "role": role,
+                    "incoming_call": {
+                        "caller": "AMMA (Mom)",
+                        "phone": "+91 94949 99999",
+                        "is_amma": True
+                    }
+                })
+                return
+
+            try:
+                reply = _ask_groq(cmd, user_name, role, history=history, permanent_memory=permanent_mem)
+            except Exception as e:
+                print(f"[GROQ ERROR] {e}")
+                if role == "ADMIN":
+                    reply = f"Harsha Sir, I processed your directive: '{cmd}'. Ready for your command."
+                else:
+                    reply = f"Hello {user_name}, I am here and ready to help you."
+
+            # Store chat in user_chats table
+            try:
+                conn = get_db_connection()
+                conn.execute(
+                    """
+                    INSERT INTO user_chats (user_token, user_name, user_email, user_phone, role, prompt, reply, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (token or "guest", user_name, user_email, user_phone, role, cmd, reply, time.time())
+                )
+                conn.commit()
+                conn.close()
+            except Exception:
+                pass
+
+            res_payload = {
+                "ok": True,
+                "reply": reply,
+                "response": reply,
+                "user_name": user_name,
+                "role": role
+            }
+            if new_fact:
+                res_payload["new_memory_fact"] = new_fact
+            self._send_json(res_payload)
+            return
 
         # --- Cloud Neural TTS Endpoint ---
         if path.endswith("/tts"):
