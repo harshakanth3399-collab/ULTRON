@@ -998,7 +998,9 @@
         }
 
         @media (max-width: 767px) {
-            
+            .top-dock {
+                top: calc(env(safe-area-inset-top, 20px) + 45px);
+            }
             .action-btn { 
                 padding: 10px 10px;
                 min-height: 44px; /* Minimum thumb tap target */
@@ -4429,7 +4431,7 @@
     <!-- ── Mobile Phone Bottom Navigation Dock (Thumb-Friendly Experience) ── -->
     
 
-<div id="build-stamp" style="position:fixed; bottom:5px; right:5px; font-size:10px; color:rgba(255,180,0,0.8); z-index:99999; pointer-events:none; font-family:monospace; background:rgba(0,0,0,0.8); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,180,0,0.4);">Phase0-v3</div>
+<div id="build-stamp" style="position:fixed; bottom:5px; right:5px; font-size:10px; color:rgba(255,180,0,0.8); z-index:99999; pointer-events:none; font-family:monospace; background:rgba(0,0,0,0.8); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,180,0,0.4);">Phase0-v4</div>
 </body>
 </html>
 
