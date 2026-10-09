@@ -831,15 +831,10 @@ class handler(BaseHTTPRequestHandler):
             pass
         body = self.rfile.read(content_length) if content_length > 0 else b""
         data = {}
-        parse_err = ""
         try:
             data = json.loads(body.decode("utf-8")) if body else {}
-        except Exception as e:
-            parse_err = str(e)
-
-        if path.endswith("/test_headers"):
-            self._send_json({"headers": dict(self.headers), "body": body.decode('utf-8', errors='ignore'), "data": data, "cl": content_length, "parse_err": parse_err})
-            return
+        except Exception:
+            pass
             
         # 1. User Registration
         if path.endswith("/register"):
