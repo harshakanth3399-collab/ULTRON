@@ -226,29 +226,30 @@
 
         .visualizer-container {
             position: relative !important;
-            width: clamp(300px, 56vmin, 620px) !important;
-            height: clamp(300px, 56vmin, 620px) !important;
-            max-width: 90vw !important;
-            max-height: 54vh !important;
+            width: clamp(180px, 38vmin, 380px) !important;
+            height: clamp(180px, 38vmin, 380px) !important;
+            aspect-ratio: 1 / 1 !important;
+            max-width: min(85vw, 85vh) !important;
+            max-height: min(85vw, 85vh) !important;
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
             margin: auto !important;
             z-index: 10 !important;
             overflow: visible !important;
-            flex-shrink: 1 !important;
+            flex-shrink: 0 !important;
         }
-        @media (max-width: 640px) or (max-height: 720px) {
+        @media (max-width: 640px) {
             .visualizer-container {
-                width: clamp(260px, 68vmin, 380px) !important;
-                height: clamp(260px, 68vmin, 380px) !important;
-                max-height: 46vh !important;
-                max-width: 88vw !important;
+                width: clamp(180px, 48vmin, 320px) !important;
+                height: clamp(180px, 48vmin, 320px) !important;
+                aspect-ratio: 1 / 1 !important;
             }
         }
         #webgl-canvas {
             width: 100% !important;
             height: 100% !important;
+            aspect-ratio: 1 / 1 !important;
             display: block !important;
         }
 
@@ -2928,6 +2929,8 @@
                     const size = Math.round(Math.min(rect.width, rect.height)) || 280;
                     if (size <= 0) return;
                     renderer.setSize(size, size, false);
+                    canvas.style.width = size + 'px';
+                    canvas.style.height = size + 'px';
                     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
                     camera.aspect = 1;
                     camera.updateProjectionMatrix();
