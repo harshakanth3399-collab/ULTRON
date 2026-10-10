@@ -10,6 +10,29 @@ import re
 import smtplib
 import sqlite3
 import time
+import base64
+import uuid
+import datetime
+
+VOICE_MAP = {
+    "guy": "en-US-GuyNeural",
+    "onyx": "en-US-GuyNeural",
+    "christopher": "en-US-ChristopherNeural",
+    "alloy": "en-US-ChristopherNeural",
+    "eric": "en-US-EricNeural",
+    "echo": "en-US-EricNeural",
+    "ryan": "en-GB-RyanNeural",
+    "fable": "en-GB-RyanNeural",
+    "andrew": "en-US-AndrewNeural",
+    "brian": "en-US-BrianNeural",
+    "roger": "en-US-RogerNeural",
+    "steffan": "en-US-SteffanNeural",
+    "jenny": "en-US-JennyNeural",
+    "nova": "en-US-JennyNeural",
+    "aria": "en-US-AriaNeural",
+    "shimmer": "en-US-AriaNeural",
+    "default": "en-US-GuyNeural"
+}
 import urllib.parse
 import urllib.request
 import uuid
@@ -940,7 +963,7 @@ class handler(BaseHTTPRequestHandler):
                         b64_content = row["data_b64"] if isinstance(row, dict) else row[1]
                         if "," in b64_content:
                             b64_content = b64_content.split(",", 1)[1]
-                        import base64
+                        # base64 imported at top
                         file_bytes = base64.b64decode(b64_content)
 
                         self.send_response(200)
@@ -1039,7 +1062,7 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             try:
-                import time
+                # time imported at top
                 conn = get_db_connection()
                 cur = conn.cursor()
                 cur.execute("SELECT id FROM livelink_users WHERE email = ? OR phone = ?", (email, phone))
@@ -1117,7 +1140,7 @@ class handler(BaseHTTPRequestHandler):
             clean_phone = re.sub(r"[^\d+]", "", ident)
             try:
                 import uuid
-                import time
+                # time imported at top
                 conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
@@ -1522,7 +1545,7 @@ class handler(BaseHTTPRequestHandler):
 
             try:
                 raw_b64 = file_data.split(",", 1)[1] if "," in file_data else file_data
-                import base64
+                # base64 imported at top
                 decoded_bytes = base64.b64decode(raw_b64)
                 sz_bytes = len(decoded_bytes)
                 if sz_bytes < 1024:
