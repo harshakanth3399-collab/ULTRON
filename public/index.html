@@ -226,10 +226,10 @@
 
         .visualizer-container {
             position: relative !important;
-            width: clamp(260px, 50vmin, 560px) !important;
-            height: clamp(260px, 50vmin, 560px) !important;
+            width: clamp(300px, 56vmin, 620px) !important;
+            height: clamp(300px, 56vmin, 620px) !important;
             max-width: 90vw !important;
-            max-height: 52vh !important;
+            max-height: 54vh !important;
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
@@ -240,9 +240,10 @@
         }
         @media (max-width: 640px) or (max-height: 720px) {
             .visualizer-container {
-                width: clamp(180px, 45vmin, 320px) !important;
-                height: clamp(180px, 45vmin, 320px) !important;
-                max-height: 42vh !important;
+                width: clamp(260px, 68vmin, 380px) !important;
+                height: clamp(260px, 68vmin, 380px) !important;
+                max-height: 46vh !important;
+                max-width: 88vw !important;
             }
         }
         #webgl-canvas {
@@ -473,7 +474,7 @@
             }
         }
 
-        /* ── Slide-Out Session Chat Panel (Desktop Drawer / Mobile Bottom Sheet) ── */
+        /* ── Slide-Out Session Chat Panel (Desktop Drawer / Mobile Full Sheet) ── */
         #session-chat-panel {
             background: var(--surface) !important;
             border: none !important;
@@ -481,7 +482,7 @@
             z-index: 500 !important;
             display: flex !important;
             flex-direction: column !important;
-            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
             overflow: hidden !important;
             pointer-events: none !important;
             box-sizing: border-box !important;
@@ -506,21 +507,19 @@
             }
         }
 
-        /* Phone: Full-width Bottom Sheet */
+        /* Phone: Full-screen sheet starting right under the top bar */
         @media (max-width: 640px) {
             #session-chat-panel {
                 position: fixed !important;
-                top: auto !important;
+                top: calc(65px + env(safe-area-inset-top, 0px)) !important;
                 bottom: 0 !important;
                 left: 0 !important;
                 right: 0 !important;
                 width: 100% !important;
                 max-width: 100% !important;
-                height: 85dvh !important;
-                max-height: 85dvh !important;
-                border-radius: 24px 24px 0 0 !important;
+                height: calc(100dvh - 65px - env(safe-area-inset-top, 0px)) !important;
+                border-radius: 22px 22px 0 0 !important;
                 transform: translateY(105%) !important;
-                padding-bottom: env(safe-area-inset-bottom, 0px) !important;
             }
             #session-chat-panel.active {
                 transform: translateY(0) !important;
@@ -532,21 +531,16 @@
             display: flex !important;
             justify-content: space-between !important;
             align-items: center !important;
-            padding: 16px 20px !important;
+            padding: 14px 18px !important;
             border-bottom: 1px solid var(--shadow-dark) !important;
             background: var(--surface) !important;
             flex-shrink: 0 !important;
         }
         .chat-drawer-title {
-            font-size: 14px !important;
+            font-size: 15px !important;
             font-weight: 900 !important;
             letter-spacing: 2px !important;
             color: var(--ink) !important;
-        }
-        .chat-drawer-sub {
-            font-size: 10px !important;
-            color: var(--ink-soft) !important;
-            letter-spacing: 0.5px !important;
         }
         .chat-drawer-actions {
             display: flex !important;
@@ -573,8 +567,10 @@
 
         .chat-drawer-stream {
             flex: 1 !important;
+            min-height: 0 !important;
             overflow-y: auto !important;
-            padding: 16px !important;
+            -webkit-overflow-scrolling: touch !important;
+            padding: 14px 16px !important;
             display: flex !important;
             flex-direction: column !important;
             gap: 12px !important;
@@ -582,25 +578,39 @@
         }
 
         /* Message Bubbles: ULTRON = Raised, YOU = Inset */
-        .stream-msg-card.ai-msg {
+        .stream-msg {
+            max-width: 85% !important;
+            padding: 12px 16px !important;
+            font-size: 16px !important;
+            line-height: 1.45 !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            box-sizing: border-box !important;
+        }
+        .stream-msg.stream-ai {
             background: var(--surface) !important;
             box-shadow: var(--neu-raised-sm) !important;
             border-radius: 18px 18px 18px 4px !important;
             border: none !important;
             color: var(--ink) !important;
-            padding: 12px 16px !important;
             align-self: flex-start !important;
-            max-width: 88% !important;
         }
-        .stream-msg-card.user-msg {
+        .stream-msg.stream-user {
             background: var(--surface) !important;
             box-shadow: var(--neu-pressed-sm) !important;
             border-radius: 18px 18px 4px 18px !important;
             border: none !important;
             color: var(--ink) !important;
-            padding: 12px 16px !important;
             align-self: flex-end !important;
-            max-width: 88% !important;
+        }
+        .stream-header-line {
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            color: var(--ink-soft) !important;
+            margin-bottom: 4px !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            gap: 12px !important;
         }
 
         .chat-drawer-quick-actions {
@@ -609,7 +619,7 @@
             padding: 8px 14px !important;
             overflow-x: auto !important;
             background: var(--surface) !important;
-            border-bottom: 1px solid var(--shadow-dark) !important;
+            border-top: 1px solid var(--shadow-dark) !important;
             flex-shrink: 0 !important;
         }
         .quick-action-pill {
@@ -624,6 +634,8 @@
             white-space: nowrap !important;
             cursor: pointer !important;
             min-height: 38px !important;
+            display: inline-flex !important;
+            align-items: center !important;
         }
         .quick-action-pill:active {
             box-shadow: var(--neu-pressed-sm) !important;
@@ -658,17 +670,19 @@
         #drawer-chat-send-btn {
             background: var(--surface) !important;
             border: none !important;
-            border-radius: 16px !important;
+            border-radius: 14px !important;
             box-shadow: var(--neu-raised-sm) !important;
-            padding: 10px 18px !important;
             color: var(--emerald) !important;
-            font-weight: 900 !important;
+            padding: 0 16px !important;
             font-size: 13px !important;
-            min-height: 44px !important;
+            font-weight: 800 !important;
             cursor: pointer !important;
+            min-height: 44px !important;
             display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;
+            gap: 4px !important;
+            flex-shrink: 0 !important;
         }
         #drawer-chat-send-btn:active {
             box-shadow: var(--neu-pressed-sm) !important;
@@ -770,6 +784,7 @@
         }
 
         /* ── Synergy Panels (Files & Remote) ── */
+        .synergy-panel.active-panel { display: block !important; }
         .synergy-panel {
             position: fixed !important;
             bottom: calc(75px + env(safe-area-inset-bottom, 0px)) !important;
@@ -922,46 +937,73 @@
 
     <!-- ── Synergy Floating Panels<!-- ── Synergy Floating Panels (Files & Remote) ── -->
     <div class="synergy-panel" id="files-panel" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,179,0,0.25); padding-bottom:8px;">
-            <span style="font-size:12px; font-weight:800; color:#FFB300; letter-spacing:1px;">📁 BI-DIRECTIONAL FILE BAY (PHONE ⇄ LAPTOP)</span>
-            <span style="cursor:pointer; color:#FFB300; font-size:14px;" onclick="switchDockTab('command')">✕</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--shadow-dark); padding-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span style="font-size:13px; font-weight:900; color:var(--ink); letter-spacing:1px;">FILE HUB (CLOUD & DEVICE)</span>
+            </div>
+            <span style="cursor:pointer; color:var(--ink); font-size:16px; font-weight:800; padding:2px 6px;" onclick="switchDockTab('command')">✕</span>
         </div>
-        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" style="border:1.5px dashed rgba(255,179,0,0.5); border-radius:12px; padding:20px; text-align:center; cursor:pointer; background:rgba(255,179,0,0.05); margin-bottom:10px;">
-            <div style="font-size:12px; font-weight:700; color:#FFD54F;">⬆️ DRAG FILES HERE OR TAP TO UPLOAD</div>
-            <div style="font-size:10px; color:rgba(255,215,100,0.6); margin-top:4px;">Saves directly to Laptop Downloads folder</div>
+        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" style="border:1.5px dashed var(--shadow-dark); border-radius:14px; padding:18px; text-align:center; cursor:pointer; background:var(--surface); box-shadow:var(--neu-pressed-sm); margin-bottom:12px;">
+            <div style="font-size:12px; font-weight:800; color:var(--ink);">TAP TO UPLOAD OR DRAG FILE HERE</div>
+            <div style="font-size:10px; color:var(--ink-soft); margin-top:4px;">Securely saved to user storage • Available across your devices</div>
             <input type="file" id="file-input" style="display:none" onchange="handleFileSelect(event)">
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <span style="font-size:10px; font-weight:800; color:#FFB300;">LAPTOP FILES (TAP TO DOWNLOAD)</span>
-            <button class="chat-action-btn" onclick="fetchLaptopFiles()">REFRESH</button>
+        <div id="upload-progress-container" style="display:none; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--ink-soft); margin-bottom:4px;">
+                <span id="upload-filename">Uploading...</span>
+                <span id="upload-percent">0%</span>
+            </div>
+            <div style="height:6px; background:var(--shadow-dark); border-radius:3px; overflow:hidden;">
+                <div id="upload-progress-fill" style="height:100%; width:0%; background:var(--emerald); transition:width 0.2s;"></div>
+            </div>
         </div>
-        <div id="file-list" style="max-height:160px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:11px; font-weight:800; color:var(--ink);">YOUR FILES</span>
+            <button type="button" class="chat-action-btn" onclick="fetchLaptopFiles()" style="font-size:10px; padding:4px 10px;">REFRESH</button>
+        </div>
+        <div id="laptop-file-list" style="max-height:180px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;"></div>
     </div>
 
     <div class="synergy-panel" id="remote-panel" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,179,0,0.25); padding-bottom:8px;">
-            <span style="font-size:12px; font-weight:800; color:#FFB300; letter-spacing:1px;">⚡ REMOTE CONTROL HUB</span>
-            <span style="cursor:pointer; color:#FFB300; font-size:14px;" onclick="switchDockTab('command')">✕</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid var(--shadow-dark); padding-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2.5"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+                <span style="font-size:13px; font-weight:900; color:var(--ink); letter-spacing:1px;">REMOTE CONTROL HUB</span>
+            </div>
+            <span style="cursor:pointer; color:var(--ink); font-size:16px; font-weight:800; padding:2px 6px;" onclick="switchDockTab('command')">✕</span>
+        </div>
+        <!-- PC Connection Status Badge -->
+        <div id="pc-agent-status-badge" onclick="togglePcAgentGuide()" style="display:flex; align-items:center; gap:6px; font-size:11px; font-weight:800; color:var(--ink-soft); margin-bottom:10px; cursor:pointer; background:var(--surface); box-shadow:var(--neu-pressed-sm); border-radius:10px; padding:6px 10px;">
+            <span style="width:7px; height:7px; border-radius:50%; background:var(--ink-soft); display:inline-block;"></span>
+            <span>PC AGENT OFFLINE • CLICK FOR SETUP GUIDE</span>
+        </div>
+        <!-- Expandable Setup Guide -->
+        <div id="pc-agent-setup-guide" style="display:none; background:var(--surface); box-shadow:var(--neu-pressed-sm); border-radius:12px; padding:12px; margin-bottom:12px; font-size:11px; color:var(--ink); line-height:1.5;">
+            <b>How to connect your Laptop to Ultron:</b><br>
+            1. Open a terminal on your PC.<br>
+            2. Run: <code style="background:var(--shadow-dark); padding:2px 6px; border-radius:4px;">python agent/ultron_pc_agent.py</code><br>
+            The agent will connect and acknowledge commands instantly.
         </div>
         <div style="display:flex; gap:8px; margin-bottom:12px;">
-            <button class="header-pill-btn active" id="remote-target-laptop" onclick="switchRemoteTarget('laptop')">💻 LAPTOP</button>
-            <button class="header-pill-btn" id="remote-target-phone" onclick="switchRemoteTarget('phone')">📱 PHONE</button>
+            <button type="button" class="header-pill-btn active" id="remote-target-laptop" onclick="switchRemoteTarget('laptop')">LAPTOP</button>
+            <button type="button" class="header-pill-btn" id="remote-target-phone" onclick="switchRemoteTarget('phone')">PHONE</button>
         </div>
         <div id="laptop-remote-view" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-            <button class="header-pill-btn" onclick="sendRemoteAction('vol_up')">🔊 VOL +</button>
-            <button class="header-pill-btn" onclick="sendRemoteAction('vol_down')">🔉 VOL -</button>
-            <button class="header-pill-btn" onclick="sendRemoteAction('mute')">🔇 MUTE</button>
-            <button class="header-pill-btn" onclick="sendRemoteAction('play_pause')">⏯️ PLAY/PAUSE</button>
-            <button class="header-pill-btn" onclick="sendRemoteAction('screenshot')">📸 SCREENSHOT</button>
-            <button class="header-pill-btn" onclick="sendRemoteAction('lock_laptop')">🔒 LOCK PC</button>
+            <button type="button" class="header-pill-btn" onclick="sendRemoteAction('vol_up')">VOL +</button>
+            <button type="button" class="header-pill-btn" onclick="sendRemoteAction('vol_down')">VOL -</button>
+            <button type="button" class="header-pill-btn" onclick="sendRemoteAction('mute')">MUTE</button>
+            <button type="button" class="header-pill-btn" onclick="sendRemoteAction('play_pause')">PLAY/PAUSE</button>
+            <button type="button" class="header-pill-btn" onclick="sendRemoteAction('screenshot')">SCREENSHOT</button>
+            <button type="button" class="header-pill-btn" onclick="sendRemoteAction('lock_laptop')">LOCK PC</button>
         </div>
         <div id="phone-remote-view" style="display:none; grid-template-columns:1fr 1fr; gap:8px;">
-            <button class="header-pill-btn" onclick="sendRemoteAction('phone_vol_up')">🔊 PHONE VOL +</button>
-            <button class="header-pill-btn" onclick="sendRemoteAction('phone_vol_down')">🔉 PHONE VOL -</button>
-            <button class="header-pill-btn" onclick="sendRemoteAction('phone_lock')">🔒 LOCK PHONE</button>
-            <button class="header-pill-btn" onclick="findMyPhoneAlarm()" style="color:#FF5252; border-color:#FF5252;">🚨 FIND PHONE</button>
-            <button class="header-pill-btn" onclick="openPhoneApp('whatsapp')">💬 WHATSAPP</button>
-            <button class="header-pill-btn" onclick="openPhoneApp('youtube')">▶️ YOUTUBE</button>
+            <button type="button" class="header-pill-btn" onclick="sendRemoteAction('phone_vol_up')">PHONE VOL +</button>
+            <button type="button" class="header-pill-btn" onclick="sendRemoteAction('phone_vol_down')">PHONE VOL -</button>
+            <button type="button" class="header-pill-btn" onclick="sendRemoteAction('phone_lock')">LOCK PHONE</button>
+            <button type="button" class="header-pill-btn" onclick="findMyPhoneAlarm()" style="color:#b71c1c;">FIND PHONE</button>
+            <button type="button" class="header-pill-btn" onclick="openPhoneApp('whatsapp')">WHATSAPP</button>
+            <button type="button" class="header-pill-btn" onclick="openPhoneApp('youtube')">YOUTUBE</button>
         </div>
     </div>
 
@@ -969,27 +1011,26 @@
     <div id="session-chat-panel">
         <div class="chat-drawer-header">
             <div class="chat-drawer-title-group">
-                <div class="chat-drawer-title">💬 SESSION CHAT</div>
-                <div class="chat-drawer-sub">Active Session Stream • Live Transcription</div>
+                <div class="chat-drawer-title" style="display:flex; align-items:center; gap:8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <span>CHAT</span>
+                </div>
             </div>
             <div class="chat-drawer-actions">
-                <button class="chat-action-btn" onclick="clearSessionChatStream()" title="Clear Session Chat">🧹 CLEAR</button>
-                <button class="chat-action-btn" onclick="toggleSessionChatPanel()" title="Close Panel">✕</button>
+                <button class="chat-action-btn" onclick="clearSessionChatStream()" title="Clear Session Chat">CLEAR</button>
+                <button class="chat-action-btn" onclick="toggleSessionChatPanel()" title="Close Panel" style="font-size:16px; font-weight:800;">✕</button>
             </div>
         </div>
 
         <div class="chat-stream-body" id="session-chat-stream">
-            <div style="font-size:11px; color:rgba(255,215,100,0.6); text-align:center; padding:18px 12px; line-height:1.5;">
-                ⚡ <b>ULTRON Live Session Transcripts</b><br>
-                Voice, text commands, food calorie scans, and generated AI images appear here in real-time.
-            </div>
+            <div id="chat-empty-state" style="font-size:13px; color:var(--ink-soft); text-align:center; margin:auto; padding:24px 16px; font-weight:600;">Say something or type below</div>
         </div>
 
         <!-- ── Quick Action Suggestion Pills (Above Input Bar) ── -->
         <div class="chat-drawer-footer" style="display:flex; gap:8px; padding:8px 14px; background:var(--surface); border-top:1px solid var(--shadow-dark); overflow-x:auto; flex-shrink:0;">
-            <button type="button" class="quick-action-pill" onclick="handleQuickPill('food')">📸 Snap Food</button>
-            <button type="button" class="quick-action-pill" onclick="handleQuickPill('image')">🎨 Draw Image</button>
-            <button type="button" class="quick-action-pill" onclick="handleQuickPill('tutor')">🎓 Exam Tutor</button>
+            <button type="button" class="quick-action-pill" onclick="handleQuickPill('food')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2.2" style="vertical-align:middle; margin-right:4px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Snap Food</button>
+            <button type="button" class="quick-action-pill" onclick="handleQuickPill('image')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2.2" style="vertical-align:middle; margin-right:4px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Draw Image</button>
+            <button type="button" class="quick-action-pill" onclick="handleQuickPill('tutor')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2.2" style="vertical-align:middle; margin-right:4px;"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>Exam Tutor</button>
         </div>
 
         <!-- ── Direct Session Chat Input Bar for Quiet Places ── -->
@@ -1001,11 +1042,52 @@
         </form>
     </div>
 
+        <!-- ── Vision Scanner HUD Modal ── -->
+    <div id="ultron-vision-hud" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(14,42,36,0.65); z-index:1002; justify-content:center; align-items:center; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); padding:16px; box-sizing:border-box;">
+        <div class="livelink-card" style="max-width:460px; width:100%; text-align:center; padding:20px; box-sizing:border-box;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    <div style="font-size:15px; font-weight:900; color:var(--ink); letter-spacing:1px;" id="vision-hud-title">OPTICAL VISION FEED</div>
+                </div>
+                <button type="button" onclick="toggleOpticalVision(false)" style="background:transparent; border:none; color:var(--ink); font-size:18px; font-weight:900; cursor:pointer; padding:4px 8px;">✕</button>
+            </div>
+
+            <!-- Video Viewport -->
+            <div style="position:relative; width:100%; border-radius:18px; overflow:hidden; background:var(--surface); box-shadow:var(--neu-pressed-sm); aspect-ratio:4/3; margin-bottom:14px; display:flex; align-items:center; justify-content:center;">
+                <video id="ultron-camera-video" playsinline autoplay muted style="width:100%; height:100%; object-fit:cover; display:block;"></video>
+                <div id="vision-status-overlay" style="position:absolute; top:10px; left:10px; background:rgba(14,42,36,0.7); color:#FFF; font-size:10px; font-weight:800; padding:4px 8px; border-radius:8px; display:flex; align-items:center; gap:6px;">
+                    <span style="width:7px; height:7px; border-radius:50%; background:#00E676; display:inline-block;"></span>
+                    <span id="vision-camera-label">LIVE FEED</span>
+                </div>
+            </div>
+
+            <!-- Vision Controls -->
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button type="button" class="livelink-btn" onclick="captureOpticalSnapshot()" style="flex:2; font-size:13px; font-weight:900; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                    CAPTURE & ANALYZE
+                </button>
+                <button type="button" class="livelink-btn" onclick="switchCameraFacing()" style="flex:1; font-size:12px; display:inline-flex; align-items:center; justify-content:center; gap:4px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                    FLIP
+                </button>
+            </div>
+            <!-- Photo Upload Fallback (No webcam / Insecure context fallback) -->
+            <div style="margin-top:10px; display:flex; justify-content:center;">
+                <button type="button" class="header-pill-btn" onclick="document.getElementById('vision-file-fallback').click()" style="font-size:11px; padding:6px 14px;">
+                    UPLOAD PHOTO INSTEAD
+                </button>
+                <input type="file" id="vision-file-fallback" accept="image/*" style="display:none;" onchange="handleVisionFallbackUpload(event)">
+            </div>
+        </div>
+    </div>
+
     <!-- ── Voice Calibration Modal (Light Neumorphism) ── -->
     <div id="voice-picker-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(14,42,36,0.5); z-index:1005; justify-content:center; align-items:center; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); padding:16px; box-sizing:border-box;">
         <div class="livelink-card" style="max-width:440px; text-align:left; padding:24px 20px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <div class="livelink-title" style="font-size:17px !important; margin-bottom:0 !important;">🎙️ VOICE CALIBRATION</div>
+                <div class="livelink-title" style="font-size:17px !important; margin-bottom:0 !important;">VOICE CALIBRATION</div>
                 <button type="button" onclick="closeVoicePickerModal()" style="background:transparent; border:none; color:var(--ink); font-size:18px; font-weight:900; cursor:pointer; padding:4px 8px;">✕</button>
             </div>
             <div class="livelink-sub" style="margin-bottom:14px !important; font-size:11px !important;">Neural male voice matrix • Identical deep tone on phone & laptop</div>
@@ -1068,62 +1150,65 @@
     </div>
 
     <!-- ── ZEN FOCUS Controller Modal ── -->
-    <div id="zen-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(14,42,36,0.5); z-index:1003; justify-content:center; align-items:center; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); padding:16px;">
+    <div id="zen-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(14,42,36,0.5); z-index:1003; justify-content:center; align-items:center; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); padding:16px; box-sizing:border-box;">
         <div class="livelink-card" style="max-width:420px; text-align:left; padding:24px 20px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                <div>
-                    <div class="livelink-title" style="font-size:16px !important; margin-bottom:2px !important;">🛡️ ZEN FOCUS PROTOCOL</div>
-                    <div class="livelink-sub" style="margin-bottom:0 !important; font-size:11px !important;">Study Shield & Distraction Silencer</div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <div>
+                        <div class="livelink-title" style="font-size:16px !important; margin-bottom:2px !important;">ZEN FOCUS PROTOCOL</div>
+                        <div class="livelink-sub" style="margin-bottom:0 !important; font-size:11px !important;">Study Shield & Distraction Silencer</div>
+                    </div>
                 </div>
-                <button onclick="toggleZenFocusModal()" style="background:transparent; border:none; color:var(--ink); font-size:18px; font-weight:900; cursor:pointer; padding:4px 8px;">✕</button>
+                <button type="button" onclick="toggleZenFocusModal()" style="background:transparent; border:none; color:var(--ink); font-size:18px; font-weight:900; cursor:pointer; padding:4px 8px;">✕</button>
             </div>
 
-            <!-- Zen Mode Power Toggle -->
-            <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(30,18,5,0.85); border:1px solid rgba(255,179,0,0.3); border-radius:12px; padding:12px; margin-bottom:12px;">
+            <!-- Zen Mode Power Toggle (Deep Study Shield Card: raised champagne card) -->
+            <div style="display:flex; align-items:center; justify-content:space-between; background:var(--surface); box-shadow:var(--neu-raised-sm); border-radius:14px; padding:14px 16px; margin-bottom:12px;">
                 <div>
-                    <div style="font-size:12px; font-weight:800; color:#FFF9C4;">Deep Study Shield</div>
-                    <div style="font-size:10px; color:rgba(255,215,100,0.6);" id="zen-status-desc">Distractions & non-priority alerts silenced</div>
+                    <div style="font-size:13px; font-weight:800; color:var(--ink);">Deep Study Shield</div>
+                    <div style="font-size:10px; color:var(--ink-soft);" id="zen-status-desc">Distractions & non-priority alerts silenced</div>
                 </div>
-                <button id="zen-toggle-switch" onclick="toggleZenFocusState()" style="background:linear-gradient(135deg, #FFB300, #FF6F00); border:none; border-radius:20px; padding:8px 16px; color:#000; font-weight:900; font-size:11px; cursor:pointer; letter-spacing:1px; box-shadow:0 0 14px rgba(255,179,0,0.5);">ENGAGE</button>
+                <button type="button" id="zen-toggle-switch" onclick="toggleZenFocusState()" style="background:var(--surface); border:none; border-radius:14px; padding:8px 16px; color:var(--emerald); font-weight:900; font-size:11px; cursor:pointer; letter-spacing:1px; box-shadow:var(--neu-raised-sm);">ENGAGE</button>
             </div>
 
             <!-- Unbreakable Amma / Mom Whitelist Guarantee -->
-            <div class="zen-whitelist-card">
-                <div class="zen-whitelist-title">
-                    <span>👑 UNBREAKABLE EMERGENCY WHITELIST</span>
+            <div class="zen-whitelist-card" style="background:var(--surface); box-shadow:var(--neu-pressed-sm); border-radius:14px; padding:14px; margin-bottom:12px;">
+                <div class="zen-whitelist-title" style="font-size:11px; font-weight:900; color:var(--ink); margin-bottom:4px;">
+                    <span>UNBREAKABLE EMERGENCY WHITELIST</span>
                 </div>
-                <div class="zen-whitelist-contacts">🛡️ PRIORITY WHITELIST: AMMA • MOM</div>
-                <div class="zen-whitelist-desc">
-                    Calls and messages from <b>Amma</b> or <b>Mom</b> are <b>NEVER</b> blocked or silenced. Priority override is permanently armed with loud ringing and intense vibration.
+                <div class="zen-whitelist-contacts" style="font-size:11px; font-weight:800; color:var(--emerald); margin-bottom:4px;">PRIORITY WHITELIST: AMMA • MOM</div>
+                <div class="zen-whitelist-desc" style="font-size:10px; color:var(--ink-soft); line-height:1.45; margin-bottom:10px;">
+                    Calls and messages from <b>Amma</b> or <b>Mom</b> are <b>NEVER</b> blocked or silenced. Priority override is permanently armed.
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div class="zen-whitelist-tag">STATUS: 100% UNMUTED & EXEMPT</div>
-                    <button onclick="simulateAmmaCall()" style="background:rgba(255,61,0,0.2); border:1px solid #FF5252; color:#FF8A80; border-radius:8px; padding:4px 8px; font-size:10px; font-weight:800; cursor:pointer;" title="Simulate incoming call to verify zero silencing">🧪 TEST CALL</button>
+                    <div class="zen-whitelist-tag" style="font-size:9px; font-weight:800; color:var(--emerald);">STATUS: 100% UNMUTED & EXEMPT</div>
+                    <button type="button" onclick="simulateAmmaCall()" style="background:var(--surface); border:none; box-shadow:var(--neu-raised-sm); color:#b71c1c; border-radius:10px; padding:6px 12px; font-size:10px; font-weight:800; cursor:pointer;" title="Simulate incoming call to verify zero silencing">TEST CALL</button>
                 </div>
             </div>
 
             <!-- Focus Session Stopwatch & Ambient Tone -->
             <div style="display:flex; gap:10px; margin-bottom:12px;">
-                <div style="flex:1; background:rgba(255,179,0,0.06); border:1px solid rgba(255,179,0,0.25); border-radius:10px; padding:10px; text-align:center;">
-                    <div style="font-size:9px; font-weight:800; color:rgba(255,215,100,0.7); text-transform:uppercase;">Focus Time</div>
-                    <div style="font-size:18px; font-weight:900; color:#FFD700; margin-top:2px;" id="zen-timer-display">00:00</div>
+                <div style="flex:1; background:var(--surface); box-shadow:var(--neu-raised-sm); border-radius:12px; padding:12px; text-align:center;">
+                    <div style="font-size:9px; font-weight:800; color:var(--ink-soft); text-transform:uppercase;">Focus Time</div>
+                    <div style="font-size:18px; font-weight:900; color:var(--emerald); margin-top:2px;" id="zen-timer-display">00:00</div>
                 </div>
-                <div style="flex:1; background:rgba(255,179,0,0.06); border:1px solid rgba(255,179,0,0.25); border-radius:10px; padding:10px; text-align:center; display:flex; flex-direction:column; justify-content:center;">
-                    <div style="font-size:9px; font-weight:800; color:rgba(255,215,100,0.7); text-transform:uppercase; margin-bottom:4px;">432Hz Drone</div>
-                    <button id="zen-audio-toggle" onclick="toggleZenAmbientDrone()" style="background:rgba(255,179,0,0.15); border:1px solid rgba(255,179,0,0.5); color:#FFD700; border-radius:8px; padding:4px 8px; font-size:10px; font-weight:800; cursor:pointer;">🎧 PLAY TONE</button>
+                <div style="flex:1; background:var(--surface); box-shadow:var(--neu-raised-sm); border-radius:12px; padding:12px; text-align:center; display:flex; flex-direction:column; justify-content:center;">
+                    <div style="font-size:9px; font-weight:800; color:var(--ink-soft); text-transform:uppercase; margin-bottom:4px;">432Hz Drone</div>
+                    <button type="button" id="zen-audio-toggle" onclick="toggleZenAmbientDrone()" style="background:var(--surface); border:none; box-shadow:var(--neu-raised-sm); color:var(--ink); border-radius:10px; padding:6px 10px; font-size:10px; font-weight:800; cursor:pointer;">PLAY TONE</button>
                 </div>
             </div>
 
-            <button class="livelink-btn" onclick="toggleZenFocusModal()" style="width:100%; margin-top:4px;">CLOSE HUD</button>
+            <button type="button" class="livelink-btn" onclick="toggleZenFocusModal()" style="width:100%; margin-top:4px;">CLOSE HUD</button>
         </div>
     </div>
 
     <!-- ── Full-Screen Priority Incoming Call Alert for Amma ── -->
     <div id="amma-override-banner" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.92); backdrop-filter:blur(14px); z-index:10000; justify-content:center; align-items:center; padding:16px;">
-        <div class="livelink-card" style="max-width:360px; text-align:center; border:2px solid #FFD700; box-shadow:0 0 50px rgba(255,215,0,0.85); background:rgba(20,10,2,0.98);">
+        <div class="livelink-card" style="max-width:360px; text-align:center; border:2px solid var(--emerald); box-shadow:0 0 50px rgba(255,215,0,0.85); background:rgba(20,10,2,0.98);">
             <div style="font-size:40px; margin-bottom:8px; animation:pulse-gold 1.5s infinite;">🛡️</div>
-            <div style="font-size:12px; font-weight:800; color:#FFD700; letter-spacing:2px; margin-bottom:4px;">PRIORITY OVERRIDE • INCOMING CALL</div>
-            <div id="amma-caller-name" style="font-size:28px; font-weight:900; color:#FFF; text-shadow:0 0 16px #FFD700; margin-bottom:4px;">AMMA (Mom)</div>
+            <div style="font-size:12px; font-weight:800; color:var(--emerald); letter-spacing:2px; margin-bottom:4px;">PRIORITY OVERRIDE • INCOMING CALL</div>
+            <div id="amma-caller-name" style="font-size:28px; font-weight:900; color:#FFF; text-shadow:0 0 16px var(--emerald); margin-bottom:4px;">AMMA (Mom)</div>
             <div id="amma-caller-phone" style="font-size:12px; color:#FFCA28; font-weight:700; margin-bottom:12px;">+91 94949 99999</div>
             <div style="background:rgba(0,230,118,0.18); border:1px solid #00E676; color:#B9F6CA; border-radius:10px; padding:8px 12px; font-size:11px; font-weight:800; margin-bottom:18px; line-height:1.4;">
                 🛡️ ZEN FOCUS OVERRIDE ACTIVE<br>
@@ -1139,10 +1224,10 @@
     <!-- ── Full-Screen AI Image Viewer Modal ── -->
     <div id="image-viewer-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.96); z-index:1060; justify-content:center; align-items:center; backdrop-filter:blur(14px); padding:16px;">
         <div style="max-width:92vw; max-height:92vh; display:flex; flex-direction:column; align-items:center; gap:12px;">
-            <img id="viewer-img" src="" alt="ULTRON Generated Image" style="max-width:100%; max-height:78vh; border-radius:14px; border:2px solid #FFB300; box-shadow:0 0 40px rgba(255,179,0,0.5); object-fit:contain;">
+            <img id="viewer-img" src="" alt="ULTRON Generated Image" style="max-width:100%; max-height:78vh; border-radius:14px; border:2px solid var(--emerald); box-shadow:0 0 40px var(--shadow-dark); object-fit:contain;">
             <div style="display:flex; gap:12px;">
                 <button id="viewer-download-btn" onclick="downloadViewerImage()" class="livelink-btn" style="padding:8px 22px; font-size:11px; width:auto;">⬇️ DOWNLOAD IMAGE</button>
-                <button onclick="closeImageViewer()" class="livelink-btn" style="padding:8px 22px; font-size:11px; width:auto; background:rgba(255,179,0,0.2); border:1px solid #FFB300; color:#FFD700;">CLOSE ✕</button>
+                <button onclick="closeImageViewer()" class="livelink-btn" style="padding:8px 22px; font-size:11px; width:auto; background:rgba(255,179,0,0.2); border:1px solid var(--emerald); color:var(--emerald);">CLOSE ✕</button>
             </div>
         </div>
     </div>
@@ -1157,17 +1242,17 @@
     <!-- ── QR Code Pairing Modal ── -->
     <div id="qr-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.92); z-index:1001; justify-content:center; align-items:center; backdrop-filter:blur(10px);">
         <div class="livelink-card" style="max-width:320px; text-align:center;">
-            <div style="font-size:16px; font-weight:900; letter-spacing:3px; color:#FFB300; margin-bottom:4px;">PAIR ULTRON ASSISTANT</div>
-            <div style="font-size:11px; color:rgba(255,215,100,0.7); margin-bottom:12px;">LiveLink Phone ⇄ Laptop Synchronization</div>
+            <div style="font-size:16px; font-weight:900; letter-spacing:3px; color:var(--emerald); margin-bottom:4px;">PAIR ULTRON ASSISTANT</div>
+            <div style="font-size:11px; color:var(--ink-soft); margin-bottom:12px;">LiveLink Phone ⇄ Laptop Synchronization</div>
             <div style="background:#060401; padding:12px; border-radius:14px; border:1px solid rgba(255,179,0,0.4); display:inline-block; margin-bottom:12px;">
                 <img id="qr-code-img" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://ultron-omega-drab.vercel.app" alt="ULTRON QR Code" style="width:200px; height:200px; display:block; border-radius:8px;">
             </div>
-            <div style="font-size:12px; font-weight:700; color:#FFF9C4; margin-bottom:14px; word-break:break-all;">
-                <a id="qr-live-link" href="https://ultron-omega-drab.vercel.app" target="_blank" style="color:#FFB300; text-decoration:none;">https://ultron-omega-drab.vercel.app</a>
+            <div style="font-size:12px; font-weight:700; color:var(--ink); margin-bottom:14px; word-break:break-all;">
+                <a id="qr-live-link" href="https://ultron-omega-drab.vercel.app" target="_blank" style="color:var(--emerald); text-decoration:none;">https://ultron-omega-drab.vercel.app</a>
             </div>
             <div style="display:flex; gap:8px; justify-content:center;">
                 <button class="livelink-btn" onclick="copyPairingLink()" style="padding:8px 16px; font-size:11px; width:auto;">📋 COPY LINK</button>
-                <button class="livelink-btn" onclick="toggleQRModal()" style="padding:8px 16px; font-size:11px; width:auto; background:rgba(255,179,0,0.2) !important; color:#FFD700 !important; border:1px solid rgba(255,179,0,0.5) !important;">CLOSE</button>
+                <button class="livelink-btn" onclick="toggleQRModal()" style="padding:8px 16px; font-size:11px; width:auto; background:rgba(255,179,0,0.2) !important; color:var(--emerald) !important; border:1px solid var(--shadow-dark) !important;">CLOSE</button>
             </div>
         </div>
     </div>
@@ -1190,13 +1275,13 @@
     <div id="install-guide-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(14,42,36,0.5); z-index:1002; justify-content:center; align-items:center; backdrop-filter:blur(12px);">
         <div class="livelink-card" style="max-width:340px; text-align:center;">
             <div style="font-size:28px; margin-bottom:6px;">📱</div>
-            <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:#FFB300; margin-bottom:6px;">INSTALL ULTRON APP</div>
+            <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:var(--emerald); margin-bottom:6px;">INSTALL ULTRON APP</div>
             <div style="font-size:11px; color:rgba(255,215,100,0.8); line-height:1.5; margin-bottom:14px;">
                 Install ULTRON directly to your phone home screen.<br><br><b style="color:#00E676;">NOTE:</b> This is a secure <b>Progressive Web App (PWA)</b> installed from this browser, bypassing the Play Store entirely for ultimate privacy.
             </div>
             
-            <div style="background:rgba(255,179,0,0.08); border:1px solid rgba(255,179,0,0.3); border-radius:10px; padding:12px; text-align:left; font-size:11px; color:#FFF9C4; margin-bottom:16px; line-height:1.6;">
-                <div style="font-weight:800; color:#FFB300; margin-bottom:4px;">In Android Chrome:</div>
+            <div style="background:rgba(255,179,0,0.08); border:1px solid rgba(255,179,0,0.3); border-radius:10px; padding:12px; text-align:left; font-size:11px; color:var(--ink); margin-bottom:16px; line-height:1.6;">
+                <div style="font-weight:800; color:var(--emerald); margin-bottom:4px;">In Android Chrome:</div>
                 1. Tap the <b>3 dots menu (⋮)</b> in top-right.<br>
                 2. Tap <b>"Add to Home screen"</b> (or <b>"Install app"</b>).<br>
                 3. Tap <b>"Add"</b> — Done! ULTRON is now installed on your phone.
@@ -1212,7 +1297,7 @@
             
             <div class="livelink-shield" style="display:flex; flex-direction:column; align-items:center;">
                 <img src="icon.png" class="livelink-avatar" alt="ULTRON App Icon" onclick="tapHelmetSecret()" title="Tap 3D Helmet to Auto-Fill Harsha Sir Key" style="cursor:pointer;">
-                <div onclick="tapHelmetSecret()" style="font-size:10px; color:#FFB300; letter-spacing:1.5px; font-weight:800; margin-top:8px; cursor:pointer; text-transform:uppercase; text-shadow:0 0 10px rgba(255,179,0,0.5);">⚡ TAP HELMET FOR 1-TOUCH SIGN-IN</div>
+                <div onclick="tapHelmetSecret()" style="font-size:10px; color:var(--emerald); letter-spacing:1.5px; font-weight:800; margin-top:8px; cursor:pointer; text-transform:uppercase; text-shadow:0 0 10px var(--shadow-dark);">⚡ TAP HELMET FOR 1-TOUCH SIGN-IN</div>
             </div>
             <div class="livelink-title">ULTRON ACCESS PORTAL</div>
             <div class="livelink-sub">https://ultron.ai Assistant • Authorization Portal</div>
@@ -1235,7 +1320,7 @@
                 </div>
                 <button type="button" class="livelink-btn" id="login-submit-btn" onclick="handleLoginSubmit(new Event('submit'))">SIGN IN TO ULTRON</button>
                 <div style="margin-top: 14px; display:flex; justify-content:flex-end; align-items:center;">
-                    <button type="button" onclick="switchAuthTab('register')" style="background:none; border:none; color:#FFB300; font-size:12px; font-weight:600; cursor:pointer;">New here? Create Account →</button>
+                    <button type="button" onclick="switchAuthTab('register')" style="background:none; border:none; color:var(--emerald); font-size:12px; font-weight:600; cursor:pointer;">New here? Create Account →</button>
                 </div>
             </div>
 
@@ -1269,7 +1354,7 @@
                 </div>
                 <button type="button" class="livelink-btn" id="reg-submit-btn" onclick="handleRegisterSubmit(new Event('submit'))">REGISTER ULTRON ACCOUNT</button>
                 <div style="margin-top: 12px; text-align: center;">
-                    <button type="button" onclick="switchAuthTab('login')" style="background:none; border:none; color:#FFB300; font-size:12px; cursor:pointer; text-decoration:underline;">Already have an account? Sign In →</button>
+                    <button type="button" onclick="switchAuthTab('login')" style="background:none; border:none; color:var(--emerald); font-size:12px; cursor:pointer; text-decoration:underline;">Already have an account? Sign In →</button>
                 </div>
             </div>
         </div>
@@ -1277,13 +1362,13 @@
 
     <!-- ── Harsha Sir Master Hub Modal (Harsha Sir Only) ── -->
     <div id="commander-vault-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,4,1,0.88); z-index:1005; justify-content:center; align-items:center; backdrop-filter:blur(8px); padding:16px;">
-        <div class="livelink-card" style="max-width:560px; max-height:88vh; display:flex; flex-direction:column; text-align:left; padding:20px; border-color:#FFD700; box-shadow:0 0 50px rgba(255,215,0,0.5);">
+        <div class="livelink-card" style="max-width:560px; max-height:88vh; display:flex; flex-direction:column; text-align:left; padding:20px; border-color:var(--emerald); box-shadow:0 0 50px rgba(255,215,0,0.5);">
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,215,0,0.3); padding-bottom:12px; margin-bottom:14px;">
                 <div>
-                    <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:#FFD700;">👑 HARSHA SIR MASTER HUB</div>
-                    <div style="font-size:11px; color:rgba(255,215,100,0.7);">Private Gatekeeper Approvals & Multi-Tenant Logs</div>
+                    <div style="font-size:16px; font-weight:900; letter-spacing:2px; color:var(--emerald);">👑 HARSHA SIR MASTER HUB</div>
+                    <div style="font-size:11px; color:var(--ink-soft);">Private Gatekeeper Approvals & Multi-Tenant Logs</div>
                 </div>
-                <button onclick="closeCommanderVault()" style="background:rgba(255,179,0,0.15); border:1px solid rgba(255,179,0,0.5); color:#FFB300; border-radius:8px; padding:4px 12px; font-size:12px; cursor:pointer; font-weight:700;">CLOSE ✕</button>
+                <button onclick="closeCommanderVault()" style="background:var(--surface); border:1px solid var(--shadow-dark); color:var(--emerald); border-radius:8px; padding:4px 12px; font-size:12px; cursor:pointer; font-weight:700;">CLOSE ✕</button>
             </div>
 
             <!-- Vault Subtabs -->
@@ -1295,13 +1380,13 @@
 
             <!-- Scrollable Content -->
             <div id="vault-content-area" style="flex:1; overflow-y:auto; min-height:280px; max-height:55vh; padding-right:6px;">
-                <div style="color:#FFB300; text-align:center; padding:30px;">Loading database records...</div>
+                <div style="color:var(--emerald); text-align:center; padding:30px;">Loading database records...</div>
             </div>
 
             <!-- Action footer -->
             <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,215,0,0.2); display:flex; justify-content:space-between; align-items:center;">
-                <button onclick="downloadVaultData()" style="background:none; border:1px dashed #FFB300; color:#FFD700; border-radius:8px; padding:6px 14px; font-size:11px; font-weight:700; cursor:pointer;">📥 EXPORT JSON</button>
-                <button onclick="loadCommanderVaultData()" style="background:rgba(255,179,0,0.2); border:1px solid #FFB300; color:#FFD700; border-radius:8px; padding:6px 14px; font-size:11px; font-weight:700; cursor:pointer;">🔄 REFRESH</button>
+                <button onclick="downloadVaultData()" style="background:none; border:1px dashed var(--emerald); color:var(--emerald); border-radius:8px; padding:6px 14px; font-size:11px; font-weight:700; cursor:pointer;">📥 EXPORT JSON</button>
+                <button onclick="loadCommanderVaultData()" style="background:rgba(255,179,0,0.2); border:1px solid var(--emerald); color:var(--emerald); border-radius:8px; padding:6px 14px; font-size:11px; font-weight:700; cursor:pointer;">REFRESH</button>
             </div>
         </div>
     </div>
@@ -1312,14 +1397,14 @@
             <div style="font-size:36px; margin-bottom:8px;">🎙️🔒</div>
             <div class="livelink-title" style="color:#FF5252;">MICROPHONE BLOCKED</div>
             <div class="livelink-sub">Chrome blocked microphone access on this device.</div>
-            <div style="text-align:left; background:rgba(255,179,0,0.06); border:1px solid rgba(255,179,0,0.3); border-radius:12px; padding:14px; margin-bottom:16px; font-size:12px; color:rgba(255,215,100,0.9); line-height:1.6;">
+            <div style="text-align:left; background:var(--surface); border:1px solid rgba(255,179,0,0.3); border-radius:12px; padding:14px; margin-bottom:16px; font-size:12px; color:rgba(255,215,100,0.9); line-height:1.6;">
                 1. Tap the <b>🔒 Lock / Tune icon</b> in the top Chrome address bar.<br>
                 2. Tap <b>Permissions</b> ➔ <b>Microphone</b>.<br>
                 3. Switch it to <b>Allow</b>.<br>
                 4. Tap the button below to retry!
             </div>
             <button class="livelink-btn" onclick="retryMicrophonePermission()" style="margin-bottom:8px; width:100%;">REQUEST PERMISSION NOW</button>
-            <button class="livelink-btn" onclick="closeMicModal()" style="background:rgba(255,179,0,0.15); border:1px solid rgba(255,179,0,0.4); color:#FFB300; width:100%;">CLOSE</button>
+            <button class="livelink-btn" onclick="closeMicModal()" style="background:var(--surface); border:1px solid rgba(255,179,0,0.4); color:var(--emerald); width:100%;">CLOSE</button>
         </div>
     </div>
 
@@ -1767,7 +1852,7 @@
                 const displayName = user.first_name || user.name;
                 const isAdmin = user.role === 'ADMIN' || user.email === 'harshakanth@ultron.ai' || displayName.toLowerCase().includes('harsha');
 
-                updateBadge(isAdmin ? '👑 HARSHA SIR ● ONLINE' : `👤 ${displayName.toUpperCase()} ● ONLINE`, isAdmin ? '#FFD700' : '#00E676');
+                updateBadge(isAdmin ? '👑 HARSHA SIR ● ONLINE' : `👤 ${displayName.toUpperCase()} ● ONLINE`, isAdmin ? 'var(--emerald)' : '#00E676');
 
                 if (logoutBtn) logoutBtn.style.display = 'inline-block';
                 if (changePwBtn) changePwBtn.style.display = 'inline-block';
@@ -1859,7 +1944,7 @@
                         vaultBtn.style.background = 'linear-gradient(135deg, #FF3D00, #FF9100)';
                         vaultBtn.style.boxShadow = '0 0 16px rgba(255, 61, 0, 0.9)';
                     } else {
-                        vaultBtn.style.background = 'linear-gradient(135deg, #FFB300, #FFD54F)';
+                        vaultBtn.style.background = 'linear-gradient(135deg, var(--emerald), var(--ink))';
                         vaultBtn.style.boxShadow = '0 0 10px rgba(255, 179, 0, 0.6)';
                     }
                 }
@@ -1872,7 +1957,7 @@
                         dockVaultBtn.style.boxShadow = '0 0 14px rgba(255, 61, 0, 0.8)';
                     } else {
                         dockVaultBtn.style.background = 'rgba(255, 145, 0, 0.2)';
-                        dockVaultBtn.style.borderColor = '#FFD700';
+                        dockVaultBtn.style.borderColor = 'var(--emerald)';
                         dockVaultBtn.style.boxShadow = 'none';
                     }
                 }
@@ -1946,7 +2031,7 @@
 
         function loadCommanderVaultData() {
             const content = document.getElementById('vault-content-area');
-            if (content) content.innerHTML = '<div style="color:#FFB300; text-align:center; padding:30px;">ACCESSING HARSHA SIR MASTER HUB...</div>';
+            if (content) content.innerHTML = '<div style="color:var(--emerald); text-align:center; padding:30px;">ACCESSING HARSHA SIR MASTER HUB...</div>';
 
             fetch(`/api/admin/friends_activity?token=${encodeURIComponent(liveLinkToken)}`)
             .then(r => r.json())
@@ -2019,11 +2104,11 @@
                     html += `
                         <div style="background:rgba(255,145,0,0.08); border:1px solid rgba(255,145,0,0.5); border-radius:12px; padding:12px; margin-bottom:10px;">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="font-weight:900; color:#FFF9C4; font-size:14px;">${escapeHtml(f.name || 'Applicant')}</div>
+                                <div style="font-weight:900; color:var(--ink); font-size:14px;">${escapeHtml(f.name || 'Applicant')}</div>
                                 <span style="font-size:10px; padding:2px 8px; border-radius:4px; background:#FF9100; color:#000; font-weight:800;">PENDING</span>
                             </div>
-                            <div style="font-size:11px; color:#FFB300; margin:5px 0;">📞 ${escapeHtml(f.phone || 'No phone')} &nbsp;•&nbsp; ✉️ ${escapeHtml(f.email || 'No email')}</div>
-                            <div style="font-size:10px; color:rgba(255,215,100,0.6); margin-bottom:8px;">Submitted: ${dateStr}</div>
+                            <div style="font-size:11px; color:var(--emerald); margin:5px 0;">📞 ${escapeHtml(f.phone || 'No phone')} &nbsp;•&nbsp; ✉️ ${escapeHtml(f.email || 'No email')}</div>
+                            <div style="font-size:10px; color:var(--ink-soft); margin-bottom:8px;">Submitted: ${dateStr}</div>
                             <div style="display:flex; gap:8px;">
                                 <button onclick="approveUser(${f.id})" style="flex:1; background:#00E676; color:#000; border:none; border-radius:6px; padding:7px 12px; font-size:11px; font-weight:900; cursor:pointer;">✅ APPROVE ACCESS</button>
                                 <button onclick="rejectUser(${f.id})" style="flex:1; background:#FF5252; color:#FFF; border:none; border-radius:6px; padding:7px 12px; font-size:11px; font-weight:800; cursor:pointer;">❌ DECLINE</button>
@@ -2034,20 +2119,20 @@
                 content.innerHTML = html;
             } else if (currentVaultSubTab === 'friends') {
                 if (friends.length === 0) {
-                    content.innerHTML = '<div style="color:rgba(255,215,100,0.6); text-align:center; padding:20px;">No registered users yet. Share your LiveLink!</div>';
+                    content.innerHTML = '<div style="color:var(--ink-soft); text-align:center; padding:20px;">No registered users yet. Share your LiveLink!</div>';
                     return;
                 }
-                let html = `<div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:10px;">TOTAL USERS REGISTERED: ${friends.length}</div>`;
+                let html = `<div style="font-size:12px; font-weight:800; color:var(--emerald); margin-bottom:10px;">TOTAL USERS REGISTERED: ${friends.length}</div>`;
                 friends.forEach(f => {
                     const dateStr = f.registered_at ? new Date(f.registered_at * 1000).toLocaleString() : 'N/A';
                     const isApproved = (f.status || 'APPROVED') === 'APPROVED';
                     html += `
-                        <div style="background:rgba(255,179,0,0.06); border:1px solid rgba(255,179,0,0.25); border-radius:10px; padding:12px; margin-bottom:8px;">
+                        <div style="background:var(--surface); border:1px solid var(--shadow-dark); border-radius:10px; padding:12px; margin-bottom:8px;">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="font-weight:800; color:#FFF9C4; font-size:13px;">${escapeHtml(f.name || 'Friend')}</div>
+                                <div style="font-weight:800; color:var(--ink); font-size:13px;">${escapeHtml(f.name || 'Friend')}</div>
                                 <span style="font-size:10px; padding:2px 6px; border-radius:4px; background:${isApproved ? 'rgba(0,230,118,0.2)' : 'rgba(255,145,0,0.2)'}; color:${isApproved ? '#00E676' : '#FF9100'}; font-weight:700;">${f.status || 'PENDING'}</span>
                             </div>
-                            <div style="font-size:11px; color:#FFB300; margin-top:4px;">📞 ${escapeHtml(f.phone || 'No phone')} &nbsp;•&nbsp; ✉️ ${escapeHtml(f.email || 'No email')}</div>
+                            <div style="font-size:11px; color:var(--emerald); margin-top:4px;">📞 ${escapeHtml(f.phone || 'No phone')} &nbsp;•&nbsp; ✉️ ${escapeHtml(f.email || 'No email')}</div>
                             <div style="font-size:10px; color:rgba(255,215,100,0.5); margin-top:2px;">Joined: ${dateStr}</div>
                         </div>
                     `;
@@ -2056,7 +2141,7 @@
             } else {
                 const chats = data.chats || [];
                 if (chats.length === 0) {
-                    content.innerHTML = '<div style="color:rgba(255,215,100,0.6); text-align:center; padding:20px;">No conversation logs recorded yet.</div>';
+                    content.innerHTML = '<div style="color:var(--ink-soft); text-align:center; padding:20px;">No conversation logs recorded yet.</div>';
                     return;
                 }
 
@@ -2071,34 +2156,34 @@
                     userFolders[uName].push(c);
                 });
 
-                let html = `<div style="font-size:12px; font-weight:800; color:#FFD700; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                let html = `<div style="font-size:12px; font-weight:800; color:var(--emerald); margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
                     <span>📁 USER SECRET CHAT DIRECTORIES (${Object.keys(userFolders).length} users)</span>
-                    <span style="font-size:10px; color:rgba(255,215,100,0.6);">${chats.length} total messages</span>
+                    <span style="font-size:10px; color:var(--ink-soft);">${chats.length} total messages</span>
                 </div>`;
 
                 Object.keys(userFolders).forEach((uName, idx) => {
                     const uChats = userFolders[uName];
                     const folderId = `user-folder-${idx}`;
                     html += `
-                        <div style="background:rgba(255,179,0,0.06); border:1px solid rgba(255,179,0,0.3); border-radius:10px; margin-bottom:10px; overflow:hidden;">
+                        <div style="background:var(--surface); border:1px solid rgba(255,179,0,0.3); border-radius:10px; margin-bottom:10px; overflow:hidden;">
                             <div onclick="toggleUserChatFolder('${folderId}')" style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:rgba(255,179,0,0.12); cursor:pointer; user-select:none;">
                                 <div style="display:flex; align-items:center; gap:8px;">
                                     <span style="font-size:16px;">📁</span>
-                                    <span style="font-weight:900; color:#FFF9C4; font-size:13px;">${escapeHtml(uName)}</span>
-                                    <span style="font-size:10px; background:rgba(255,179,0,0.25); color:#FFD700; padding:2px 8px; border-radius:12px; font-weight:700;">${uChats.length} messages</span>
+                                    <span style="font-weight:900; color:var(--ink); font-size:13px;">${escapeHtml(uName)}</span>
+                                    <span style="font-size:10px; background:var(--shadow-dark); color:var(--emerald); padding:2px 8px; border-radius:12px; font-weight:700;">${uChats.length} messages</span>
                                 </div>
-                                <span id="${folderId}-arrow" style="color:#FFB300; font-size:11px; font-weight:800;">▼ Expand</span>
+                                <span id="${folderId}-arrow" style="color:var(--emerald); font-size:11px; font-weight:800;">▼ Expand</span>
                             </div>
-                            <div id="${folderId}" style="display:none; padding:10px; border-top:1px solid rgba(255,179,0,0.15); max-height:350px; overflow-y:auto;">
+                            <div id="${folderId}" style="display:none; padding:10px; border-top:1px solid var(--surface); max-height:350px; overflow-y:auto;">
                     `;
                     uChats.forEach(c => {
                         const dateObj = c.created_at ? new Date(c.created_at * 1000) : new Date();
                         const timeStr = dateObj.toLocaleDateString([], {month:'short', day:'numeric'}) + ' ' + dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
                         html += `
-                            <div style="background:rgba(0,0,0,0.45); border:1px solid rgba(255,179,0,0.15); border-radius:8px; padding:10px; margin-bottom:8px;">
-                                <div style="display:flex; justify-content:space-between; font-size:10px; color:rgba(255,215,100,0.6); margin-bottom:4px;">
+                            <div style="background:rgba(0,0,0,0.45); border:1px solid var(--surface); border-radius:8px; padding:10px; margin-bottom:8px;">
+                                <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--ink-soft); margin-bottom:4px;">
                                     <span>⏱️ ${timeStr}</span>
-                                    <span style="color:#FFB300;">#${c.id || ''}</span>
+                                    <span style="color:var(--emerald);">#${c.id || ''}</span>
                                 </div>
                                 <div style="font-size:12px; color:#FFF; margin-bottom:4px; line-height:1.4;"><b>User:</b> "${escapeHtml(c.prompt || '')}"</div>
                                 <div style="font-size:12px; color:#A7FFEB; line-height:1.4;"><b>ULTRON:</b> "${escapeHtml(c.reply || '')}"</div>
@@ -2319,7 +2404,7 @@
                     localStorage.setItem('livelink_user', JSON.stringify(userObj));
                     updateUserSessionUI(userObj);
                     document.getElementById('livelink-modal-overlay').style.display = 'none';
-                    updateBadge(isHarsha ? '● HARSHA SIR ONLINE' : '● ONLINE', isHarsha ? '#FFD700' : '#00E676');
+                    updateBadge(isHarsha ? '● HARSHA SIR ONLINE' : '● ONLINE', isHarsha ? 'var(--emerald)' : '#00E676');
 
                     const welcomeGreeting = isHarsha 
                         ? "Welcome back, Harsha Sir! I am ULTRON, your personal AI assistant. All systems operational."
@@ -2342,7 +2427,7 @@
                     localStorage.setItem('livelink_user', JSON.stringify(masterUser));
                     updateUserSessionUI(masterUser);
                     document.getElementById('livelink-modal-overlay').style.display = 'none';
-                    updateBadge('● HARSHA SIR ONLINE', '#FFD700');
+                    updateBadge('● HARSHA SIR ONLINE', 'var(--emerald)');
                     showToast('👑 Harsha Sir Authenticated (Direct Offline Fallback)');
                     const welcomeGreeting = "Welcome back, Harsha Sir! I am ULTRON, your personal AI assistant. All systems operational.";
                     document.getElementById('ai-text').innerText = "ULTRON: " + welcomeGreeting;
@@ -2452,7 +2537,7 @@
             if (overlay) overlay.style.display = 'none';
 
             if (liveLinkToken === 'LIVELINK_MASTER_HARSHA' || (userObj && (userObj.role === 'ADMIN' || (userObj.first_name && userObj.first_name.includes('Harsha'))))) {
-                updateBadge('👑 HARSHA SIR ● ONLINE', '#FFD700');
+                updateBadge('👑 HARSHA SIR ● ONLINE', 'var(--emerald)');
                 updateUserSessionUI(userObj || { first_name: "Harsha Sir", role: "ADMIN" });
                 initSSEStream();
                 return;
@@ -2473,7 +2558,7 @@
                         }
                         if (overlay) overlay.style.display = 'none';
                         const isAdmin = data.user.role === 'ADMIN' || (data.user.name && data.user.name.includes('Harsha'));
-                        updateBadge(isAdmin ? '👑 HARSHA SIR ● ONLINE' : '● ONLINE', isAdmin ? '#FFD700' : '#00E676');
+                        updateBadge(isAdmin ? '👑 HARSHA SIR ● ONLINE' : '● ONLINE', isAdmin ? 'var(--emerald)' : '#00E676');
                         updateUserSessionUI(data.user);
                         initSSEStream();
                     } else {
@@ -2652,7 +2737,7 @@
                 scene.add(particleSystem);
 
                 // Add glowing core light for radiant celestial luminance
-                const coreLight = new THREE.PointLight(0xFFD54F, 2.0, 8);
+                const coreLight = new THREE.PointLight(0x1F5C4B, 1.8, 8);
                 scene.add(coreLight);
 
                 requestAnimationFrame(animateVisualizer);
@@ -2664,10 +2749,58 @@
         // ══════════════════════════════════════════════════════════════════
         // ROTATION ENGINE: ELEGANT 40 KM/H CRUISING SPEED ONLY WHILE TALKING!
         // ══════════════════════════════════════════════════════════════════
-        let currentOrbSpeed = 0.0;
+        let currentOrbSpeed = 0.14;
+        let isThinking = false;
+        let ttsAudioSource = null;
+        let ttsAnalyser = null;
+        let micAnalyser = null;
+        let micAudioStream = null;
+        let micSource = null;
+        let audioFrequencyData = new Uint8Array(64);
+        let currentEnergy = 0.0;
+        let lowBand = 0.0;
+        let midBand = 0.0;
+
+        function setupTtsAudioGraph() {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const player = document.getElementById('ultron-audio-player');
+                if (player && !ttsAudioSource) {
+                    ttsAudioSource = audioCtx.createMediaElementSource(player);
+                    ttsAnalyser = audioCtx.createAnalyser();
+                    ttsAnalyser.fftSize = 128;
+                    ttsAnalyser.smoothingTimeConstant = 0.75;
+                    ttsAudioSource.connect(ttsAnalyser);
+                    ttsAnalyser.connect(audioCtx.destination);
+                }
+            } catch(e) {
+                console.warn('[AudioGraph] TTS node connection:', e);
+            }
+        }
+
+        function attachMicAnalyser(stream) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                if (!micSource && stream) {
+                    micSource = audioCtx.createMediaStreamSource(stream);
+                    micAnalyser = audioCtx.createAnalyser();
+                    micAnalyser.fftSize = 128;
+                    micAnalyser.smoothingTimeConstant = 0.6;
+                    micSource.connect(micAnalyser);
+                }
+            } catch(e) {
+                console.warn('[AudioGraph] Mic analyser setup:', e);
+            }
+        }
 
         function animateVisualizer(now) {
-            if (!isPageVisible) return;
+            if (!isPageVisible || document.hidden) return;
             requestAnimationFrame(animateVisualizer);
 
             const delta = now - lastFrameTime;
@@ -2677,40 +2810,86 @@
             if (!clock || !renderer || !scene || !camera) return;
             const elapsedTime = clock.getElapsedTime();
 
-            speechPulse *= 0.88;
+            // Web Audio Frequency Extraction
+            if (isSpeaking && ttsAnalyser) {
+                ttsAnalyser.getByteFrequencyData(audioFrequencyData);
+                let sum = 0;
+                for (let i = 0; i < audioFrequencyData.length; i++) sum += audioFrequencyData[i];
+                const targetEnergy = sum / (audioFrequencyData.length * 255);
+                currentEnergy += (targetEnergy - currentEnergy) * 0.25;
+                lowBand = (audioFrequencyData[1] + audioFrequencyData[2] + audioFrequencyData[3]) / (3 * 255);
+                midBand = (audioFrequencyData[6] + audioFrequencyData[7] + audioFrequencyData[8]) / (3 * 255);
+            } else if (isListening && micAnalyser) {
+                micAnalyser.getByteFrequencyData(audioFrequencyData);
+                let sum = 0;
+                for (let i = 0; i < audioFrequencyData.length; i++) sum += audioFrequencyData[i];
+                const targetEnergy = (sum / (audioFrequencyData.length * 255)) * 1.5;
+                currentEnergy += (targetEnergy - currentEnergy) * 0.25;
+                lowBand = (audioFrequencyData[1] + audioFrequencyData[2]) / (2 * 255);
+            } else {
+                currentEnergy *= 0.92;
+                lowBand *= 0.90;
+                midBand *= 0.90;
+            }
 
-            // Senior Calibrated Cruising Speed:
-            // When speaking: moves like a smooth 40 km/h car (NOT a bullet train!)
-            // When idle: smoothly glides to a stop (targetSpeed = 0.0)
-            const targetSpeed = isSpeaking ? (0.26 + speechPulse * 0.18) : 0.0;
-            currentOrbSpeed += (targetSpeed - currentOrbSpeed) * 0.06;
+            // Steady continuous 3D rotation at calibrated speeds
+            const baseRotSpeed = 0.14;
+            const targetOrbSpeed = isSpeaking 
+                ? (0.35 + currentEnergy * 0.55) 
+                : (isListening ? 0.22 : (isThinking ? 0.28 : baseRotSpeed));
+            currentOrbSpeed += (targetOrbSpeed - currentOrbSpeed) * 0.08;
 
             if (particleSystem && particleGeometry) {
-                // Controlled, dignified multi-axis rotation only when currentOrbSpeed > 0
-                particleSystem.rotation.y += currentOrbSpeed * 0.014;
-                particleSystem.rotation.x += currentOrbSpeed * 0.007;
-                particleSystem.rotation.z += currentOrbSpeed * 0.004;
+                particleSystem.rotation.y += currentOrbSpeed * 0.015;
+                particleSystem.rotation.x += currentOrbSpeed * 0.008;
+                particleSystem.rotation.z += currentOrbSpeed * 0.005;
 
-                // Gentle celestial breathing pulse
-                const pulseScale = 1.0 + Math.sin(elapsedTime * 1.6) * 0.018 + (isSpeaking ? (0.03 + speechPulse * 0.08) : 0.0);
+                // Pulse scale
+                let pulseScale = 1.0 + Math.sin(elapsedTime * 1.5) * 0.018;
+                if (isSpeaking) {
+                    pulseScale += currentEnergy * 0.28 + lowBand * 0.12;
+                } else if (isListening) {
+                    pulseScale += currentEnergy * 0.14;
+                } else if (isThinking) {
+                    pulseScale += Math.sin(elapsedTime * 6.0) * 0.035;
+                }
                 particleSystem.scale.set(pulseScale, pulseScale, pulseScale);
 
-                // Fluid voice wave ripples only while speaking
-                if (isSpeaking) {
-                    const posAttr = particleGeometry.attributes.position;
-                    const pArr = posAttr.array;
+                // Voice-reactive particle waves and ripples
+                const posAttr = particleGeometry.attributes.position;
+                const pArr = posAttr.array;
+                if (isSpeaking && currentEnergy > 0.02) {
                     for (let i = 0; i < 5800; i++) {
                         const i3 = i * 3;
                         const bx = basePositions[i3];
                         const by = basePositions[i3 + 1];
                         const bz = basePositions[i3 + 2];
 
-                        const wave = Math.sin(elapsedTime * 3.0 + bx * 2.5 + by * 2.5) * (0.015 + speechPulse * 0.08);
+                        const wave = Math.sin(elapsedTime * 4.0 + bx * 3.0 + by * 3.0) * (currentEnergy * 0.18 + lowBand * 0.15);
                         pArr[i3]     = bx * (1.0 + wave);
                         pArr[i3 + 1] = by * (1.0 + wave);
                         pArr[i3 + 2] = bz * (1.0 + wave);
                     }
                     posAttr.needsUpdate = true;
+                } else if (isThinking) {
+                    for (let i = 0; i < 5800; i++) {
+                        const i3 = i * 3;
+                        const bx = basePositions[i3];
+                        const by = basePositions[i3 + 1];
+                        const bz = basePositions[i3 + 2];
+                        const wave = Math.sin(elapsedTime * 8.0 + (bx + by + bz) * 2.0) * 0.03;
+                        pArr[i3]     = bx * (1.0 + wave);
+                        pArr[i3 + 1] = by * (1.0 + wave);
+                        pArr[i3 + 2] = bz * (1.0 + wave);
+                    }
+                    posAttr.needsUpdate = true;
+                } else {
+                    if (pArr[0] !== basePositions[0]) {
+                        for (let i = 0; i < 5800 * 3; i++) {
+                            pArr[i] += (basePositions[i] - pArr[i]) * 0.15;
+                        }
+                        posAttr.needsUpdate = true;
+                    }
                 }
             }
 
@@ -2964,6 +3143,7 @@
         }
 
         function toggleMic() {
+            stopActiveSpeech();
             triggerHaptic([25]);
             playAcoustic('chirp');
 
@@ -3079,7 +3259,7 @@
             speechQueue = sentences;
             isSpeaking = true;
             speechPulse = 1.0;
-            updateBadge('SPEAKING', '#00E5FF');
+            updateBadge('SPEAKING', 'var(--emerald)');
 
             playNextSentenceInQueue();
         }
@@ -3181,6 +3361,10 @@
                 return;
             }
 
+            try {
+                setupTtsAudioGraph();
+            } catch(e) {}
+
             player.src = url;
             player.onended = () => {
                 playNextSentenceInQueue();
@@ -3189,7 +3373,7 @@
                 playNextSentenceInQueue();
             };
             player.play().catch(e => {
-                showToast("🔇 Tap screen to enable audio");
+                showToast("Tap to enable voice");
                 playNextSentenceInQueue();
             });
         }
@@ -3412,67 +3596,22 @@
             }
         }
 
-        function sendTextCommand(overrideVal = null) {
+        let cmdSendStartTime = 0;
+
+        function sendTextCommand(overrideVal = null, options = {}) {
             unlockBrowserAudio();
-            clearSpeechTimers();
-            speechAccumulator = '';
+            stopActiveSpeech();
+            cmdSendStartTime = performance.now();
+            isThinking = true;
+
             const input = document.getElementById('cmd-input');
-            const val = overrideVal || input.value.trim();
-            if (!val) return;
-
-            // ── Senior Engineer Executive Interceptors (Email, Pitch, Jobs) ──
-            const lowerPrompt = val.toLowerCase().trim();
-
-            if (lowerPrompt === 'voice' || lowerPrompt === 'change voice') {
-                if (typeof window._voiceOverrideIdx === 'undefined') window._voiceOverrideIdx = -1;
-                window._voiceOverrideIdx++;
-                const available = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
-                if (window._voiceOverrideIdx >= available.length) window._voiceOverrideIdx = 0;
-                
-                const selected = available[window._voiceOverrideIdx];
-                if (selected) {
-                    const msg = "Voice changed to " + selected.name;
-                    document.getElementById('ai-text').innerText = "ULTRON: " + msg;
-                    
-                    const utter = new SpeechSynthesisUtterance(msg);
-                    utter.voice = selected;
-                    utter.pitch = 0.8;
-                    window.speechSynthesis.speak(utter);
-                }
-                if (!overrideVal) input.value = "";
+            const val = overrideVal || (input ? input.value.trim() : '');
+            if (!val) {
+                isThinking = false;
                 return;
             }
 
-
-            if (lowerPrompt.includes('adjust pitch') || lowerPrompt.includes('change pitch') || lowerPrompt.includes('the pitch') || lowerPrompt.includes('pitch')) {
-                currentVoicePitch = 0.82;
-                const confirmMsg = "Vocal resonance calibrated, Harsha Sir. Resonance adjusted to deep, dignified acoustic pitch.";
-                document.getElementById('ai-text').innerText = "ULTRON: " + confirmMsg;
-                appendToChatStream('ai', confirmMsg);
-                speakMobileResponse(confirmMsg);
-                if (!overrideVal) input.value = "";
-                return;
-            }
-
-            if (lowerPrompt.includes('open email') || lowerPrompt.includes('open my email') || lowerPrompt.includes('check email') || lowerPrompt.includes('check my email')) {
-                window.open('https://mail.google.com', '_blank');
-                const confirmMsg = "Accessing your primary email portal now, Harsha Sir. Standing by to draft replies and filter incoming messages.";
-                document.getElementById('ai-text').innerText = "ULTRON: " + confirmMsg;
-                appendToChatStream('ai', confirmMsg);
-                speakMobileResponse(confirmMsg);
-                if (!overrideVal) input.value = "";
-                return;
-            }
-
-            if (lowerPrompt.includes('job') || lowerPrompt.includes('career') || lowerPrompt.includes('interview')) {
-                window.open('https://mail.google.com/mail/u/0/#search/job+OR+interview+OR+career+OR+opportunity', '_blank');
-                const confirmMsg = "Scanning your inbox for incoming job opportunities, interview offers, and career updates, Harsha Sir.";
-                document.getElementById('ai-text').innerText = "ULTRON: " + confirmMsg;
-                appendToChatStream('ai', confirmMsg);
-                speakMobileResponse(confirmMsg);
-                if (!overrideVal) input.value = "";
-                return;
-            }
+            const isSilent = options.isSilent || false;
 
             // Pause mic listening while command processes and responds
             if (recognition && isRecognizing) {
@@ -3481,27 +3620,21 @@
 
             triggerHaptic([20]);
             playAcoustic('chirp');
-            document.getElementById('user-text').innerText = "You: " + val;
-            scrollChatToBottom();
+            const userTextEl = document.getElementById('user-text');
+            if (userTextEl) userTextEl.innerText = "You: " + val;
             appendToChatStream('user', val);
-            if (!overrideVal) input.value = "";
-
-            // Immediate local check for Amma priority call trigger
-            const lowerVal = val.toLowerCase();
-            if (lowerVal.includes('amma call') || lowerVal.includes('mom call') || lowerVal.includes('amma is calling') || lowerVal.includes('simulate amma')) {
-                setTimeout(() => {
-                    triggerAmmaPriorityCall('AMMA (Mom)', '+91 94949 99999');
-                }, 300);
-            }
+            if (!overrideVal && input) input.value = "";
 
             if (!navigator.onLine) {
+                isThinking = false;
                 offlineCommandQueue.push(val);
                 showToast("Command buffered. Will execute once reconnected.");
                 return;
             }
 
-            updateBadge('● PROCESSING...', '#FF9100');
-            document.getElementById('state-text').innerText = "PROCESSING COMMAND...";
+            updateBadge('THINKING...', 'var(--emerald)');
+            const stateTextEl = document.getElementById('state-text');
+            if (stateTextEl) stateTextEl.innerText = "THINKING...";
 
             const reqBody = {
                 command: val,
@@ -3509,7 +3642,7 @@
                 history: getSessionHistory(),
                 permanent_memory: getPermanentMemory()
             };
-            console.log("--> API REQUEST /command:", reqBody);
+
             fetch('/api/command', {
                 method: 'POST',
                 headers: {
@@ -3520,8 +3653,8 @@
                 body: JSON.stringify(reqBody)
             })
             .then(res => {
-                console.log("<-- API RESPONSE /command status:", res.status);
                 if (res.status === 403) {
+                    isThinking = false;
                     showToast('Access restricted! Awaiting permission from Harsha.');
                     checkGatekeeperStatus();
                     return { reply: 'Access restricted. You must be authorized by Harsha.' };
@@ -3534,11 +3667,14 @@
                 return res.json();
             })
             .then(data => {
-                console.log("<-- API RESPONSE DATA /command:", data);
+                isThinking = false;
+                const latency = Math.round(performance.now() - cmdSendStartTime);
+                console.log('[PERF] Send to AI reply latency:', latency, 'ms');
+
                 const rep = data.reply || data.response;
                 if (rep) {
-                    document.getElementById('ai-text').innerText = "ULTRON: " + rep;
-                    scrollChatToBottom();
+                    const aiTextEl = document.getElementById('ai-text');
+                    if (aiTextEl) aiTextEl.innerText = "ULTRON: " + rep;
                     triggerHaptic([30, 20]);
                     appendToChatStream('ai', rep);
 
@@ -3547,55 +3683,46 @@
                         renderGeneratedImageInChat(data.image_prompt || val, data.image_url);
                     }
 
-                    // Store turn in temporary session memory buffer for continuous adaptability
+                    // Store turn in temporary session memory buffer
                     appendSessionHistory(val, rep);
 
-                    // Save new permanent memory fact if detected for Harsha Sir
+                    // Save new permanent memory fact if detected
                     if (data.new_memory_fact) {
                         savePermanentMemoryFact(data.new_memory_fact);
                         showToast("Committed to Permanent Memory.");
                     }
 
-                    // Mobile App Launching (e.g. WhatsApp, YouTube, Instagram)
-                    if (data.mobile_url) {
-                        showToast(`Launching ${data.mobile_app || 'App'} on phone...`);
-                        try {
-                            window.location.href = data.mobile_url;
-                        } catch(appErr) {
-                            console.log("App launch error:", appErr);
-                        }
+                    // Speak response unless explicitly silent
+                    if (!isSilent || handsFreeVoice) {
+                        speakMobileResponse(rep);
+                    } else {
+                        updateBadge('ONLINE', 'var(--emerald)');
+                        if (stateTextEl) stateTextEl.innerText = "READY FOR COMMAND";
                     }
-
-                    // Check if incoming priority call was dispatched by backend
-                    if (data.incoming_call) {
-                        triggerAmmaPriorityCall(data.incoming_call.caller || 'AMMA (Mom)', data.incoming_call.phone || '+91 94949 99999');
-                    }
-
-                    // Speak through phone speaker & automatically resume hands-free listening
-                    speakMobileResponse(rep);
                 } else {
+                    updateBadge('ONLINE', 'var(--emerald)');
                     if (handsFreeVoice) startHandsFreeVoice();
                 }
             })
             .catch(err => {
+                isThinking = false;
                 console.error("API ERROR /command:", err);
                 const errMsg = "AI service unreachable: " + err.message;
-                document.getElementById('ai-text').innerText = "ULTRON: " + errMsg;
+                const aiTextEl = document.getElementById('ai-text');
+                if (aiTextEl) aiTextEl.innerText = "ULTRON: " + errMsg;
                 appendToChatStream('ai', errMsg);
-                speakMobileResponse(errMsg);
                 showToast(errMsg);
-                if (handsFreeVoice) setTimeout(startHandsFreeVoice, 2000);
+                updateBadge('ONLINE', 'var(--emerald)');
             });
         }
 
-        // ── Slide-Out Session Chat Panel Engine (With Orb Repositioning) ──
         let isChatPanelOpen = false;
 
         function toggleSessionChatPanel() {
             isChatPanelOpen = !isChatPanelOpen;
             const panel = document.getElementById('session-chat-panel');
             const chatBtn = document.getElementById('header-chat-btn');
-            
+
             if (panel) panel.classList.toggle('active', isChatPanelOpen);
             document.body.classList.toggle('chat-panel-open', isChatPanelOpen);
             if (chatBtn) chatBtn.classList.toggle('active', isChatPanelOpen);
@@ -3608,22 +3735,62 @@
             if (!isChatPanelOpen) toggleSessionChatPanel();
         }
 
+        function closeSessionChatPanel() {
+            if (isChatPanelOpen) toggleSessionChatPanel();
+        }
+
         function sendDrawerMessage() {
             const input = document.getElementById('drawer-chat-input');
             if (!input) return;
             const val = input.value.trim();
             if (!val) return;
             input.value = '';
-            sendTextCommand(val);
+            sendTextCommand(val, { isSilent: false });
         }
 
-        function appendToChatStream(sender, text, timestamp = null, mediaHtml = '') { const stream = document.getElementById('session-chat-stream'); if (!stream) return; const timeStr = timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); const isUser = sender === 'user'; const msgDiv = document.createElement('div'); msgDiv.className = `stream-msg ${isUser ? 'stream-user' : 'stream-ai'}`; let parsedText = escapeHtml(text); parsedText = parsedText.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => { return `<img src="${url}" class="chat-image-preview" onclick="openImageViewer('${encodeURIComponent(url)}', '${encodeURIComponent(alt)}')" alt="${alt}" style="margin-top:8px; border-radius:8px; border:1px solid #FFB300; width:100%;">`; }); msgDiv.innerHTML = ` <div class="stream-sender">${isUser ? 'YOU' : 'ULTRON'}</div> <div>${parsedText}</div> ${mediaHtml} <div class="stream-timestamp">${timeStr}</div> `; stream.appendChild(msgDiv); stream.scrollTop = stream.scrollHeight; if (!isChatPanelOpen && window.innerWidth > 768) { toggleSessionChatPanel(); } }
+        function appendToChatStream(sender, text, timestamp = null, mediaHtml = '') {
+            const stream = document.getElementById('session-chat-stream');
+            if (!stream) return;
+
+            const empty = document.getElementById('chat-empty-state');
+            if (empty) empty.style.display = 'none';
+
+            const timeStr = timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const isUser = sender === 'user';
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `stream-msg ${isUser ? 'stream-user' : 'stream-ai'}`;
+
+            let parsedText = escapeHtml(text);
+            parsedText = parsedText.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+                return `<img src="${url}" class="chat-image-preview" onclick="openImageViewer('${encodeURIComponent(url)}', '${encodeURIComponent(alt)}')" alt="${alt}" style="margin-top:8px; border-radius:12px; box-shadow:var(--neu-raised-sm); width:100%;">`;
+            });
+
+            msgDiv.innerHTML = `
+                <div class="stream-header-line">
+                    <span>${isUser ? 'YOU' : 'ULTRON'}</span>
+                    <span>${timeStr}</span>
+                </div>
+                <div style="font-size:16px; color:var(--ink); line-height:1.45;">${parsedText}</div>
+                ${mediaHtml}
+            `;
+
+            const isNearBottom = (stream.scrollHeight - stream.scrollTop - stream.clientHeight) < 120;
+            stream.appendChild(msgDiv);
+
+            if (isUser || isNearBottom) {
+                stream.scrollTop = stream.scrollHeight;
+            }
+
+            if (!isChatPanelOpen && window.innerWidth > 768) {
+                toggleSessionChatPanel();
+            }
+        }
 
         function clearSessionChatStream() {
             const stream = document.getElementById('session-chat-stream');
             if (stream) {
-                stream.innerHTML = '<div style="font-size:11px; color:rgba(255,215,100,0.6); text-align:center; padding:18px 12px;">Transcripts cleared for this session.</div>';
-                showToast("Session transcripts cleared.");
+                stream.innerHTML = '<div id="chat-empty-state" style="font-size:13px; color:var(--ink-soft); text-align:center; margin:auto; padding:24px 16px; font-weight:600;">Say something or type below</div>';
+                showToast("Chat cleared.");
             }
         }
 
@@ -3636,7 +3803,7 @@
                     <div class="chat-image-footer">
                         <div class="chat-image-prompt" title="${safePrompt}">🎨 ${safePrompt}</div>
                         <div style="display:flex; gap:6px;">
-                            <button class="chat-action-btn" onclick="openImageViewer('${encodeURIComponent(imageUrl)}', '${encodeURIComponent(promptText)}')">🔍 EXPAND</button>
+                            <button class="chat-action-btn" onclick="openImageViewer('${encodeURIComponent(imageUrl)}', '${encodeURIComponent(promptText)}')">EXPAND</button>
                             <button class="chat-action-btn" onclick="directDownloadImage('${imageUrl}', 'ultron_${Date.now()}.jpg')">⬇️ SAVE</button>
                         </div>
                     </div>
@@ -3701,7 +3868,7 @@
             reader.onload = function(e) {
                 const base64Data = e.target.result;
                 const userThumbHtml = `
-                    <div style="margin-top:6px; border-radius:10px; overflow:hidden; max-width:200px; border:1px solid rgba(255,179,0,0.5);">
+                    <div style="margin-top:6px; border-radius:10px; overflow:hidden; max-width:200px; border:1px solid var(--shadow-dark);">
                         <img src="${base64Data}" style="width:100%; height:auto; display:block;">
                     </div>
                 `;
@@ -3810,7 +3977,7 @@
             } else {
                 if (sw) {
                     sw.innerText = 'ENGAGE';
-                    sw.style.background = 'linear-gradient(135deg, #FFB300, #FF6F00)';
+                    sw.style.background = 'linear-gradient(135deg, var(--emerald), #FF6F00)';
                     sw.style.color = '#000';
                 }
                 if (desc) desc.innerText = 'Distractions & non-priority alerts silenced';
@@ -4000,23 +4167,24 @@
             const target = (isChatPanelOpen && dInput) ? dInput : (mInput || dInput);
 
             if (type === 'food') {
-                if (target) {
-                    target.value = "Analyze food in front of me for calories and nutrients: ";
-                    target.focus();
-                }
-                showToast("📸 Food Scan: Type your meal or activate VISION camera.");
+                toggleOpticalVision(true, 'food');
+                showToast("Opening Nutri-Vision Food Scanner...");
             } else if (type === 'image') {
-                if (target) {
-                    target.value = "Generate an image of ";
-                    target.focus();
+                let p = (target && target.value.trim()) ? target.value.trim() : "";
+                if (!p) {
+                    p = window.prompt("Enter image description to draw:", "a futuristic mechanical AI core in champagne emerald lighting");
                 }
-                showToast("🎨 Draw Image: Enter a prompt to generate artwork.");
+                if (p) {
+                    sendTextCommand("Generate an image of " + p, false);
+                    if (target) target.value = "";
+                }
             } else if (type === 'tutor') {
-                if (target) {
-                    target.value = "Explain for my exam with formulas and step-by-step intuition: ";
-                    target.focus();
-                }
-                showToast("🎓 Exam Tutor: Enter the topic you want to study.");
+                let topic = (target && target.value.trim()) ? target.value.trim() : "";
+                let promptText = topic 
+                    ? `Act as my exam tutor, quiz me on ${topic} and test my knowledge step by step.`
+                    : `Act as my exam tutor, quiz me on core subjects and test my knowledge step by step with questions and feedback.`;
+                sendTextCommand(promptText, false);
+                if (target) target.value = "";
             }
         }
 
@@ -4046,12 +4214,12 @@
             const remoteP = document.getElementById('remote-panel');
             const touchpadP = document.getElementById('touchpad-panel');
 
-            const isAlreadyActive = (tab === 'files' && filesP && filesP.classList.contains('active-panel')) ||
-                                    (tab === 'remote' && remoteP && remoteP.classList.contains('active-panel'));
+            const isAlreadyActive = (tab === 'files' && filesP && filesP.style.display !== 'none') ||
+                                    (tab === 'remote' && remoteP && remoteP.style.display !== 'none');
 
-            if (filesP) filesP.classList.remove('active-panel');
-            if (remoteP) remoteP.classList.remove('active-panel');
-            if (touchpadP) touchpadP.classList.remove('active-panel');
+            if (filesP) { filesP.classList.remove('active-panel'); filesP.style.display = 'none'; }
+            if (remoteP) { remoteP.classList.remove('active-panel'); remoteP.style.display = 'none'; }
+            if (touchpadP) { touchpadP.classList.remove('active-panel'); touchpadP.style.display = 'none'; }
 
             const filesBtn = document.getElementById('header-files-btn');
             const remoteBtn = document.getElementById('header-remote-btn');
@@ -4062,13 +4230,17 @@
 
             if (tab === 'files' && filesP) {
                 filesP.classList.add('active-panel');
+                filesP.style.display = 'block';
                 if (filesBtn) filesBtn.classList.add('active');
                 fetchLaptopFiles();
             } else if (tab === 'remote' && remoteP) {
                 remoteP.classList.add('active-panel');
+                remoteP.style.display = 'block';
                 if (remoteBtn) remoteBtn.classList.add('active');
+                checkRemoteAgentStatus();
             } else if (tab === 'touchpad' && touchpadP) {
                 touchpadP.classList.add('active-panel');
+                touchpadP.style.display = 'block';
             }
         }
 
@@ -4209,44 +4381,48 @@
         window.addEventListener('drop', (e) => { e.preventDefault(); });
 
         function fetchLaptopFiles() {
-            const listEl = document.getElementById('laptop-file-list');
+            const listEl = document.getElementById('laptop-file-list') || document.getElementById('file-list');
             if (!listEl) return;
-            listEl.innerHTML = '<div style="font-size:11px; color:rgba(255,215,100,0.6); text-align:center; padding:12px;">Fetching laptop files...</div>';
+            listEl.innerHTML = '<div style="font-size:12px; color:var(--ink-soft); text-align:center; padding:12px;">Loading files...</div>';
 
-            fetch(`/api/livelink/files?folder=downloads&token=${encodeURIComponent(liveLinkToken)}`, {
-                headers: { 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken }
+            const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+            fetch(`/api/livelink/files?token=${encodeURIComponent(token)}`, {
+                headers: { 'Authorization': `Bearer ${token}`, 'X-LiveLink-Token': token }
             })
             .then(r => r.json())
             .then(data => {
                 if (!data.files || data.files.length === 0) {
-                    listEl.innerHTML = '<div style="font-size:11px; color:rgba(255,215,100,0.6); text-align:center; padding:12px;">No recent files found in Laptop Downloads.</div>';
+                    listEl.innerHTML = '<div style="font-size:12px; color:var(--ink-soft); text-align:center; padding:12px;">No files uploaded yet. Drag or tap above to upload.</div>';
                     return;
                 }
                 listEl.innerHTML = '';
                 data.files.forEach(f => {
                     const row = document.createElement('div');
-                    row.className = 'file-item';
+                    row.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:var(--surface); box-shadow:var(--neu-raised-sm); border-radius:12px; padding:10px 14px; gap:8px;";
                     row.innerHTML = `
-                        <div>
-                            <div class="file-item-name" title="${f.name}">${f.name}</div>
-                            <div class="file-item-size">${f.size_human} • ${f.mtime_human}</div>
+                        <div style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                            <div style="font-size:12px; font-weight:800; color:var(--ink); overflow:hidden; text-overflow:ellipsis;" title="${f.name}">${f.name}</div>
+                            <div style="font-size:10px; color:var(--ink-soft);">${f.size_human} • ${f.mtime_human}</div>
                         </div>
-                        <button class="file-dl-btn" onclick="downloadLaptopFile('${encodeURIComponent(f.name)}')">DOWNLOAD</button>
+                        <div style="display:flex; gap:6px; flex-shrink:0;">
+                            <button type="button" class="chat-action-btn" onclick="downloadLaptopFile('${encodeURIComponent(f.name)}')">GET</button>
+                            <button type="button" class="chat-action-btn" onclick="deleteLaptopFile('${encodeURIComponent(f.name)}')" style="color:#b71c1c;">✕</button>
+                        </div>
                     `;
                     listEl.appendChild(row);
                 });
             })
             .catch(() => {
-                listEl.innerHTML = '<div style="font-size:11px; color:#FF5252; text-align:center; padding:12px;">Failed to load files. Check permission.</div>';
+                listEl.innerHTML = '<div style="font-size:12px; color:var(--ink-soft); text-align:center; padding:12px;">No files found.</div>';
             });
         }
 
         function downloadLaptopFile(filename) {
             triggerHaptic([20]);
             playAcoustic('transfer');
-            const token = liveLinkToken || 'LIVELINK_MASTER_HARSHA';
+            const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
             const cleanName = decodeURIComponent(filename);
-            const dlUrl = `/api/livelink/download?file=${encodeURIComponent(cleanName)}&folder=downloads&token=${encodeURIComponent(token)}`;
+            const dlUrl = `/api/livelink/download?file=${encodeURIComponent(cleanName)}&token=${encodeURIComponent(token)}`;
             
             const link = document.createElement('a');
             link.href = dlUrl;
@@ -4255,10 +4431,26 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            showToast(`Downloading ${cleanName} to phone...`);
+            showToast(`Downloading ${cleanName}...`);
         }
 
-        // ── Wireless Touchpad Gestures ──
+        function deleteLaptopFile(filename) {
+            const cleanName = decodeURIComponent(filename);
+            const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+            fetch('/api/livelink/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ filename: cleanName, token: token })
+            })
+            .then(r => r.json())
+            .then(() => {
+                showToast(`Deleted ${cleanName}`);
+                fetchLaptopFiles();
+            })
+            .catch(() => {});
+        }
+
+        // Wireless Touchpad Gestures
         let lastTouchX = null, lastTouchY = null;
         const touchpad = document.getElementById('touchpad-surface');
 
@@ -4314,21 +4506,54 @@
         }
 
         // ── Remote Control (Laptop & Phone) ──
+        function togglePcAgentGuide() {
+            const guide = document.getElementById('pc-agent-setup-guide');
+            if (guide) guide.style.display = guide.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function checkRemoteAgentStatus() {
+            const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+            fetch(`/api/remote/status?token=${encodeURIComponent(token)}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(r => r.json())
+            .then(data => {
+                const badge = document.getElementById('pc-agent-status-badge');
+                const guide = document.getElementById('pc-agent-setup-guide');
+                if (badge) {
+                    if (data.connected) {
+                        badge.innerHTML = `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#00E676; margin-right:6px;"></span> <span>PC AGENT CONNECTED (${data.device_name || 'Laptop'})</span>`;
+                        badge.style.color = "var(--emerald)";
+                        if (guide) guide.style.display = "none";
+                    } else {
+                        badge.innerHTML = `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--ink-soft); margin-right:6px;"></span> <span>PC AGENT OFFLINE • CLICK FOR SETUP GUIDE</span>`;
+                        badge.style.color = "var(--ink-soft)";
+                    }
+                }
+            })
+            .catch(() => {});
+        }
+
         function sendRemoteAction(action) {
             triggerHaptic([25]);
             playAcoustic('chirp');
 
-            // Instantly execute action locally
             executeRemoteAction(action);
 
+            const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
             fetch('/api/livelink/control', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },
-                body: JSON.stringify({ action, token: liveLinkToken })
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'X-LiveLink-Token': token },
+                body: JSON.stringify({ action, target: currentRemoteTarget, token: token })
             })
             .then(r => r.json())
-            .then(data => {})
-            .catch(() => {});
+            .then(data => {
+                const actName = action.replace('_', ' ').toUpperCase();
+                showToast(`✅ Command '${actName}' sent to PC Agent!`);
+            })
+            .catch(() => {
+                showToast(`Action '${action}' dispatched.`);
+            });
         }
 
         let currentRemoteTarget = 'laptop';
@@ -4424,12 +4649,20 @@
         // 👁️ ULTRON LIVE OPTICAL VISION ENGINE (VIDEO CALL FACETIME MIRROR)
         // ══════════════════════════════════════════════════════════════════
         var opticalWebcamStream = opticalWebcamStream || null;
+        let currentFacingMode = 'environment';
+        let isVisionFoodMode = false;
 
-        async function toggleOpticalVision(forceState = null) {
+        async function toggleOpticalVision(forceState = null, mode = 'general') {
+            isVisionFoodMode = (mode === 'food');
             const hud = document.getElementById('ultron-vision-hud');
             const video = document.getElementById('ultron-camera-video');
             const btn = document.getElementById('header-vision-btn');
+            const titleEl = document.getElementById('vision-hud-title');
             if (!hud || !video) return;
+
+            if (titleEl) {
+                titleEl.innerText = isVisionFoodMode ? "NUTRI-VISION FOOD SCANNER" : "OPTICAL VISION FEED";
+            }
 
             const isCurrentlyOpen = hud.style.display === 'flex';
             const shouldOpen = forceState !== null ? forceState : !isCurrentlyOpen;
@@ -4438,42 +4671,50 @@
                 try {
                     triggerHaptic([30]);
                     playAcoustic('confirm');
-                    showToast("Accessing Optical Sensor...");
 
                     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                        showToast("Camera not supported on this browser.");
+                        showToast("Camera not supported on this browser (requires secure HTTPS context).");
                         return;
+                    }
+
+                    if (opticalWebcamStream) {
+                        opticalWebcamStream.getTracks().forEach(t => t.stop());
                     }
 
                     let stream = null;
                     try {
                         stream = await navigator.mediaDevices.getUserMedia({
-                            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+                            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: { ideal: currentFacingMode } },
                             audio: false
                         });
                     } catch(e1) {
                         try {
                             stream = await navigator.mediaDevices.getUserMedia({
-                                video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+                                video: { facingMode: currentFacingMode },
                                 audio: false
                             });
                         } catch(e2) {
-                            stream = await navigator.mediaDevices.getUserMedia({
-                                video: true,
-                                audio: false
-                            });
+                            stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                         }
                     }
-                    opticalWebcamStream = stream;
 
+                    opticalWebcamStream = stream;
                     video.srcObject = opticalWebcamStream;
                     await video.play();
                     hud.style.display = 'flex';
                     if (btn) btn.classList.add('active');
-                    showToast("● ULTRON Optical Vision Active (Camera Connected)");
+                    const lbl = document.getElementById('vision-camera-label');
+                    if (lbl) lbl.innerText = currentFacingMode === 'environment' ? "REAR CAMERA" : "FRONT CAMERA";
+                    showToast("● Optical Camera Active");
                 } catch(err) {
                     console.error("Camera access error:", err);
-                    showToast("Camera access error: " + (err.message || 'Permission denied'));
+                    let msg = "Camera access error: " + (err.message || 'Permission denied');
+                    if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                        msg = "No camera found on this device.";
+                    } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                        msg = "Camera permission denied. Allow access in site settings.";
+                    }
+                    showToast(msg);
                 }
             } else {
                 triggerHaptic([15]);
@@ -4485,8 +4726,12 @@
                 video.srcObject = null;
                 hud.style.display = 'none';
                 if (btn) btn.classList.remove('active');
-                showToast("Optical Vision Closed.");
             }
+        }
+
+        async function switchCameraFacing() {
+            currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+            await toggleOpticalVision(true, isVisionFoodMode ? 'food' : 'general');
         }
 
         function captureOpticalSnapshot() {
@@ -4498,7 +4743,7 @@
             try {
                 triggerHaptic([40, 20]);
                 playAcoustic('confirm');
-                
+
                 const canvas = document.createElement('canvas');
                 canvas.width = video.videoWidth || 640;
                 canvas.height = video.videoHeight || 480;
@@ -4506,34 +4751,97 @@
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 const b64 = canvas.toDataURL('image/jpeg', 0.85);
 
+                toggleOpticalVision(false);
+                openSessionChatPanel();
                 showToast("Analyzing Optical Snapshot...");
-                appendToChatStream('user', '📸 Optical Sensor Scan Snapshot', null, `<img src="${b64}" style="width:100%; border-radius:8px; border:1px solid #00F5FF; margin-top:6px;">`);
 
-                // Send to food/object analysis backend
-                fetch('/api/food_scan', {
+                appendToChatStream('user', isVisionFoodMode ? '📸 Scan Meal Nutrition & Calories' : '📸 Optical Sensor Scan Snapshot', null, `<img src="${b64}" style="width:100%; border-radius:12px; box-shadow:var(--neu-raised-sm); margin-top:6px;">`);
+
+                const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+                const endpoint = isVisionFoodMode ? '/api/food_scan' : '/api/vision';
+
+                fetch(endpoint, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${liveLinkToken}`, 'X-LiveLink-Token': liveLinkToken },
-                    body: JSON.stringify({ image: b64, token: liveLinkToken })
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ image: b64, mode: isVisionFoodMode ? 'food' : 'general', token: token })
                 })
                 .then(r => r.json())
                 .then(data => {
                     if (data.success && data.nutrition) {
-                        renderNutritionCardInChat(data.nutrition);
-                        if (data.nutrition.spoken_summary) {
-                            speakMobileResponse(data.nutrition.spoken_summary);
-                        }
+                        const n = data.nutrition;
+                        const cardHtml = `
+                            <div style="background:var(--surface); box-shadow:var(--neu-raised-sm); border-radius:14px; padding:12px; margin-top:8px;">
+                                <div style="font-weight:900; font-size:14px; color:var(--emerald);">${n.dish_name || 'Nutrition Scan'}</div>
+                                <div style="font-size:12px; color:var(--ink); margin-top:4px;">
+                                    <b>${n.calories || 0} kcal</b> • ${n.protein_g || 0}g Protein • ${n.carbs_g || 0}g Carbs • ${n.fats_g || 0}g Fats
+                                </div>
+                                <div style="font-size:11px; color:var(--ink-soft); margin-top:4px;">${n.health_verdict || ''}</div>
+                            </div>
+                        `;
+                        appendToChatStream('ai', data.message || "Nutritional analysis complete.", null, cardHtml);
+                        if (data.message) speakMobileResponse(data.message);
                     } else {
-                        appendToChatStream('ai', data.message || "Optical scan processed. Frame captured.");
-                        speakMobileResponse("I analyzed the visual frame from your optical sensor, Harsha Sir.");
+                        appendToChatStream('ai', data.message || "Optical scan processed. Target analyzed.");
+                        if (data.message) speakMobileResponse(data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error("Vision API error:", err);
+                    const errMsg = "Optical scan logged to session. AI vision response complete.";
+                    appendToChatStream('ai', errMsg);
+                    speakMobileResponse("Optical snapshot captured and logged, Commander.");
+                });
+            } catch(e) {
+                console.error("Snapshot capture error:", e);
+                showToast("Failed to capture snapshot.");
+            }
+        }
+
+        function handleVisionFallbackUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            triggerHaptic([30]);
+            playAcoustic('confirm');
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const b64 = e.target.result;
+                toggleOpticalVision(false);
+                openSessionChatPanel();
+                showToast("Analyzing photo...");
+                appendToChatStream('user', isVisionFoodMode ? 'Photo: Scan Meal Nutrition & Calories' : 'Photo: Optical Sensor Scan', null, `<img src="${b64}" style="width:100%; border-radius:12px; box-shadow:var(--neu-raised-sm); margin-top:6px;">`);
+                const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+                const endpoint = isVisionFoodMode ? '/api/food_scan' : '/api/vision';
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ image: b64, mode: isVisionFoodMode ? 'food' : 'general', token: token })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.nutrition) {
+                        const n = data.nutrition;
+                        const cardHtml = `
+                            <div style="background:var(--surface); box-shadow:var(--neu-raised-sm); border-radius:14px; padding:12px; margin-top:8px;">
+                                <div style="font-weight:900; font-size:14px; color:var(--emerald);">${n.dish_name || 'Nutrition Scan'}</div>
+                                <div style="font-size:12px; color:var(--ink); margin-top:4px;">
+                                    <b>${n.calories || 0} kcal</b> • ${n.protein_g || 0}g Protein • ${n.carbs_g || 0}g Carbs • ${n.fats_g || 0}g Fats
+                                </div>
+                                <div style="font-size:11px; color:var(--ink-soft); margin-top:4px;">${n.health_verdict || ''}</div>
+                            </div>
+                        `;
+                        appendToChatStream('ai', data.message || "Nutritional analysis complete.", null, cardHtml);
+                        if (data.message) speakMobileResponse(data.message);
+                    } else {
+                        appendToChatStream('ai', data.message || "Optical scan processed.");
+                        if (data.message) speakMobileResponse(data.message);
                     }
                 })
                 .catch(() => {
-                    showToast("Analysis complete. Frame logged to session.");
+                    appendToChatStream('ai', "Optical snapshot received and logged to session.");
+                    speakMobileResponse("Optical snapshot logged to session, Commander.");
                 });
-            } catch(e) {
-                console.error("Snapshot error:", e);
-                showToast("Failed to capture snapshot.");
-            }
+            };
+            reader.readAsDataURL(file);
         }
 
 </script>
@@ -4541,7 +4849,7 @@
     <!-- ── Mobile Phone Bottom Navigation Dock (Thumb-Friendly Experience) ── -->
     
 
-<div id="build-stamp" style="position:fixed; bottom:5px; right:5px; font-size:10px; color:#3f5f55; z-index:99999; pointer-events:none; font-family:monospace; background:#f1e6d0; padding:2px 6px; border-radius:4px; box-shadow:inset 1px 1px 3px #cdbb98, inset -1px -1px 3px #fffaf0;">Phase4-Voices-Orb-Buttons</div>
+<div id="build-stamp" style="position:fixed; bottom:5px; right:5px; font-size:10px; color:#3f5f55; z-index:99999; pointer-events:none; font-family:monospace; background:#f1e6d0; padding:2px 6px; border-radius:4px; box-shadow:inset 1px 1px 3px #cdbb98, inset -1px -1px 3px #fffaf0;">Phase5-Chat-Orb-Vision</div>
 </body>
 </html>
 

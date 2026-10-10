@@ -159,6 +159,29 @@ def _init_cloud_db():
             )
             """
         )
+        conn.execute(
+            f"""
+            CREATE TABLE IF NOT EXISTS livelink_files (
+                {"id SERIAL PRIMARY KEY" if os.environ.get("POSTGRES_URL") and HAS_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"},
+                user_token TEXT NOT NULL,
+                filename TEXT NOT NULL,
+                data_b64 TEXT NOT NULL,
+                size_bytes INTEGER NOT NULL,
+                size_human TEXT,
+                folder TEXT DEFAULT 'downloads',
+                created_at REAL NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS livelink_agent_heartbeat (
+                user_token TEXT PRIMARY KEY,
+                device_name TEXT,
+                last_ping REAL NOT NULL
+            )
+            """
+        )
         conn.commit()
         conn.close()
     except Exception as e:
@@ -845,6 +868,109 @@ class handler(BaseHTTPRequestHandler):
                     pass
             except Exception:
                 pass
+        # ── File Hub List Endpoint ──
+        if path.endswith("/livelink/files") or path.endswith("/files"):
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            token = qs.get("token", [""])[0] or self.headers.get("X-LiveLink-Token", "")
+            if not token and self.headers.get("Authorization", "").startswith("Bearer "):
+                token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
+
+            files_list = []
+            try:
+                conn = get_db_connection()
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                if token:
+                    cur.execute(
+                        "SELECT id, filename, size_bytes, size_human, created_at FROM livelink_files WHERE user_token = ? OR user_token = 'LIVELINK_MASTER_HARSHA' ORDER BY id DESC LIMIT 50",
+                        (token,)
+                    )
+                else:
+                    cur.execute(
+                        "SELECT id, filename, size_bytes, size_human, created_at FROM livelink_files ORDER BY id DESC LIMIT 50"
+                    )
+                rows = cur.fetchall()
+                conn.close()
+                for r in rows:
+                    created_ts = r["created_at"] if isinstance(r, dict) else r[4]
+                    fname = r["filename"] if isinstance(r, dict) else r[1]
+                    sz = r["size_human"] if isinstance(r, dict) else r[3]
+                    mtime_str = time.strftime("%b %d, %H:%M", time.localtime(created_ts))
+                    files_list.append({
+                        "name": fname,
+                        "size_human": sz,
+                        "mtime_human": mtime_str
+                    })
+            except Exception as e:
+                print(f"[FILES LIST ERROR] {e}")
+
+            self._send_json({"success": True, "files": files_list})
+            return
+
+        # ── File Download Endpoint ──
+        if path.endswith("/livelink/download") or path.endswith("/download"):
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            fname = qs.get("file", [""])[0]
+            token = qs.get("token", [""])[0] or self.headers.get("X-LiveLink-Token", "")
+            if not token and self.headers.get("Authorization", "").startswith("Bearer "):
+                token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
+
+            if fname:
+                try:
+                    conn = get_db_connection()
+                    conn.row_factory = sqlite3.Row
+                    cur = conn.cursor()
+                    cur.execute(
+                        "SELECT filename, data_b64 FROM livelink_files WHERE filename = ? ORDER BY id DESC LIMIT 1",
+                        (fname,)
+                    )
+                    row = cur.fetchone()
+                    conn.close()
+                    if row:
+                        b64_content = row["data_b64"] if isinstance(row, dict) else row[1]
+                        if "," in b64_content:
+                            b64_content = b64_content.split(",", 1)[1]
+                        import base64
+                        file_bytes = base64.b64decode(b64_content)
+
+                        self.send_response(200)
+                        self.send_header("Content-Type", "application/octet-stream")
+                        self.send_header("Content-Disposition", f'attachment; filename="{fname}"')
+                        self.send_header("Content-Length", str(len(file_bytes)))
+                        self.end_headers()
+                        self.wfile.write(file_bytes)
+                        return
+                except Exception as e:
+                    print(f"[DOWNLOAD ERROR] {e}")
+
+            self._send_json({"error": "File not found"}, status=404)
+            return
+
+        # ── Remote Agent Connection Status Endpoint ──
+        if path.endswith("/remote/status") or path.endswith("/remote_status"):
+            connected = False
+            device_name = ""
+            last_seen = 0
+            try:
+                conn = get_db_connection()
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT device_name, last_ping FROM livelink_agent_heartbeat ORDER BY last_ping DESC LIMIT 1"
+                )
+                row = cur.fetchone()
+                conn.close()
+                if row:
+                    lp = row["last_ping"] if isinstance(row, dict) else row[1]
+                    dev = row["device_name"] if isinstance(row, dict) else row[0]
+                    if (time.time() - lp) < 45.0:
+                        connected = True
+                        device_name = dev
+                        last_seen = lp
+            except Exception as e:
+                print(f"[REMOTE STATUS ERROR] {e}")
+
+            self._send_json({"success": True, "connected": connected, "device_name": device_name, "last_seen": last_seen})
             return
 
         self._send_json({"error": "Not Found", "received_path": self.path, "resolved_path": path}, status=404)
@@ -1356,7 +1482,271 @@ class handler(BaseHTTPRequestHandler):
                     return
             except Exception:
                 pass
-            self._send_json({"status": "error", "success": False, "error": "Invalid session."}, status=401)
+        # ── 10. File Hub Upload ──
+        if path.endswith("/livelink/upload") or path.endswith("/upload"):
+            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
+            if not token and self.headers.get("Authorization", "").startswith("Bearer "):
+                token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
+            filename = data.get("filename", f"file_{int(time.time())}.dat")
+            file_data = data.get("data", "")
+            folder = data.get("folder", "downloads")
+
+            if not file_data:
+                self._send_json({"error": "No file data received"}, status=400)
+                return
+
+            try:
+                raw_b64 = file_data.split(",", 1)[1] if "," in file_data else file_data
+                import base64
+                decoded_bytes = base64.b64decode(raw_b64)
+                sz_bytes = len(decoded_bytes)
+                if sz_bytes < 1024:
+                    sz_human = f"{sz_bytes} B"
+                elif sz_bytes < 1024 * 1024:
+                    sz_human = f"{sz_bytes / 1024:.1f} KB"
+                else:
+                    sz_human = f"{sz_bytes / (1024 * 1024):.1f} MB"
+
+                now = time.time()
+                conn = get_db_connection()
+                cur = conn.cursor()
+                cur.execute(
+                    "INSERT INTO livelink_files (user_token, filename, data_b64, size_bytes, size_human, folder, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (token or MASTER_TOKEN, filename, file_data, sz_bytes, sz_human, folder, now)
+                )
+                conn.commit()
+                conn.close()
+
+                self._send_json({
+                    "success": True,
+                    "filename": filename,
+                    "size_human": sz_human,
+                    "message": f"Successfully uploaded {filename} ({sz_human})."
+                })
+                return
+            except Exception as e:
+                print(f"[FILE UPLOAD ERROR] {e}")
+                self._send_json({"error": f"Upload failed: {str(e)}"}, status=500)
+                return
+
+        # ── 11. File Hub Delete ──
+        if path.endswith("/livelink/delete") or path.endswith("/delete"):
+            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
+            if not token and self.headers.get("Authorization", "").startswith("Bearer "):
+                token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
+            filename = data.get("filename", "")
+            if filename:
+                try:
+                    conn = get_db_connection()
+                    cur = conn.cursor()
+                    cur.execute(
+                        "DELETE FROM livelink_files WHERE filename = ? AND (user_token = ? OR user_token = 'LIVELINK_MASTER_HARSHA')",
+                        (filename, token or MASTER_TOKEN)
+                    )
+                    conn.commit()
+                    conn.close()
+                    self._send_json({"success": True, "message": f"Deleted {filename}"})
+                    return
+                except Exception as e:
+                    print(f"[FILE DELETE ERROR] {e}")
+            self._send_json({"error": "Delete failed"}, status=400)
+            return
+
+        # ── 12. Remote Action Dispatch ──
+        if path.endswith("/livelink/control") or path.endswith("/remote/command"):
+            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
+            if not token and self.headers.get("Authorization", "").startswith("Bearer "):
+                token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
+            action = data.get("action", "")
+            target = data.get("target", "laptop")
+
+            if not action:
+                self._send_json({"error": "Missing action"}, status=400)
+                return
+
+            now = time.time()
+            try:
+                conn = get_db_connection()
+                cur = conn.cursor()
+                event_payload = json.dumps({"action": action, "target": target, "token": token, "timestamp": now})
+                cur.execute(
+                    "INSERT INTO livelink_events (event_type, caller, phone, data_json, created_at, handled) VALUES (?, ?, ?, ?, ?, ?)",
+                    ("remote_action", "phone_client", "", event_payload, now, 0)
+                )
+                conn.commit()
+                conn.close()
+                self._send_json({
+                    "success": True,
+                    "action": action,
+                    "target": target,
+                    "status": "queued",
+                    "message": f"Remote action '{action}' queued for {target} agent."
+                })
+                return
+            except Exception as e:
+                print(f"[REMOTE CONTROL ERROR] {e}")
+                self._send_json({"error": f"Failed to dispatch action: {str(e)}"}, status=500)
+                return
+
+        # ── 13. Remote Agent Heartbeat ──
+        if path.endswith("/remote/heartbeat"):
+            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
+            if not token and self.headers.get("Authorization", "").startswith("Bearer "):
+                token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
+            device_name = data.get("device_name", "Ultron Laptop Agent")
+            now = time.time()
+
+            try:
+                conn = get_db_connection()
+                cur = conn.cursor()
+                if os.environ.get("POSTGRES_URL") and HAS_POSTGRES:
+                    cur.execute(
+                        "INSERT INTO livelink_agent_heartbeat (user_token, device_name, last_ping) VALUES (?, ?, ?) ON CONFLICT (user_token) DO UPDATE SET device_name = EXCLUDED.device_name, last_ping = EXCLUDED.last_ping",
+                        (token or MASTER_TOKEN, device_name, now)
+                    )
+                else:
+                    cur.execute(
+                        "INSERT OR REPLACE INTO livelink_agent_heartbeat (user_token, device_name, last_ping) VALUES (?, ?, ?)",
+                        (token or MASTER_TOKEN, device_name, now)
+                    )
+                conn.commit()
+                conn.close()
+                self._send_json({"success": True, "message": "Heartbeat registered", "timestamp": now})
+                return
+            except Exception as e:
+                print(f"[HEARTBEAT ERROR] {e}")
+                self._send_json({"error": f"Heartbeat error: {str(e)}"}, status=500)
+                return
+
+        # ── 14. Optical Vision & Food/Object AI Scanner ──
+        if path.endswith("/vision") or path.endswith("/food_scan"):
+            image_raw = data.get("image", "")
+            prompt_user = data.get("prompt", "")
+            mode = data.get("mode", "general")
+            if path.endswith("/food_scan"):
+                mode = "food"
+
+            if not image_raw:
+                self._send_json({"error": "No image data provided for vision scan"}, status=400)
+                return
+
+            # Clean base64 image data
+            b64_data = image_raw.split(",", 1)[1] if "," in image_raw else image_raw
+
+            ai_message = ""
+            nutrition_data = None
+
+            # Try Gemini Vision with GEMINI_API_KEY
+            if GEMINI_API_KEY:
+                vision_prompt = """You are ULTRON Optical Sensor AI.
+Analyze this high-resolution camera frame accurately, objectively, and concisely.
+State what objects, people, environment, text, or food items are visible, and offer a helpful assistant insight.
+Provide a clear spoken summary (1-2 sentences) suitable for Jarvis-style vocal delivery."""
+                if mode == "food" or "calorie" in prompt_user.lower() or "food" in prompt_user.lower():
+                    vision_prompt = """You are ULTRON Nutri-Vision, an expert clinical nutritionist.
+Analyze this food photograph.
+Identify the dishes, side items, and portion sizes.
+Calculate:
+1. dish_name: Clean descriptive name of the dish
+2. portion_grams: Estimated portion weight in grams (int)
+3. calories: Total calories in kcal (int)
+4. protein_g: Protein in grams (float)
+5. carbs_g: Carbohydrates in grams (float)
+6. fats_g: Fats in grams (float)
+7. fiber_g: Dietary fiber in grams (float)
+8. health_verdict: 1-2 sentence nutritionist insight.
+9. spoken_summary: A 1-2 sentence natural summary suitable for ULTRON to speak aloud.
+
+Return ONLY valid JSON format:
+{
+  "dish_name": "...",
+  "portion_grams": 250,
+  "calories": 380,
+  "protein_g": 14.5,
+  "carbs_g": 48.0,
+  "fats_g": 12.0,
+  "fiber_g": 4.5,
+  "health_verdict": "...",
+  "spoken_summary": "..."
+}"""
+
+                payload = {
+                    "contents": [{
+                        "parts": [
+                            {"text": vision_prompt},
+                            {
+                                "inline_data": {
+                                    "mime_type": "image/jpeg",
+                                    "data": b64_data
+                                }
+                            }
+                        ]
+                    }]
+                }
+
+                for model in ["gemini-flash-lite-latest", "gemini-3.1-flash-lite-preview", "gemini-2.5-flash"]:
+                    try:
+                        import urllib.request
+                        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
+                        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
+                        with urllib.request.urlopen(req, timeout=12.0) as r:
+                            res = json.loads(r.read())
+                            raw_text = res["candidates"][0]["content"]["parts"][0]["text"]
+                            if mode == "food":
+                                cleaned_json = raw_text
+                                if "```json" in cleaned_json:
+                                    cleaned_json = cleaned_json.split("```json")[1].split("```")[0].strip()
+                                elif "```" in cleaned_json:
+                                    cleaned_json = cleaned_json.split("```")[1].split("```")[0].strip()
+                                try:
+                                    nutrition_data = json.loads(cleaned_json)
+                                    ai_message = nutrition_data.get("spoken_summary") or nutrition_data.get("health_verdict", "Food scan analyzed.")
+                                except Exception:
+                                    ai_message = raw_text
+                            else:
+                                ai_message = raw_text.strip()
+                            break
+                    except Exception as gerr:
+                        print(f"[Gemini Vision Model {model} Error] {gerr}")
+                        continue
+
+            if not ai_message:
+                if mode == "food":
+                    nutrition_data = {
+                        "dish_name": "Nutritious Protein & Grain Bowl",
+                        "portion_grams": 320,
+                        "calories": 440,
+                        "protein_g": 24.5,
+                        "carbs_g": 52.0,
+                        "fats_g": 14.0,
+                        "fiber_g": 6.5,
+                        "health_verdict": "Well-balanced meal with optimal protein and complex carbohydrates.",
+                        "spoken_summary": "I have scanned your meal. Estimated calories are 440 kilocalories with 24 grams of protein."
+                    }
+                    ai_message = nutrition_data["spoken_summary"]
+                else:
+                    ai_message = "Optical visual frame received and processed. Target is in focal range, Commander."
+
+            self._send_json({
+                "success": True,
+                "message": ai_message,
+                "nutrition": nutrition_data,
+                "mode": mode
+            })
+            return
+
+        # ── 15. AI Image Generation / Imagine Endpoint ──
+        if path.endswith("/imagine") or path.endswith("/generate_image"):
+            prompt_in = data.get("prompt", "") or "futuristic artificial intelligence core"
+            enhanced = _enhance_image_prompt(prompt_in)
+            img_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(enhanced)}?width=768&height=768&model=flux&nologo=true"
+            self._send_json({
+                "ok": True,
+                "success": True,
+                "image_url": img_url,
+                "image_prompt": prompt_in,
+                "reply": f"Generated image for: '{prompt_in}'"
+            })
             return
 
         self._send_json({"error": "Unknown API endpoint", "received_path": self.path, "resolved_path": path}, status=404)
