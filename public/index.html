@@ -3762,7 +3762,11 @@
 
             let parsedText = escapeHtml(text);
             parsedText = parsedText.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
-                return `<img src="${url}" class="chat-image-preview" onclick="openImageViewer('${encodeURIComponent(url)}', '${encodeURIComponent(alt)}')" alt="${alt}" style="margin-top:8px; border-radius:12px; box-shadow:var(--neu-raised-sm); width:100%;">`;
+                const cleanUrl = (url || '').trim();
+                if (/^(https?:\/\/|data:image\/)/i.test(cleanUrl)) {
+                    return `<img src="${cleanUrl}" class="chat-image-preview" onclick="openImageViewer('${encodeURIComponent(cleanUrl)}', '${encodeURIComponent(alt)}')" alt="${alt}" style="margin-top:8px; border-radius:12px; box-shadow:var(--neu-raised-sm); width:100%;">`;
+                }
+                return `[Image: ${alt}]`;
             });
 
             msgDiv.innerHTML = `

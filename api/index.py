@@ -608,12 +608,25 @@ def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER", histor
 
 
 class handler(BaseHTTPRequestHandler):
+    def _send_cors_headers(self):
+        req_origin = self.headers.get("Origin", "")
+        if req_origin and (
+            req_origin == "https://ultron-omega-drab.vercel.app" or
+            req_origin.endswith(".vercel.app") or
+            req_origin.startswith("http://localhost:") or
+            req_origin.startswith("http://127.0.0.1:")
+        ):
+            self.send_header("Access-Control-Allow-Origin", req_origin)
+            self.send_header("Vary", "Origin")
+        else:
+            self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-LiveLink-Token")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+
     def _send_json(self, data, status=200):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-LiveLink-Token")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self._send_cors_headers()
         self.end_headers()
         self.wfile.write(json.dumps(data).encode("utf-8"))
 
@@ -624,7 +637,9 @@ class handler(BaseHTTPRequestHandler):
         return raw.split("?")[0].rstrip("/")
 
     def do_OPTIONS(self):
-        self._send_json({"status": "ok"})
+        self.send_response(200)
+        self._send_cors_headers()
+        self.end_headers()
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -908,19 +923,23 @@ class handler(BaseHTTPRequestHandler):
             if not token and self.headers.get("Authorization", "").startswith("Bearer "):
                 token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
 
+            if not token:
+                self._send_json({"success": False, "error": "Unauthorized: Authentication token required", "files": []}, status=401)
+                return
+
             files_list = []
             try:
                 conn = get_db_connection()
                 conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
-                if token:
+                if token == MASTER_TOKEN or token == os.getenv("MASTER_TOKEN", MASTER_TOKEN):
                     cur.execute(
-                        "SELECT id, filename, size_bytes, size_human, created_at FROM livelink_files WHERE user_token = ? OR user_token = 'LIVELINK_MASTER_HARSHA' ORDER BY id DESC LIMIT 50",
-                        (token,)
+                        "SELECT id, filename, size_bytes, size_human, created_at FROM livelink_files ORDER BY id DESC LIMIT 50"
                     )
                 else:
                     cur.execute(
-                        "SELECT id, filename, size_bytes, size_human, created_at FROM livelink_files ORDER BY id DESC LIMIT 50"
+                        "SELECT id, filename, size_bytes, size_human, created_at FROM livelink_files WHERE user_token = ? ORDER BY id DESC LIMIT 50",
+                        (token,)
                     )
                 rows = cur.fetchall()
                 conn.close()
@@ -948,15 +967,26 @@ class handler(BaseHTTPRequestHandler):
             if not token and self.headers.get("Authorization", "").startswith("Bearer "):
                 token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
 
+            if not token:
+                self._send_json({"error": "Unauthorized: Authentication token required"}, status=401)
+                return
+
+            fname = os.path.basename(fname)
             if fname:
                 try:
                     conn = get_db_connection()
                     conn.row_factory = sqlite3.Row
                     cur = conn.cursor()
-                    cur.execute(
-                        "SELECT filename, data_b64 FROM livelink_files WHERE filename = ? ORDER BY id DESC LIMIT 1",
-                        (fname,)
-                    )
+                    if token == MASTER_TOKEN or token == os.getenv("MASTER_TOKEN", MASTER_TOKEN):
+                        cur.execute(
+                            "SELECT filename, data_b64 FROM livelink_files WHERE filename = ? ORDER BY id DESC LIMIT 1",
+                            (fname,)
+                        )
+                    else:
+                        cur.execute(
+                            "SELECT filename, data_b64 FROM livelink_files WHERE filename = ? AND user_token = ? ORDER BY id DESC LIMIT 1",
+                            (fname, token)
+                        )
                     row = cur.fetchone()
                     conn.close()
                     if row:
@@ -970,13 +1000,14 @@ class handler(BaseHTTPRequestHandler):
                         self.send_header("Content-Type", "application/octet-stream")
                         self.send_header("Content-Disposition", f'attachment; filename="{fname}"')
                         self.send_header("Content-Length", str(len(file_bytes)))
+                        self._send_cors_headers()
                         self.end_headers()
                         self.wfile.write(file_bytes)
                         return
                 except Exception as e:
                     print(f"[DOWNLOAD ERROR] {e}")
 
-            self._send_json({"error": "File not found"}, status=404)
+            self._send_json({"error": "File not found or access denied"}, status=404)
             return
 
         # ── Voices List Endpoint ──
@@ -1535,7 +1566,12 @@ class handler(BaseHTTPRequestHandler):
             token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
             if not token and self.headers.get("Authorization", "").startswith("Bearer "):
                 token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
-            filename = data.get("filename", f"file_{int(time.time())}.dat")
+
+            if not token:
+                self._send_json({"error": "Unauthorized: Token required to upload files"}, status=401)
+                return
+
+            filename = os.path.basename(data.get("filename", f"file_{int(time.time())}.dat"))
             file_data = data.get("data", "")
             folder = data.get("folder", "downloads")
 
@@ -1562,7 +1598,7 @@ class handler(BaseHTTPRequestHandler):
                     cur = conn.cursor()
                     cur.execute(
                         "INSERT INTO livelink_files (user_token, filename, data_b64, size_bytes, size_human, folder, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                        (token or MASTER_TOKEN, filename, file_data, sz_bytes, sz_human, folder, now)
+                        (token, filename, file_data, sz_bytes, sz_human, folder, now)
                     )
                     conn.commit()
                 except Exception as dbe:
@@ -1592,22 +1628,33 @@ class handler(BaseHTTPRequestHandler):
             token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
             if not token and self.headers.get("Authorization", "").startswith("Bearer "):
                 token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
-            filename = data.get("filename", "")
+
+            if not token:
+                self._send_json({"error": "Unauthorized: Token required to delete files"}, status=401)
+                return
+
+            filename = os.path.basename(data.get("filename", ""))
             if filename:
                 try:
                     conn = get_db_connection()
                     cur = conn.cursor()
-                    cur.execute(
-                        "DELETE FROM livelink_files WHERE filename = ? AND (user_token = ? OR user_token = 'LIVELINK_MASTER_HARSHA')",
-                        (filename, token or MASTER_TOKEN)
-                    )
+                    if token == MASTER_TOKEN or token == os.getenv("MASTER_TOKEN", MASTER_TOKEN):
+                        cur.execute(
+                            "DELETE FROM livelink_files WHERE filename = ?",
+                            (filename,)
+                        )
+                    else:
+                        cur.execute(
+                            "DELETE FROM livelink_files WHERE filename = ? AND user_token = ?",
+                            (filename, token)
+                        )
                     conn.commit()
                     conn.close()
                     self._send_json({"success": True, "message": f"Deleted {filename}"})
                     return
                 except Exception as e:
                     print(f"[FILE DELETE ERROR] {e}")
-            self._send_json({"error": "Delete failed"}, status=400)
+            self._send_json({"error": "Delete failed or permission denied"}, status=400)
             return
 
         # ── Touchpad Gestures Endpoint ──
@@ -1620,6 +1667,11 @@ class handler(BaseHTTPRequestHandler):
             token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
             if not token and self.headers.get("Authorization", "").startswith("Bearer "):
                 token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
+
+            if not token:
+                self._send_json({"error": "Unauthorized: Token required for remote action"}, status=401)
+                return
+
             action = data.get("action", "")
             target = data.get("target", "laptop")
 

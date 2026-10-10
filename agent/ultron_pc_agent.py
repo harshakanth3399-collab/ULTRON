@@ -16,6 +16,7 @@ import json
 import platform
 import urllib.request
 import urllib.parse
+import subprocess
 import threading
 
 SERVER_URL = os.environ.get("ULTRON_SERVER_URL", "https://ultron-omega-drab.vercel.app").rstrip("/")
@@ -57,10 +58,10 @@ def execute_pc_action(action: str):
             except Exception as e:
                 print(f"[FAIL] Could not lock: {e}")
         elif "darwin" in sys_type:
-            os.system("pmset displaysleepnow")
+            subprocess.run(["pmset", "displaysleepnow"], check=False)
             print("[SUCCESS] macOS Display Locked.")
         else:
-            os.system("xdg-screensaver lock || gnome-screensaver-command -l")
+            subprocess.run(["sh", "-c", "xdg-screensaver lock || gnome-screensaver-command -l"], check=False)
             print("[SUCCESS] Linux Screen Locked.")
 
     elif action in ["vol_up", "phone_vol_up"]:
@@ -74,7 +75,7 @@ def execute_pc_action(action: str):
             except Exception:
                 pass
         elif "darwin" in sys_type:
-            os.system("osascript -e 'set volume output volume ((output volume of (get volume settings)) + 10)'")
+            subprocess.run(["osascript", "-e", "set volume output volume ((output volume of (get volume settings)) + 10)"], check=False)
 
     elif action in ["vol_down", "phone_vol_down"]:
         print("[ACTION] Volume DOWN")
@@ -87,7 +88,7 @@ def execute_pc_action(action: str):
             except Exception:
                 pass
         elif "darwin" in sys_type:
-            os.system("osascript -e 'set volume output volume ((output volume of (get volume settings)) - 10)'")
+            subprocess.run(["osascript", "-e", "set volume output volume ((output volume of (get volume settings)) - 10)"], check=False)
 
     elif action in ["mute"]:
         print("[ACTION] Toggle MUTE")
@@ -100,7 +101,7 @@ def execute_pc_action(action: str):
             except Exception:
                 pass
         elif "darwin" in sys_type:
-            os.system("osascript -e 'set volume output muted (not (output muted of (get volume settings)))'")
+            subprocess.run(["osascript", "-e", "set volume output muted (not (output muted of (get volume settings)))"], check=False)
 
     elif action in ["play_pause"]:
         print("[ACTION] Media Play/Pause")
