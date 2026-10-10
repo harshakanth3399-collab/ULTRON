@@ -737,7 +737,8 @@ class handler(BaseHTTPRequestHandler):
         path = self._get_path()
 
         # ── Health & Cloud Status ──
-        if path.endswith("/status") or path == "/api/status" or path == "/api":
+        if ((path.endswith("/status") and not path.endswith("/terminal/status") and not path.endswith("/check_status")) 
+            or path == "/api/status" or path == "/api"):
             self._send_json({
                 "status": "online",
                 "system": "ULTRON Holographic Matrix (Vercel Cloud)",
@@ -806,10 +807,13 @@ class handler(BaseHTTPRequestHandler):
             self._send_json({
                 "ok": True,
                 "is_locked": False,
+                "locked": False,
+                "status": "unlocked",
                 "failed_attempts": 0,
                 "locked_until": 0,
                 "is_rate_limited": False,
                 "remaining_lockout": 0,
+                "retry_after": 0,
                 "now": now
             })
             return
