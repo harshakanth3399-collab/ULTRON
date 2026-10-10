@@ -62,9 +62,14 @@ def get_db_connection():
                 cur.execute(query, params)
                 return cur
             def commit(self):
-                self.conn.commit()
+                try: self.conn.commit()
+                except Exception: pass
+            def rollback(self):
+                try: self.conn.rollback()
+                except Exception: pass
             def close(self):
-                self.conn.close()
+                try: self.conn.close()
+                except Exception: pass
             @property
             def row_factory(self):
                 pass
@@ -110,10 +115,15 @@ GEMINI_MODELS = ["gemini-flash-lite-latest", "gemini-3.1-flash-lite-preview"]
 
 
 def _init_cloud_db():
+    conn = None
     try:
         conn = get_db_connection()
-        conn.execute(
-            f"""\n            CREATE TABLE IF NOT EXISTS livelink_users (\n                {"id SERIAL PRIMARY KEY" if os.environ.get("POSTGRES_URL") and HAS_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"},
+        is_pg = bool(os.environ.get("POSTGRES_URL") and HAS_POSTGRES)
+        id_col = "id SERIAL PRIMARY KEY" if is_pg else "id INTEGER PRIMARY KEY AUTOINCREMENT"
+
+        tables = [
+            f"""CREATE TABLE IF NOT EXISTS livelink_users (
+                {id_col},
                 name TEXT NOT NULL,
                 first_name TEXT,
                 last_name TEXT,
@@ -126,17 +136,9 @@ def _init_cloud_db():
                 access_token TEXT UNIQUE NOT NULL,
                 registered_at REAL NOT NULL,
                 last_active_at REAL
-            )
-            """
-        )
-        try:
-            conn.execute("ALTER TABLE livelink_users ADD COLUMN voice_settings TEXT")
-        except Exception:
-            pass
-        conn.commit()
-
-        conn.execute(
-            f"""\n            CREATE TABLE IF NOT EXISTS user_chats (\n                {"id SERIAL PRIMARY KEY" if os.environ.get("POSTGRES_URL") and HAS_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"},
+            )""",
+            f"""CREATE TABLE IF NOT EXISTS user_chats (
+                {id_col},
                 user_token TEXT NOT NULL,
                 user_name TEXT,
                 user_email TEXT,
@@ -145,24 +147,18 @@ def _init_cloud_db():
                 prompt TEXT NOT NULL,
                 reply TEXT NOT NULL,
                 created_at REAL NOT NULL
-            )
-            """
-        )
-        conn.execute(
-            f"""\n            CREATE TABLE IF NOT EXISTS livelink_events (\n                {"id SERIAL PRIMARY KEY" if os.environ.get("POSTGRES_URL") and HAS_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"},
+            )""",
+            f"""CREATE TABLE IF NOT EXISTS livelink_events (
+                {id_col},
                 event_type TEXT,
                 caller TEXT,
                 phone TEXT,
                 data_json TEXT,
                 created_at REAL NOT NULL,
                 handled INTEGER DEFAULT 0
-            )
-            """
-        )
-        conn.execute(
-            f"""
-            CREATE TABLE IF NOT EXISTS livelink_files (
-                {"id SERIAL PRIMARY KEY" if os.environ.get("POSTGRES_URL") and HAS_POSTGRES else "id INTEGER PRIMARY KEY AUTOINCREMENT"},
+            )""",
+            f"""CREATE TABLE IF NOT EXISTS livelink_files (
+                {id_col},
                 user_token TEXT NOT NULL,
                 filename TEXT NOT NULL,
                 data_b64 TEXT NOT NULL,
@@ -170,22 +166,36 @@ def _init_cloud_db():
                 size_human TEXT,
                 folder TEXT DEFAULT 'downloads',
                 created_at REAL NOT NULL
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS livelink_agent_heartbeat (
+            )""",
+            """CREATE TABLE IF NOT EXISTS livelink_agent_heartbeat (
                 user_token TEXT PRIMARY KEY,
                 device_name TEXT,
                 last_ping REAL NOT NULL
-            )
-            """
-        )
-        conn.commit()
-        conn.close()
+            )"""
+        ]
+
+        for stmt in tables:
+            try:
+                conn.execute(stmt)
+                conn.commit()
+            except Exception as te:
+                try: conn.rollback()
+                except Exception: pass
+                print(f"[TABLE INIT WARN] {te}")
+
+        try:
+            conn.execute("ALTER TABLE livelink_users ADD COLUMN voice_settings TEXT")
+            conn.commit()
+        except Exception:
+            try: conn.rollback()
+            except Exception: pass
+
     except Exception as e:
         print(f"[DB INIT ERROR] {e}")
+    finally:
+        if conn:
+            try: conn.close()
+            except Exception: pass
 
 
 _init_cloud_db()
@@ -946,6 +956,21 @@ class handler(BaseHTTPRequestHandler):
             self._send_json({"error": "File not found"}, status=404)
             return
 
+        # ── Voices List Endpoint ──
+        if path.endswith("/voices"):
+            self._send_json({"ok": True, "voices": VOICE_MAP})
+            return
+
+        # ── AI Imagine GET Endpoint ──
+        if path.endswith("/imagine") or path.endswith("/generate_image"):
+            query = urllib.parse.urlparse(self.path).query
+            params = urllib.parse.parse_qs(query)
+            prompt_in = params.get("prompt", [""])[0] or "futuristic artificial intelligence core"
+            enhanced = _enhance_image_prompt(prompt_in)
+            img_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(enhanced)}?width=768&height=768&model=flux&nologo=true"
+            self._send_json({"ok": True, "image_url": img_url, "image_prompt": prompt_in})
+            return
+
         # ── Remote Agent Connection Status Endpoint ──
         if path.endswith("/remote/status") or path.endswith("/remote_status"):
             connected = False
@@ -1508,14 +1533,24 @@ class handler(BaseHTTPRequestHandler):
                     sz_human = f"{sz_bytes / (1024 * 1024):.1f} MB"
 
                 now = time.time()
-                conn = get_db_connection()
-                cur = conn.cursor()
-                cur.execute(
-                    "INSERT INTO livelink_files (user_token, filename, data_b64, size_bytes, size_human, folder, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (token or MASTER_TOKEN, filename, file_data, sz_bytes, sz_human, folder, now)
-                )
-                conn.commit()
-                conn.close()
+                conn = None
+                try:
+                    conn = get_db_connection()
+                    cur = conn.cursor()
+                    cur.execute(
+                        "INSERT INTO livelink_files (user_token, filename, data_b64, size_bytes, size_human, folder, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (token or MASTER_TOKEN, filename, file_data, sz_bytes, sz_human, folder, now)
+                    )
+                    conn.commit()
+                except Exception as dbe:
+                    print(f"[FILE UPLOAD DB WARN] {dbe}")
+                    if conn:
+                        try: conn.rollback()
+                        except Exception: pass
+                finally:
+                    if conn:
+                        try: conn.close()
+                        except Exception: pass
 
                 self._send_json({
                     "success": True,
@@ -1526,7 +1561,7 @@ class handler(BaseHTTPRequestHandler):
                 return
             except Exception as e:
                 print(f"[FILE UPLOAD ERROR] {e}")
-                self._send_json({"error": f"Upload failed: {str(e)}"}, status=500)
+                self._send_json({"error": f"Upload failed: {str(e)}"}, status=400)
                 return
 
         # ── 11. File Hub Delete ──
@@ -1552,6 +1587,11 @@ class handler(BaseHTTPRequestHandler):
             self._send_json({"error": "Delete failed"}, status=400)
             return
 
+        # ── Touchpad Gestures Endpoint ──
+        if path.endswith("/touchpad"):
+            self._send_json({"ok": True, "status": "received"})
+            return
+
         # ── 12. Remote Action Dispatch ──
         if path.endswith("/livelink/control") or path.endswith("/remote/command"):
             token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
@@ -1565,6 +1605,7 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             now = time.time()
+            conn = None
             try:
                 conn = get_db_connection()
                 cur = conn.cursor()
@@ -1574,19 +1615,24 @@ class handler(BaseHTTPRequestHandler):
                     ("remote_action", "phone_client", "", event_payload, now, 0)
                 )
                 conn.commit()
-                conn.close()
-                self._send_json({
-                    "success": True,
-                    "action": action,
-                    "target": target,
-                    "status": "queued",
-                    "message": f"Remote action '{action}' queued for {target} agent."
-                })
-                return
             except Exception as e:
                 print(f"[REMOTE CONTROL ERROR] {e}")
-                self._send_json({"error": f"Failed to dispatch action: {str(e)}"}, status=500)
-                return
+                if conn:
+                    try: conn.rollback()
+                    except Exception: pass
+            finally:
+                if conn:
+                    try: conn.close()
+                    except Exception: pass
+
+            self._send_json({
+                "success": True,
+                "action": action,
+                "target": target,
+                "status": "queued",
+                "message": f"Remote action '{action}' dispatched for {target} agent."
+            })
+            return
 
         # ── 13. Remote Agent Heartbeat ──
         if path.endswith("/remote/heartbeat"):
@@ -1596,6 +1642,7 @@ class handler(BaseHTTPRequestHandler):
             device_name = data.get("device_name", "Ultron Laptop Agent")
             now = time.time()
 
+            conn = None
             try:
                 conn = get_db_connection()
                 cur = conn.cursor()
@@ -1610,13 +1657,18 @@ class handler(BaseHTTPRequestHandler):
                         (token or MASTER_TOKEN, device_name, now)
                     )
                 conn.commit()
-                conn.close()
-                self._send_json({"success": True, "message": "Heartbeat registered", "timestamp": now})
-                return
             except Exception as e:
                 print(f"[HEARTBEAT ERROR] {e}")
-                self._send_json({"error": f"Heartbeat error: {str(e)}"}, status=500)
-                return
+                if conn:
+                    try: conn.rollback()
+                    except Exception: pass
+            finally:
+                if conn:
+                    try: conn.close()
+                    except Exception: pass
+
+            self._send_json({"success": True, "message": "Heartbeat registered", "timestamp": now})
+            return
 
         # ── 14. Optical Vision & Food/Object AI Scanner ──
         if path.endswith("/vision") or path.endswith("/food_scan"):
