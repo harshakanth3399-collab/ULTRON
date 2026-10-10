@@ -836,7 +836,68 @@
             display: none;
             box-sizing: border-box !important;
         }
+    
+        /* Phase 6: Perfect Square Canvas & Sharp Particle Orb */
+        .visualizer-container, #webgl-canvas {
+            aspect-ratio: 1 / 1 !important;
+        }
+
+        .chat-drawer-stream, #session-chat-stream {
+            flex: 1 !important;
+            min-height: 0 !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            padding: 14px 16px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 12px !important;
+            background: var(--surface) !important;
+        }
+
+        @keyframes inputShake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .shake {
+            animation: inputShake 0.4s ease-in-out !important;
+            border-color: #d32f2f !important;
+        }
+
+        @media (max-width: 640px) {
+            .app-header {
+                padding: calc(6px + env(safe-area-inset-top, 0px)) 8px 6px 8px !important;
+                gap: 6px !important;
+            }
+            .header-right-group {
+                gap: 5px !important;
+                flex-wrap: nowrap !important;
+            }
+            .header-right-group .action-btn {
+                min-width: 44px !important;
+                min-height: 44px !important;
+                padding: 0 8px !important;
+                gap: 0 !important;
+                justify-content: center !important;
+            }
+            .header-right-group .action-btn .action-text {
+                display: none !important;
+            }
+            .status-badge {
+                padding: 6px 10px !important;
+                font-size: 10px !important;
+                min-height: 44px !important;
+            }
+        html.unauthenticated .app-shell {
+            display: none !important;
+        }
+
     </style>
+    <script>
+        if (!localStorage.getItem('livelink_token')) {
+            document.documentElement.classList.add('unauthenticated');
+        }
+    </script>
 </head>
 <body>
     <audio id="ultron-audio-player" playsinline preload="auto"></audio>
@@ -852,7 +913,19 @@
             </div>
 
             <div class="header-right-group">
-                <button class="action-btn" id="voice-settings-btn" onclick="openVoicePickerModal()" title="Voice Calibration" style="padding: 6px 12px; gap: 5px;">
+                <button class="action-btn nav-btn-vision" onclick="toggleOpticalVision()" title="Toggle Camera Video Feed">
+                    <span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                    <span class="action-text">VISION</span>
+                </button>
+                <button class="action-btn nav-btn-chat" onclick="toggleSessionChatPanel()" title="Open Session Chat">
+                    <span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+                    <span class="action-text">CHAT</span>
+                </button>
+                <button class="action-btn nav-btn-pair" onclick="toggleQRModal()" title="Pair Phone with Laptop">
+                    <span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span>
+                    <span class="action-text">PAIR</span>
+                </button>
+                <button class="action-btn nav-btn-voice" id="voice-settings-btn" onclick="openVoicePickerModal()" title="Voice Calibration" style="padding: 6px 12px; gap: 5px;">
                     <span class="action-icon">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
@@ -861,8 +934,11 @@
                     </span>
                     <span class="action-text">VOICE</span>
                 </button>
-                <div class="status-badge" id="badge" onclick="openChangePasswordModal()" title="Change Password">🔴 OFFLINE</div>
-                <button class="action-btn" id="logout-btn-hud" onclick="logoutUser()" style="display:none;" title="Sign out">
+                <div class="status-badge" id="badge" onclick="openChangePasswordModal()" title="Change Password">● ONLINE</div>
+                <button class="action-btn nav-btn-logout" id="logout-btn-hud" onclick="logoutUser()" style="display:none;" title="Sign out">
+                    <span class="action-icon" style="color:#d32f2f;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    </span>
                     <span class="action-text" style="color:#d32f2f;">LOGOUT</span>
                 </button>
             </div>
@@ -906,18 +982,6 @@
         </section>
 
         <footer class="bottom-nav-shell">
-            <div id="top-dock" class="priority-dock top-dock">
-                <button class="action-btn" onclick="toggleOpticalVision()" title="Toggle Camera Video Feed">
-                    <span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="action-text">VISION</span>
-                </button>
-                <button class="action-btn" onclick="toggleSessionChatPanel()" title="Open Session Chat">
-                    <span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="action-text">CHAT</span>
-                </button>
-                <button class="action-btn" onclick="toggleQRModal()" title="Pair Phone with Laptop">
-                    <span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span><span class="action-text">PAIR</span>
-                </button>
-            </div>
-
             <div id="bottom-dock" class="priority-dock bottom-dock">
                 <button class="action-btn" onclick="switchDockTab('files')" title="Bi-Directional Drag & Drop Files">
                     <span class="action-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span><span class="action-text">FILES</span>
@@ -989,11 +1053,26 @@
             <button type="button" class="header-pill-btn active" id="remote-target-laptop" onclick="switchRemoteTarget('laptop')">LAPTOP</button>
             <button type="button" class="header-pill-btn" id="remote-target-phone" onclick="switchRemoteTarget('phone')">PHONE</button>
         </div>
+        <!-- Remote Action Status Feedback Banner -->
+        <div id="remote-action-status-banner" style="display:none; background:var(--surface); box-shadow:var(--neu-pressed-sm); border-radius:12px; padding:10px 14px; margin-bottom:12px; font-size:12px; font-weight:800; color:var(--emerald); text-align:center;">
+            <span id="remote-action-status-text">Ready</span>
+        </div>
+
+        <!-- Latest Screenshot Preview Card -->
+        <div id="remote-screenshot-card" style="display:none; background:var(--surface); box-shadow:var(--neu-raised-sm); border-radius:14px; padding:12px; margin-bottom:12px; text-align:center;">
+            <div style="font-size:11px; font-weight:800; color:var(--ink-soft); margin-bottom:6px;">LATEST SCREENSHOT</div>
+            <img id="remote-screenshot-img" src="" alt="Screenshot" style="width:100%; max-height:160px; object-fit:contain; border-radius:10px; box-shadow:var(--neu-pressed-sm); margin-bottom:8px;">
+            <div style="display:flex; justify-content:center; gap:8px;">
+                <button type="button" class="chat-action-btn" onclick="openImageViewer(document.getElementById('remote-screenshot-img').src, 'PC Screenshot')" style="font-size:11px; padding:4px 12px;">EXPAND</button>
+                <button type="button" class="chat-action-btn" onclick="directDownloadImage(document.getElementById('remote-screenshot-img').src, 'ultron_pc_screenshot.jpg')" style="font-size:11px; padding:4px 12px;">DOWNLOAD</button>
+            </div>
+        </div>
+
         <div id="laptop-remote-view" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
             <button type="button" class="header-pill-btn" onclick="sendRemoteAction('vol_up')">VOL +</button>
             <button type="button" class="header-pill-btn" onclick="sendRemoteAction('vol_down')">VOL -</button>
             <button type="button" class="header-pill-btn" onclick="sendRemoteAction('mute')">MUTE</button>
-            <button type="button" class="header-pill-btn" onclick="sendRemoteAction('play_pause')">PLAY/PAUSE</button>
+            <button type="button" class="header-pill-btn" onclick="sendRemoteAction('play_pause')">PLAY / PAUSE</button>
             <button type="button" class="header-pill-btn" onclick="sendRemoteAction('screenshot')">SCREENSHOT</button>
             <button type="button" class="header-pill-btn" onclick="sendRemoteAction('lock_laptop')">LOCK PC</button>
         </div>
@@ -1022,15 +1101,16 @@
             </div>
         </div>
 
-        <div class="chat-stream-body" id="session-chat-stream">
+        <div class="chat-drawer-stream" id="session-chat-stream">
             <div id="chat-empty-state" style="font-size:13px; color:var(--ink-soft); text-align:center; margin:auto; padding:24px 16px; font-weight:600;">Say something or type below</div>
         </div>
+        <button id="chat-jump-latest-btn" onclick="jumpChatToLatest()" style="display:none; position:absolute; bottom:110px; right:20px; background:var(--surface); box-shadow:var(--neu-raised-sm); border:none; border-radius:20px; padding:6px 14px; font-size:12px; font-weight:800; color:var(--emerald); z-index:505; cursor:pointer;">Jump to latest ↓</button>
 
         <!-- ── Quick Action Suggestion Pills (Above Input Bar) ── -->
         <div class="chat-drawer-footer" style="display:flex; gap:8px; padding:8px 14px; background:var(--surface); border-top:1px solid var(--shadow-dark); overflow-x:auto; flex-shrink:0;">
             <button type="button" class="quick-action-pill" onclick="handleQuickPill('food')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2.2" style="vertical-align:middle; margin-right:4px;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Snap Food</button>
             <button type="button" class="quick-action-pill" onclick="handleQuickPill('image')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2.2" style="vertical-align:middle; margin-right:4px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Draw Image</button>
-            <button type="button" class="quick-action-pill" onclick="handleQuickPill('tutor')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--emerald)" stroke-width="2.2" style="vertical-align:middle; margin-right:4px;"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>Exam Tutor</button>
+            <button type="button" class="quick-action-pill" id="exam-tutor-toggle-chip" onclick="toggleExamTutorMode()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:middle; margin-right:4px;"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg><span id="exam-tutor-chip-text">Exam Tutor: OFF</span></button>
         </div>
 
         <!-- ── Direct Session Chat Input Bar for Quiet Places ── -->
@@ -1264,10 +1344,10 @@
             <div style="font-size:18px; font-weight:900; letter-spacing:3px; color:var(--ink); margin-bottom:6px;">SYSTEM LOCKED</div>
             <div style="font-size:12px; color:var(--ink-soft); letter-spacing:0.5px; margin-bottom:20px; line-height:1.5;">Remote Security Lockdown Active.</div>
             <div style="background:var(--surface); box-shadow:var(--neu-pressed-sm); border-radius:14px; padding:12px; margin-bottom:16px;">
-                <input type="password" id="unlock-password-input" placeholder="Enter Harsha Sir Password..." style="width:100%; background:transparent; border:none; outline:none; color:var(--ink); font-size:16px; text-align:center;">
+                <input type="password" id="unlock-password-input" placeholder="Enter Account Password..." onkeypress="if(event.key==='Enter') unlockLaptopScreen()" style="width:100%; background:transparent; border:none; outline:none; color:var(--ink); font-size:16px; text-align:center;">
             </div>
-            <button onclick="unlockLaptopScreen()" style="width:100%; background:var(--surface); box-shadow:var(--neu-raised-sm); border:none; border-radius:14px; padding:14px; color:var(--emerald); font-weight:900; font-size:13px; letter-spacing:2px; cursor:pointer;">UNLOCK TERMINAL</button>
-            <div id="unlock-error" style="color:#c62828; font-size:12px; margin-top:10px; display:none;">Incorrect credentials. Access denied.</div>
+            <button id="unlock-submit-btn" onclick="unlockLaptopScreen()" style="width:100%; background:var(--surface); box-shadow:var(--neu-raised-sm); border:none; border-radius:14px; padding:14px; color:var(--emerald); font-weight:900; font-size:13px; letter-spacing:2px; cursor:pointer;">UNLOCK TERMINAL</button>
+            <div id="unlock-error" style="color:#c62828; font-size:12px; margin-top:10px; display:none; font-weight:700;">Incorrect credentials. Access denied.</div>
         </div>
     </div>
 
@@ -1412,6 +1492,22 @@
     <div id="livelink-toast"></div>
 
     <script>
+        // ── Phase 6: Global 401 Interceptor (Logout Isolation) ──
+        const _origFetch = window.fetch;
+        window.fetch = async function(...args) {
+            const resp = await _origFetch.apply(this, args);
+            if (resp.status === 401) {
+                const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url) || '';
+                if (!url.includes('/api/livelink/login') && !url.includes('/api/terminal/unlock')) {
+                    console.warn('[ULTRON Security] 401 Unauthorized received from', url, '- redirecting to login portal');
+                    if (typeof logoutUser === 'function') {
+                        logoutUser(true);
+                    }
+                }
+            }
+            return resp;
+        };
+
         // ── Global Scope Camera & Synthesizer State ──
         var opticalWebcamStream = null;
         let audioCtx = null;
@@ -1540,6 +1636,13 @@
                     playAcoustic('chirp');
                     showToast("🔒 LiveLink Security: Screen Locked via Remote!");
                 }
+                // Persist terminal lock state on server
+                const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+                fetch('/api/terminal/lock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ token: token })
+                }).catch(() => {});
             } else if (action === 'screenshot') {
                 playAcoustic('chirp');
                 triggerScreenFlash();
@@ -1556,34 +1659,119 @@
                     isSpeaking = false;
                     showToast("⏸️ Assistant Speech Paused");
                 } else {
-                    speakMobileResponse("LiveLink synchronized. Systems active, Harsha Sir.");
-                    showToast("▶️ LiveLink Media Resumed");
+                    showToast("▶️ Playback Toggled");
                 }
             } else if (action === 'vol_up' || action === 'phone_vol_up') {
-                currentVoicePitch = 0.82;
-                showToast("🔊 Volume Calibrated: Level Up");
+                showToast("🔊 Volume Up Requested");
                 playAcoustic('chirp');
             } else if (action === 'vol_down' || action === 'phone_vol_down') {
-                showToast("🔉 Volume Calibrated: Level Down");
+                showToast("🔉 Volume Down Requested");
                 playAcoustic('chirp');
             }
         }
 
+        let unlockCooldownTimer = null;
         function unlockLaptopScreen() {
             const input = document.getElementById('unlock-password-input');
             const err = document.getElementById('unlock-error');
-            const pwd = input ? input.value.trim() : '';
-            if (pwd === 'Harsha@123' || pwd.toLowerCase() === 'harsha' || liveLinkToken === 'LIVELINK_MASTER_HARSHA') {
-                const lockModal = document.getElementById('ultron-screen-lock-modal');
-                if (lockModal) lockModal.style.display = 'none';
-                if (err) err.style.display = 'none';
-                if (input) input.value = '';
-                showToast("🔓 Terminal Unlocked. Welcome back, Harsha Sir!");
-                playAcoustic('approved');
-            } else {
-                if (err) err.style.display = 'block';
+            const btn = document.getElementById('unlock-submit-btn');
+            const pwd = input ? input.value : '';
+
+            if (!pwd) {
+                if (err) {
+                    err.innerText = "Please enter your password.";
+                    err.style.display = 'block';
+                }
+                if (input) {
+                    input.classList.add('shake');
+                    setTimeout(() => input.classList.remove('shake'), 450);
+                    input.focus();
+                }
                 playAcoustic('chirp');
+                return;
             }
+
+            if (btn) {
+                btn.innerText = 'VERIFYING...';
+                btn.disabled = true;
+            }
+
+            const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+
+            fetch('/api/terminal/unlock', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ password: pwd, token: token })
+            })
+            .then(r => r.json().then(data => ({ status: r.status, data })))
+            .then(({ status, data }) => {
+                if (btn) {
+                    btn.innerText = 'UNLOCK TERMINAL';
+                    btn.disabled = false;
+                }
+
+                if (status === 200 && data.status === 'unlocked') {
+                    const lockModal = document.getElementById('ultron-screen-lock-modal');
+                    if (lockModal) lockModal.style.display = 'none';
+                    if (err) err.style.display = 'none';
+                    if (input) input.value = '';
+                    showToast("🔓 Terminal Unlocked. Welcome back!");
+                    playAcoustic('approved');
+                } else if (status === 429) {
+                    // Rate limit exceeded (5 failed tries -> 30s lock)
+                    if (input) {
+                        input.value = '';
+                        input.classList.add('shake');
+                        setTimeout(() => input.classList.remove('shake'), 450);
+                    }
+                    let remaining = data.retry_after || 30;
+                    if (btn) btn.disabled = true;
+                    if (err) {
+                        err.innerText = `Too many failed attempts. Locked for ${remaining}s.`;
+                        err.style.display = 'block';
+                    }
+                    if (unlockCooldownTimer) clearInterval(unlockCooldownTimer);
+                    unlockCooldownTimer = setInterval(() => {
+                        remaining--;
+                        if (err) err.innerText = `Too many failed attempts. Locked for ${remaining}s.`;
+                        if (btn) btn.innerText = `LOCKOUT (${remaining}s)`;
+                        if (remaining <= 0) {
+                            clearInterval(unlockCooldownTimer);
+                            unlockCooldownTimer = null;
+                            if (btn) {
+                                btn.disabled = false;
+                                btn.innerText = 'UNLOCK TERMINAL';
+                            }
+                            if (err) err.style.display = 'none';
+                        }
+                    }, 1000);
+                    playAcoustic('chirp');
+                } else {
+                    // 401 Incorrect credentials
+                    if (input) {
+                        input.value = '';
+                        input.classList.add('shake');
+                        setTimeout(() => input.classList.remove('shake'), 450);
+                        input.focus();
+                    }
+                    if (err) {
+                        const rem = data.attempts_remaining !== undefined ? ` (${data.attempts_remaining} tries left)` : '';
+                        err.innerText = (data.error || "Incorrect credentials. Access denied.") + rem;
+                        err.style.display = 'block';
+                    }
+                    playAcoustic('chirp');
+                }
+            })
+            .catch(error => {
+                if (btn) {
+                    btn.innerText = 'UNLOCK TERMINAL';
+                    btn.disabled = false;
+                }
+                if (err) {
+                    err.innerText = "Connection error. Please try again.";
+                    err.style.display = 'block';
+                }
+            });
         }
 
         // ── Feature 1: Mobile Thermal Optimizer & Adaptive 60/120 FPS ──
@@ -2228,11 +2416,21 @@
         }
 
 
-        function logoutUser() {
+        function logoutUser(isAutoRedirect = false) {
             triggerHaptic([20, 20]);
             playAcoustic('chirp');
 
-            // 1. SILENCE ALL SPEECH AND CANCEL SPEECH SYNTHESIS IMMEDIATELY
+            // 1. Invalidate session on server
+            const tokenToInvalidate = liveLinkToken || localStorage.getItem('livelink_token');
+            if (tokenToInvalidate) {
+                fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToInvalidate}` },
+                    body: JSON.stringify({ token: tokenToInvalidate })
+                }).catch(() => {});
+            }
+
+            // 2. Silence all speech and cancel synthesis immediately
             if (window.speechSynthesis) {
                 try { window.speechSynthesis.cancel(); } catch(e) {}
             }
@@ -2245,40 +2443,61 @@
             isSpeaking = false;
             speechPulse = 0;
 
-            // 2. Stop voice listening engine if active
+            // 3. Stop voice listening engine if active
             if (recognition && isRecognizing) {
-                try { recognition.stop(); } catch(e) {}
+                try { recognition.stop(); recognition.abort(); } catch(e) {}
                 isRecognizing = false;
             }
             handsFreeVoice = false;
 
-            // 3. Clear session and credentials
-            sessionStorage.removeItem('ultron_session_active');
+            // 4. Stop camera feed & audio streams
+            if (window.currentMediaStream) {
+                try { window.currentMediaStream.getTracks().forEach(t => t.stop()); } catch(e) {}
+                window.currentMediaStream = null;
+            }
+            const camVideo = document.getElementById('ultron-camera-video');
+            if (camVideo && camVideo.srcObject) {
+                try { camVideo.srcObject.getTracks().forEach(t => t.stop()); } catch(e) {}
+                camVideo.srcObject = null;
+            }
+
+            // 5. Reset exam tutor mode to OFF
+            if (typeof toggleExamTutorMode === 'function') {
+                toggleExamTutorMode(false);
+            }
+
+            // 6. Clear session and credentials
+            sessionStorage.clear();
             localStorage.removeItem('livelink_token');
             localStorage.removeItem('livelink_user');
             liveLinkToken = '';
 
-            // 4. Update UI to logged-out state
-            updateUserSessionUI(null);
-            updateBadge('● LOGGED OUT', '#FF9100');
-            const stateEl = document.getElementById('state-text');
-            if (stateEl) stateEl.innerText = "SIGN IN REQUIRED";
-            const aiEl = document.getElementById('ai-text');
-            if (aiEl) aiEl.innerText = "";
-            const userEl = document.getElementById('user-text');
-            if (userEl) userEl.innerText = "";
+            // 7. Strictly unmount/hide app shell and close all panels / drawers
+            document.documentElement.classList.add('unauthenticated');
+            const appShell = document.querySelector('.app-shell');
+            if (appShell) {
+                appShell.style.setProperty('display', 'none', 'important');
+            }
 
-            // 5. Open login modal cleanly
+            if (typeof closeSessionChatPanel === 'function') closeSessionChatPanel();
+            if (typeof closeFilesPanel === 'function') closeFilesPanel();
+            if (typeof closeRemotePanel === 'function') closeRemotePanel();
+            if (typeof toggleOpticalVision === 'function') toggleOpticalVision(false);
+            if (typeof closeVoicePickerModal === 'function') closeVoicePickerModal();
+            const lockModal = document.getElementById('ultron-screen-lock-modal');
+            if (lockModal) lockModal.style.display = 'none';
+
+            // 8. Open login modal strictly
             const overlay = document.getElementById('livelink-modal-overlay');
             if (overlay) overlay.style.display = 'flex';
-            switchAuthTab('login');
+            if (typeof switchAuthTab === 'function') switchAuthTab('login');
 
             const idInput = document.getElementById('login-identifier');
             if (idInput) idInput.value = '';
             const pwdInput = document.getElementById('login-password');
             if (pwdInput) pwdInput.value = '';
 
-            showToast('Signed out of ULTRON. Voice silenced.');
+            showToast(isAutoRedirect ? 'Session expired. Please sign in.' : 'Signed out of ULTRON. Voice silenced.');
         }
 
         // ── Change Password Modal Handlers ──
@@ -2403,8 +2622,11 @@
                     };
                     localStorage.setItem('livelink_user', JSON.stringify(userObj));
                     updateUserSessionUI(userObj);
+                    document.documentElement.classList.remove('unauthenticated');
+                    const appShell = document.querySelector('.app-shell');
+                    if (appShell) appShell.style.display = 'flex';
                     document.getElementById('livelink-modal-overlay').style.display = 'none';
-                    updateBadge(isHarsha ? '● HARSHA SIR ONLINE' : '● ONLINE', isHarsha ? 'var(--emerald)' : '#00E676');
+                    updateBadge(isHarsha ? '👑 HARSHA SIR ● ONLINE' : '● ONLINE', isHarsha ? 'var(--emerald)' : '#00E676');
 
                     const welcomeGreeting = isHarsha 
                         ? "Welcome back, Harsha Sir! I am ULTRON, your personal AI assistant. All systems operational."
@@ -2426,8 +2648,11 @@
                     localStorage.setItem('livelink_token', liveLinkToken);
                     localStorage.setItem('livelink_user', JSON.stringify(masterUser));
                     updateUserSessionUI(masterUser);
+                    document.documentElement.classList.remove('unauthenticated');
+                    const appShell = document.querySelector('.app-shell');
+                    if (appShell) appShell.style.display = 'flex';
                     document.getElementById('livelink-modal-overlay').style.display = 'none';
-                    updateBadge('● HARSHA SIR ONLINE', 'var(--emerald)');
+                    updateBadge('👑 HARSHA SIR ● ONLINE', 'var(--emerald)');
                     showToast('👑 Harsha Sir Authenticated (Direct Offline Fallback)');
                     const welcomeGreeting = "Welcome back, Harsha Sir! I am ULTRON, your personal AI assistant. All systems operational.";
                     document.getElementById('ai-text').innerText = "ULTRON: " + welcomeGreeting;
@@ -2519,12 +2744,14 @@
                 } catch (e) {}
             }
 
-            // On initial open without login: show gatekeeper login modal
+            const appShell = document.querySelector('.app-shell');
+            const overlay = document.getElementById('livelink-modal-overlay');
+
+            // On initial open without login: render ONLY login screen, hide app shell completely
             if (!liveLinkToken) {
-                const overlay = document.getElementById('livelink-modal-overlay');
+                if (appShell) appShell.style.setProperty('display', 'none', 'important');
                 if (overlay) overlay.style.display = 'flex';
                 switchAuthTab('login');
-                updateBadge('🔒 SIGN IN REQUIRED', '#FF9100');
                 const idInput = document.getElementById('login-identifier');
                 if (idInput && !idInput.value) {
                     idInput.value = '';
@@ -2532,9 +2759,22 @@
                 return;
             }
 
-            // User is already logged in! Keep login modal closed across all refreshes & tabs
-            const overlay = document.getElementById('livelink-modal-overlay');
+            // User is authenticated: mount/display app shell and hide login modal
+            if (appShell) appShell.style.display = 'flex';
             if (overlay) overlay.style.display = 'none';
+
+            // Query server for terminal lock status across refreshes/tabs
+            fetch(`/api/terminal/status?token=${encodeURIComponent(liveLinkToken)}`, {
+                headers: { 'Authorization': `Bearer ${liveLinkToken}` }
+            })
+            .then(r => r.json())
+            .then(termData => {
+                if (termData.locked) {
+                    const lockModal = document.getElementById('ultron-screen-lock-modal');
+                    if (lockModal) lockModal.style.display = 'flex';
+                }
+            })
+            .catch(() => {});
 
             if (liveLinkToken === 'LIVELINK_MASTER_HARSHA' || (userObj && (userObj.role === 'ADMIN' || (userObj.first_name && userObj.first_name.includes('Harsha'))))) {
                 updateBadge('👑 HARSHA SIR ● ONLINE', 'var(--emerald)');
@@ -2543,35 +2783,36 @@
                 return;
             }
 
-            fetch(`/api/livelink/user_info?token=${encodeURIComponent(liveLinkToken)}`)
-                .then(r => r.json())
+            fetch(`/api/livelink/user_info?token=${encodeURIComponent(liveLinkToken)}`, {
+                headers: { 'Authorization': `Bearer ${liveLinkToken}` }
+            })
+                .then(r => {
+                    if (r.status === 401) {
+                        logoutUser(true);
+                        return null;
+                    }
+                    return r.json();
+                })
                 .then(data => {
+                    if (!data) return;
                     if (data.success && data.user) {
                         if (data.user.status === 'PENDING') {
-                            localStorage.removeItem('livelink_token');
-                            localStorage.removeItem('livelink_user');
-                            liveLinkToken = '';
-                            if (overlay) overlay.style.display = 'flex';
-                            updateBadge('⏳ AWAITING HARSHA SIR', '#FF9100');
+                            logoutUser();
                             showToast('Your access request is currently pending authorization from Harsha Sir.');
                             return;
                         }
+                        if (appShell) appShell.style.display = 'flex';
                         if (overlay) overlay.style.display = 'none';
                         const isAdmin = data.user.role === 'ADMIN' || (data.user.name && data.user.name.includes('Harsha'));
                         updateBadge(isAdmin ? '👑 HARSHA SIR ● ONLINE' : '● ONLINE', isAdmin ? 'var(--emerald)' : '#00E676');
                         updateUserSessionUI(data.user);
                         initSSEStream();
                     } else {
-                        localStorage.removeItem('livelink_token');
-                        localStorage.removeItem('livelink_user');
-                        liveLinkToken = '';
-                        if (overlay) overlay.style.display = 'flex';
-                        switchAuthTab('login');
-                        updateBadge('🔒 SIGN IN REQUIRED', '#FF3D00');
+                        logoutUser(true);
                     }
                 })
                 .catch(() => {
-                    // Offline fallback: if token exists, keep authenticated
+                    if (appShell) appShell.style.display = 'flex';
                     if (overlay) overlay.style.display = 'none';
                     if (userObj) updateUserSessionUI(userObj);
                 });
@@ -2619,19 +2860,45 @@
         let isListening = false;
         let isSpeaking = false;
         let speechPulse = 0.0;
+        let hudRings = [];
+        let orbParticleCount = 1800;
 
-        function createGlowSpriteTexture() {
+        // Phase 7: Crisp Circular Dot Texture (No fuzzy blur/glow falloff)
+        function createCrispDotTexture() {
             const c = document.createElement('canvas');
-            c.width = 128; c.height = 128;
+            c.width = 64; c.height = 64;
             const ctx = c.getContext('2d');
-            const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-            g.addColorStop(0.0, 'rgba(14, 42, 36, 1.0)');
-            g.addColorStop(0.25, 'rgba(31, 92, 75, 0.95)');
-            g.addColorStop(0.60, 'rgba(199, 169, 106, 0.65)');
-            g.addColorStop(1.0, 'rgba(199, 169, 106, 0.0)');
-            ctx.fillStyle = g;
-            ctx.fillRect(0, 0, 128, 128);
+            ctx.clearRect(0, 0, 64, 64);
+            ctx.beginPath();
+            ctx.arc(32, 32, 26, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
             return new THREE.CanvasTexture(c);
+        }
+
+        function createHudRing(radius, tiltX, tiltZ, rotSpeed, colorHex) {
+            const ringGeo = new THREE.BufferGeometry();
+            const ringPts = 120;
+            const ringPos = new Float32Array((ringPts + 1) * 3);
+            for (let j = 0; j <= ringPts; j++) {
+                const ang = (j / ringPts) * Math.PI * 2;
+                ringPos[j * 3]     = radius * Math.cos(ang);
+                ringPos[j * 3 + 1] = 0;
+                ringPos[j * 3 + 2] = radius * Math.sin(ang);
+            }
+            ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPos, 3));
+            const ringMat = new THREE.LineBasicMaterial({
+                color: colorHex || 0x1F5C4B,
+                transparent: true,
+                opacity: 0.50,
+                linewidth: 1
+            });
+            const ringLine = new THREE.Line(ringGeo, ringMat);
+            ringLine.rotation.x = tiltX;
+            ringLine.rotation.z = tiltZ;
+            scene.add(ringLine);
+            hudRings.push({ line: ringLine, speed: rotSpeed, baseRadius: radius });
+            return ringLine;
         }
 
         function initThreeVisualizer() {
@@ -2672,46 +2939,49 @@
                 clock = new THREE.Clock();
 
                 // ══════════════════════════════════════════════════════════════════
-                // 5,800 ULTRA-BRIGHT LUMINOUS GOLDEN PARTICLES (SWARM MATRIX)
+                // FIBONACCI SPHERICAL DISTRIBUTION: 1,800 DESKTOP / 1,200 PHONE
                 // ══════════════════════════════════════════════════════════════════
-                const orbParticleCount = 5800;
+                const isMobile = window.innerWidth <= 640;
+                orbParticleCount = isMobile ? 1200 : 1800;
                 particleGeometry = new THREE.BufferGeometry();
                 const pos = new Float32Array(orbParticleCount * 3);
                 basePositions = new Float32Array(orbParticleCount * 3);
                 const colors = new Float32Array(orbParticleCount * 3);
 
-                // High-luminance palette: blinding white sparks, intense gold & glowing amber
-                const emeraldDark = new THREE.Color(0x0E2A24);
-                const emeraldDeep = new THREE.Color(0x1F5C4B);
-                const emeraldMid  = new THREE.Color(0x2E7D66);
+                // Clean emerald-ink tones with subtle champagne highlights
+                const emeraldDark   = new THREE.Color(0x0E2A24);
+                const emeraldDeep   = new THREE.Color(0x1F5C4B);
+                const emeraldMid    = new THREE.Color(0x2E7D66);
                 const champagneDeep = new THREE.Color(0xC7A96A);
 
+                const goldenRatio = (1 + Math.sqrt(5)) / 2;
+
                 for (let i = 0; i < orbParticleCount; i++) {
-                    const u = Math.random();
-                    const v = Math.random();
-                    const theta = u * 2.0 * Math.PI;
-                    const phi = Math.acos(2.0 * v - 1.0);
+                    const phi = Math.acos(1 - 2 * (i + 0.5) / orbParticleCount);
+                    const theta = 2 * Math.PI * i / goldenRatio;
                     
-                    // Dense spherical cloud distribution with organic depth
-                    const r = 0.86 + Math.pow(Math.random(), 1.5) * 0.44;
+                    // Structured spherical shell with subtle radial depth variation (0.95 to 1.05)
+                    const r = 0.95 + ((i * 37) % 100) / 1000.0;
 
                     const x = r * Math.sin(phi) * Math.cos(theta);
-                    const y = r * Math.sin(phi) * Math.sin(theta);
-                    const z = r * Math.cos(phi);
+                    const y = r * Math.cos(phi);
+                    const z = r * Math.sin(phi) * Math.sin(theta);
 
                     pos[i * 3]     = basePositions[i * 3]     = x;
                     pos[i * 3 + 1] = basePositions[i * 3 + 1] = y;
                     pos[i * 3 + 2] = basePositions[i * 3 + 2] = z;
 
+                    // Depth shading: points in front get brighter champagne / mid emerald highlights
+                    const depthRatio = (z + 1.0) / 2.0;
                     let c;
-                    if (u < 0.40) {
-                        c = emeraldDeep;
-                    } else if (u < 0.70) {
-                        c = emeraldDark;
-                    } else if (u < 0.88) {
-                        c = emeraldMid;
-                    } else {
+                    if (depthRatio > 0.85 && (i % 6 === 0)) {
                         c = champagneDeep;
+                    } else if (depthRatio > 0.60) {
+                        c = emeraldMid;
+                    } else if (depthRatio > 0.30) {
+                        c = emeraldDeep;
+                    } else {
+                        c = emeraldDark;
                     }
 
                     colors[i * 3]     = c.r;
@@ -2722,10 +2992,10 @@
                 particleGeometry.setAttribute('position', new THREE.BufferAttribute(pos, 3));
                 particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-                // Increased size and additive blending for intense radiant brightness
+                // Sharp points material with crisp antialiased circular sprite
                 const particleMaterial = new THREE.PointsMaterial({
-                    size: 0.055,
-                    map: createGlowSpriteTexture(),
+                    size: isMobile ? 0.052 : 0.046,
+                    map: createCrispDotTexture(),
                     vertexColors: true,
                     transparent: true,
                     opacity: 0.95,
@@ -2736,7 +3006,13 @@
                 particleSystem = new THREE.Points(particleGeometry, particleMaterial);
                 scene.add(particleSystem);
 
-                // Add glowing core light for radiant celestial luminance
+                // Add 3 thin tilted orbiting HUD rings & guide arcs at scientific angles
+                hudRings = [];
+                createHudRing(1.18, 0.41, 0.15, 0.008, 0x1F5C4B);   // ~23.5 deg tilt
+                createHudRing(1.28, 1.05, -0.52, -0.006, 0xC7A96A);  // ~60 deg tilt, champagne
+                createHudRing(1.36, -0.78, 0.85, 0.010, 0x2E7D66);  // Guide arc
+
+                // Core ambient point light
                 const coreLight = new THREE.PointLight(0x1F5C4B, 1.8, 8);
                 scene.add(coreLight);
 
@@ -2855,11 +3131,12 @@
                 }
                 particleSystem.scale.set(pulseScale, pulseScale, pulseScale);
 
-                // Voice-reactive particle waves and ripples
+                // Voice-reactive particle waves and ripples (EXACT reactivity engine preserved)
                 const posAttr = particleGeometry.attributes.position;
                 const pArr = posAttr.array;
+                const pCount = orbParticleCount || 1800;
                 if (isSpeaking && currentEnergy > 0.02) {
-                    for (let i = 0; i < 5800; i++) {
+                    for (let i = 0; i < pCount; i++) {
                         const i3 = i * 3;
                         const bx = basePositions[i3];
                         const by = basePositions[i3 + 1];
@@ -2872,7 +3149,7 @@
                     }
                     posAttr.needsUpdate = true;
                 } else if (isThinking) {
-                    for (let i = 0; i < 5800; i++) {
+                    for (let i = 0; i < pCount; i++) {
                         const i3 = i * 3;
                         const bx = basePositions[i3];
                         const by = basePositions[i3 + 1];
@@ -2885,12 +3162,21 @@
                     posAttr.needsUpdate = true;
                 } else {
                     if (pArr[0] !== basePositions[0]) {
-                        for (let i = 0; i < 5800 * 3; i++) {
+                        for (let i = 0; i < pCount * 3; i++) {
                             pArr[i] += (basePositions[i] - pArr[i]) * 0.15;
                         }
                         posAttr.needsUpdate = true;
                     }
                 }
+            }
+
+            // Animate orbiting mechanical gyroscope HUD rings
+            if (hudRings && hudRings.length) {
+                hudRings.forEach(hr => {
+                    hr.line.rotation.y += hr.speed * (1.0 + currentEnergy * 1.5);
+                    const ringScale = 1.0 + currentEnergy * 0.08;
+                    hr.line.scale.set(ringScale, ringScale, ringScale);
+                });
             }
 
             renderer.render(scene, camera);
@@ -3640,7 +3926,8 @@
                 command: val,
                 token: liveLinkToken,
                 history: getSessionHistory(),
-                permanent_memory: getPermanentMemory()
+                permanent_memory: getPermanentMemory(),
+                exam_tutor_mode: isExamTutorMode
             };
 
             fetch('/api/command', {
@@ -3778,11 +4065,16 @@
                 ${mediaHtml}
             `;
 
-            const isNearBottom = (stream.scrollHeight - stream.scrollTop - stream.clientHeight) < 120;
+            const isNearBottom = (stream.scrollHeight - stream.scrollTop - stream.clientHeight) < 140;
             stream.appendChild(msgDiv);
 
             if (isUser || isNearBottom) {
                 stream.scrollTop = stream.scrollHeight;
+                const jumpBtn = document.getElementById('chat-jump-latest-btn');
+                if (jumpBtn) jumpBtn.style.display = 'none';
+            } else {
+                const jumpBtn = document.getElementById('chat-jump-latest-btn');
+                if (jumpBtn) jumpBtn.style.display = 'block';
             }
 
             if (!isChatPanelOpen && window.innerWidth > 768) {
@@ -3790,12 +4082,34 @@
             }
         }
 
+        function jumpChatToLatest() {
+            const stream = document.getElementById('session-chat-stream');
+            if (stream) {
+                stream.scrollTo({ top: stream.scrollHeight, behavior: 'smooth' });
+            }
+            const jumpBtn = document.getElementById('chat-jump-latest-btn');
+            if (jumpBtn) jumpBtn.style.display = 'none';
+        }
+
         function clearSessionChatStream() {
             const stream = document.getElementById('session-chat-stream');
             if (stream) {
                 stream.innerHTML = '<div id="chat-empty-state" style="font-size:13px; color:var(--ink-soft); text-align:center; margin:auto; padding:24px 16px; font-weight:600;">Say something or type below</div>';
-                showToast("Chat cleared.");
+                const jumpBtn = document.getElementById('chat-jump-latest-btn');
+                if (jumpBtn) jumpBtn.style.display = 'none';
             }
+            // Reset exam tutor mode to OFF on clear
+            toggleExamTutorMode(false);
+            // Invalidate conversation history on server
+            const token = liveLinkToken || localStorage.getItem('livelink_token');
+            if (token) {
+                fetch('/api/clear_chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ token: token })
+                }).catch(() => {});
+            }
+            showToast("Chat stream cleared.");
         }
 
         function renderGeneratedImageInChat(promptText, imageUrl) {
@@ -4183,13 +4497,34 @@
                     if (target) target.value = "";
                 }
             } else if (type === 'tutor') {
-                let topic = (target && target.value.trim()) ? target.value.trim() : "";
-                let promptText = topic 
-                    ? `Act as my exam tutor, quiz me on ${topic} and test my knowledge step by step.`
-                    : `Act as my exam tutor, quiz me on core subjects and test my knowledge step by step with questions and feedback.`;
-                sendTextCommand(promptText, false);
-                if (target) target.value = "";
+                toggleExamTutorMode();
             }
+        }
+
+        let isExamTutorMode = false;
+        function toggleExamTutorMode(forceState) {
+            if (typeof forceState === 'boolean') {
+                isExamTutorMode = forceState;
+            } else {
+                isExamTutorMode = !isExamTutorMode;
+            }
+            const chip = document.getElementById('exam-tutor-toggle-chip');
+            const txt = document.getElementById('exam-tutor-chip-text');
+            if (chip) {
+                if (isExamTutorMode) {
+                    chip.classList.add('active');
+                    chip.style.background = 'var(--emerald)';
+                    chip.style.color = '#FFFFFF';
+                } else {
+                    chip.classList.remove('active');
+                    chip.style.background = '';
+                    chip.style.color = '';
+                }
+            }
+            if (txt) {
+                txt.innerText = isExamTutorMode ? 'Exam Tutor: ON' : 'Exam Tutor: OFF';
+            }
+            showToast(isExamTutorMode ? 'Exam Tutor: ON (Step-by-step quizzing active)' : 'Exam Tutor: OFF (Standard assistant active)');
         }
 
         function quickPromptDraw() {
@@ -4538,11 +4873,20 @@
             .catch(() => {});
         }
 
+        let remotePollInterval = null;
         function sendRemoteAction(action) {
             triggerHaptic([25]);
             playAcoustic('chirp');
 
             executeRemoteAction(action);
+
+            const banner = document.getElementById('remote-action-status-banner');
+            const bannerTxt = document.getElementById('remote-action-status-text');
+            if (banner && bannerTxt) {
+                banner.style.display = 'block';
+                banner.style.color = 'var(--emerald)';
+                bannerTxt.innerText = `Dispatching ${action.replace('_', ' ').toUpperCase()}...`;
+            }
 
             const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
             fetch('/api/livelink/control', {
@@ -4552,11 +4896,55 @@
             })
             .then(r => r.json())
             .then(data => {
-                const actName = action.replace('_', ' ').toUpperCase();
-                showToast(`✅ Command '${actName}' sent to PC Agent!`);
+                pollRemoteLastResult(action, 0);
             })
             .catch(() => {
-                showToast(`Action '${action}' dispatched.`);
+                if (bannerTxt) bannerTxt.innerText = `Action '${action}' dispatched to cloud.`;
+            });
+        }
+
+        function pollRemoteLastResult(action, attempt = 0) {
+            const banner = document.getElementById('remote-action-status-banner');
+            const bannerTxt = document.getElementById('remote-action-status-text');
+            const token = liveLinkToken || localStorage.getItem('livelink_token') || 'LIVELINK_MASTER_HARSHA';
+
+            if (attempt >= 5) {
+                if (bannerTxt) {
+                    banner.style.color = '#c62828';
+                    bannerTxt.innerText = "PC Agent Offline - Run: python agent/ultron_pc_agent.py";
+                }
+                return;
+            }
+
+            fetch(`/api/remote/last_result?token=${encodeURIComponent(token)}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res && res.last_result && res.last_result.action === action) {
+                    const lr = res.last_result;
+                    if (bannerTxt) {
+                        banner.style.color = 'var(--emerald)';
+                        bannerTxt.innerText = lr.message || `${action.toUpperCase()} completed`;
+                    }
+                    if (action === 'screenshot' && (lr.screenshot_data || lr.image_url)) {
+                        const sCard = document.getElementById('remote-screenshot-card');
+                        const sImg = document.getElementById('remote-screenshot-img');
+                        if (sCard && sImg) {
+                            sImg.src = lr.screenshot_data || lr.image_url;
+                            sCard.style.display = 'block';
+                        }
+                    }
+                    const pcBadge = document.getElementById('pc-agent-status-badge');
+                    if (pcBadge) {
+                        pcBadge.innerHTML = '<span style="width:7px; height:7px; border-radius:50%; background:#00E676; display:inline-block;"></span> <span>PC AGENT ONLINE • ACTIVE</span>';
+                    }
+                } else {
+                    setTimeout(() => pollRemoteLastResult(action, attempt + 1), 750);
+                }
+            })
+            .catch(() => {
+                setTimeout(() => pollRemoteLastResult(action, attempt + 1), 750);
             });
         }
 
@@ -4853,7 +5241,7 @@
     <!-- ── Mobile Phone Bottom Navigation Dock (Thumb-Friendly Experience) ── -->
     
 
-<div id="build-stamp" style="position:fixed; bottom:5px; right:5px; font-size:10px; color:#3f5f55; z-index:99999; pointer-events:none; font-family:monospace; background:#f1e6d0; padding:2px 6px; border-radius:4px; box-shadow:inset 1px 1px 3px #cdbb98, inset -1px -1px 3px #fffaf0;">Phase5-Chat-Orb-Vision</div>
+<div id="build-stamp" style="position:fixed; bottom:5px; right:5px; font-size:10px; color:#3f5f55; z-index:99999; pointer-events:none; font-family:monospace; background:#f1e6d0; padding:2px 6px; border-radius:4px; box-shadow:inset 1px 1px 3px #cdbb98, inset -1px -1px 3px #fffaf0;">Phase6-Auth-Remote-Orb</div>
 </body>
 </html>
 

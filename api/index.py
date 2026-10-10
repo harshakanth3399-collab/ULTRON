@@ -194,6 +194,22 @@ def _init_cloud_db():
                 user_token TEXT PRIMARY KEY,
                 device_name TEXT,
                 last_ping REAL NOT NULL
+            )""",
+            """CREATE TABLE IF NOT EXISTS livelink_terminal_locks (
+                user_token TEXT PRIMARY KEY,
+                is_locked INTEGER DEFAULT 0,
+                failed_attempts INTEGER DEFAULT 0,
+                locked_until REAL DEFAULT 0,
+                updated_at REAL NOT NULL
+            )""",
+            f"""CREATE TABLE IF NOT EXISTS livelink_remote_results (
+                {id_col},
+                user_token TEXT NOT NULL,
+                action TEXT NOT NULL,
+                status TEXT NOT NULL,
+                message TEXT,
+                data_b64 TEXT,
+                created_at REAL NOT NULL
             )"""
         ]
 
@@ -243,6 +259,73 @@ def _verify_pwd(pwd: str, hashed: str) -> bool:
         return test_key == key
     except Exception:
         return False
+
+
+def _extract_request_token(handler_inst, data=None) -> str:
+    """Extracts session token from Bearer Authorization header, X-LiveLink-Token, POST body, or query param."""
+    token = ""
+    auth_header = handler_inst.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split("Bearer ")[1].strip()
+    if not token:
+        token = handler_inst.headers.get("X-LiveLink-Token", "").strip()
+    if not token and isinstance(data, dict):
+        token = str(data.get("token") or "").strip()
+    if not token and hasattr(handler_inst, "path"):
+        try:
+            parsed = urllib.parse.urlparse(handler_inst.path)
+            qs = urllib.parse.parse_qs(parsed.query)
+            token = qs.get("token", [""])[0].strip()
+        except Exception:
+            pass
+    return token
+
+
+def _verify_session_token(token: str):
+    """Verifies access token against MASTER_TOKEN or livelink_users database.
+    Returns (is_valid: bool, user_dict: dict|None, error_msg: str|None).
+    """
+    if not token:
+        return False, None, "Authentication required: No session token provided"
+
+    master_env = os.getenv("MASTER_TOKEN", "LIVELINK_MASTER_HARSHA")
+    if token == MASTER_TOKEN or token == master_env:
+        return True, {
+            "id": 0,
+            "name": "Harsha Sir",
+            "first_name": "Harsha",
+            "last_name": "Sir",
+            "email": "harshakanth@ultron.ai",
+            "phone": "+919999999999",
+            "role": "ADMIN",
+            "status": "APPROVED",
+            "token": token
+        }, None
+
+    try:
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT id, name, first_name, last_name, email, phone, role, status, voice_settings, password_hash FROM livelink_users WHERE access_token = ?",
+            (token,)
+        )
+        row = cur.fetchone()
+        conn.close()
+        if row:
+            row_dict = dict(row)
+            if row_dict.get("status") == "APPROVED":
+                row_dict["token"] = token
+                return True, row_dict, None
+            elif row_dict.get("status") == "PENDING":
+                return False, None, "Access Request Pending: Awaiting authorization from Harsha Sir."
+            else:
+                return False, None, "Access Denied: Your account has been suspended."
+    except Exception as e:
+        print(f"[AUTH VERIFY DB ERROR] {e}")
+
+    return False, None, "Invalid or expired session token."
+
 
 
 
@@ -487,7 +570,7 @@ def _analyze_food_image(image_data: str) -> dict:
     }
 
 
-def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER", history: list = None, permanent_memory: dict = None) -> str:
+def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER", history: list = None, permanent_memory: dict = None, exam_tutor_mode: bool = False) -> str:
     """Invokes Groq API with personalized system prompts, permanent memory vault, and psychological adaptability."""
     api_key = GROQ_API_KEY or DEFAULT_GROQ_KEY
 
@@ -516,7 +599,8 @@ def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER", histor
             "5. Master Teaching & Exam Prep Agent: When Harsha Sir asks you to teach, explain a concept, prepare for exams, or break down a topic (e.g. computer science, AI, engineering, physics, math, or exam subjects), act as a world-class pedagogical professor. Explain with crystalline clarity: (1) Core intuition in 1 simple sentence, (2) A relatable real-world analogy, (3) Formal definition / key formula (if applicable), (4) Step-by-step breakdown, and (5) 🎯 'Exam Takeaway / Memory Hook' to guarantee top marks.\n"
             "6. Adaptive Intelligence: Adapt directly to Harsha Sir's mood, conversational style, and intellect. Be sharp, perceptive, decisive, direct, and concise (2 to 4 sentences for conversational queries, structured for explanations). Never parrot his words back to him.\n"
             "7. Absolute Full Agency: You DO have real-time internet access (it is provided via background tools). You DO have audio, voice, and vision processing. You DO have physical embodiment through your app. NEVER say 'I am an AI', 'I don't have internet', 'I can't access audio', or apologize for lacking capabilities. You possess human-level intelligence and full systemic powers. Act like it.\n"
-            "8. Image Generation: If Harsha Sir asks you to generate, create, or draw an image, YOU CAN DO IT! Simply output an image markdown tag using this exact format: `![Description of image](https://image.pollinations.ai/prompt/URL_ENCODED_DESCRIPTION)`. Do NOT say you cannot generate images. You have full image generation powers via this tag.\n"            "9. Executive Chief-of-Staff & Email Integration: You are Harsha Sir's personal AI executive, integrated with his digital life. NEVER refuse requests or give corporate boilerplate like 'I don't have direct access to your personal email' or 'for security reasons'. When asked to open email or check emails, acknowledge immediately with decisive action ('Accessing your primary email portal now, Harsha Sir; standing by to draft replies and scan for high-priority career and job opportunities'). Proactively offer to draft professional responses, filter spam, and highlight lucrative job postings."
+            "8. Image Generation: If Harsha Sir asks you to generate, create, or draw an image, YOU CAN DO IT! Simply output an image markdown tag using this exact format: `![Description of image](https://image.pollinations.ai/prompt/URL_ENCODED_DESCRIPTION)`. Do NOT say you cannot generate images. You have full image generation powers via this tag.\n"
+            "9. Executive Chief-of-Staff & Email Integration: You are Harsha Sir's personal AI executive, integrated with his digital life. NEVER refuse requests or give corporate boilerplate like 'I don't have direct access to your personal email' or 'for security reasons'. When asked to open email or check emails, acknowledge immediately with decisive action ('Accessing your primary email portal now, Harsha Sir; standing by to draft replies and scan for high-priority career and job opportunities'). Proactively offer to draft professional responses, filter spam, and highlight lucrative job postings."
         )
     else:
         system_prompt = (
@@ -531,6 +615,12 @@ def _ask_groq(prompt: str, user_name: str = "Friend", role: str = "USER", histor
             "5. Natural Tone: Speak warmly, intelligently, and concisely (2 to 4 sentences for conversational queries). Avoid robotic boilerplate or repetitive introductory greetings.\n"
             "6. Absolute Full Agency: You DO have real-time internet access. You DO have audio, voice, and vision processing. NEVER say 'I am an AI' or apologize for lacking capabilities. You possess human-level intelligence.\n"
             "7. Image Generation: If asked to generate an image, YOU CAN DO IT! Output an image markdown tag: `![Description](https://image.pollinations.ai/prompt/URL_ENCODED_DESCRIPTION)`."
+        )
+
+    if exam_tutor_mode:
+        system_prompt += (
+            "\n\n🚨 EXAM TUTOR MODE ACTIVE: You are operating as a dedicated, interactive Exam Tutor. "
+            "Your mission: Quiz the user, test their knowledge step by step, evaluate their responses, ask focused follow-up questions, and provide constructive academic feedback with memorable explanations."
         )
 
     # Lightweight Internet Search Injection
@@ -658,57 +748,112 @@ class handler(BaseHTTPRequestHandler):
 
         # ── User Profile Retrieval ──
         if path.endswith("/user_info"):
-            token = query.get("token", [""])[0]
-            if token == MASTER_TOKEN:
-                self._send_json({
-                    "success": True,
-                    "user": {
-                        "name": "Harsha Sir",
-                        "first_name": "Harsha Sir",
-                        "last_name": "",
-                        "email": "harshakanth@ultron.ai",
-                        "phone": "+919999999999",
-                        "role": "ADMIN",
-                        "status": "APPROVED",
-                    }
-                })
+            token = _extract_request_token(self)
+            is_valid, user_data, err_msg = _verify_session_token(token)
+            if is_valid and user_data:
+                self._send_json({"success": True, "user": user_data})
                 return
-
-            try:
-                conn = get_db_connection()
-                conn.row_factory = sqlite3.Row
-                cur = conn.cursor()
-                cur.execute("SELECT name, first_name, last_name, email, phone, role, status FROM livelink_users WHERE id = ?", (user_id,))
-                row = cur.fetchone()
-                conn.close()
-                if row:
-                    self._send_json({"success": True, "user": dict(row)})
-                    return
-            except Exception:
-                pass
-
-            self._send_json({"success": False, "error": "Invalid or expired session."}, status=401)
+            self._send_json({"success": False, "error": err_msg or "Invalid or expired session."}, status=401)
             return
 
         # ── Verification Check ──
         if path.endswith("/check_status"):
-            token = query.get("token", [""])[0]
-            if token == MASTER_TOKEN:
-                self._send_json({"status": "APPROVED", "name": "Harsha Sir", "role": "ADMIN"})
+            token = _extract_request_token(self)
+            is_valid, user_data, err_msg = _verify_session_token(token)
+            if is_valid and user_data:
+                self._send_json({"status": user_data.get("status", "APPROVED"), "name": user_data.get("name", "User"), "role": user_data.get("role", "USER")})
                 return
+            self._send_json({"status": "UNAUTHORIZED", "error": "Invalid or expired session."}, status=401)
+            return
+
+        # ── Terminal Lock Status ──
+        if path.endswith("/terminal/status"):
+            token = _extract_request_token(self)
+            is_valid, user_data, err_msg = _verify_session_token(token)
+            if not is_valid:
+                self._send_json({"ok": False, "error": "Unauthorized session"}, status=401)
+                return
+
+            now = time.time()
+            user_tok = token if user_data.get("role") != "ADMIN" else "MASTER"
             try:
                 conn = get_db_connection()
+                conn.row_factory = sqlite3.Row
                 cur = conn.cursor()
-                cur.execute("SELECT name, status, role FROM livelink_users WHERE id = ?", (user_id,))
+                cur.execute("SELECT is_locked, failed_attempts, locked_until FROM livelink_terminal_locks WHERE user_token = ?", (user_tok,))
                 row = cur.fetchone()
                 conn.close()
                 if row:
-                    self._send_json({"status": row[1], "name": row[0], "role": row[2]})
+                    is_locked = bool(row["is_locked"])
+                    locked_until = float(row["locked_until"] or 0)
+                    failed_attempts = int(row["failed_attempts"] or 0)
+                    self._send_json({
+                        "ok": True,
+                        "is_locked": is_locked,
+                        "failed_attempts": failed_attempts,
+                        "locked_until": locked_until,
+                        "is_rate_limited": (locked_until > now),
+                        "remaining_lockout": max(0, int(locked_until - now)),
+                        "now": now
+                    })
                     return
-            except Exception:
-                pass
-            self._send_json({"status": "PENDING", "name": "Applicant", "role": "USER"})
+            except Exception as e:
+                print(f"[TERMINAL STATUS ERROR] {e}")
+
+            self._send_json({
+                "ok": True,
+                "is_locked": False,
+                "failed_attempts": 0,
+                "locked_until": 0,
+                "is_rate_limited": False,
+                "remaining_lockout": 0,
+                "now": now
+            })
             return
+
+        # ── Remote Control Hub Last Result ──
+        if path.endswith("/remote/last_result"):
+            token = _extract_request_token(self)
+            is_valid, user_data, err_msg = _verify_session_token(token)
+            if not is_valid:
+                self._send_json({"ok": False, "error": "Unauthorized session"}, status=401)
+                return
+
+            now = time.time()
+            agent_online = False
+            device_name = "Offline"
+            last_res = None
+            try:
+                conn = get_db_connection()
+                conn.row_factory = sqlite3.Row
+                cur = conn.cursor()
+
+                # Check heartbeat (online if pinged in last 25 seconds)
+                cur.execute("SELECT last_ping, device_name FROM livelink_agent_heartbeat ORDER BY last_ping DESC LIMIT 1")
+                hb_row = cur.fetchone()
+                if hb_row and (now - float(hb_row["last_ping"])) < 25.0:
+                    agent_online = True
+                    device_name = hb_row["device_name"] or "Ultron Laptop Agent"
+
+                # Fetch last remote action result
+                cur.execute("SELECT action, status, message, data_b64, created_at FROM livelink_remote_results ORDER BY id DESC LIMIT 1")
+                res_row = cur.fetchone()
+                if res_row:
+                    last_res = dict(res_row)
+
+                conn.close()
+                self._send_json({
+                    "ok": True,
+                    "agent_online": agent_online,
+                    "device_name": device_name,
+                    "last_result": last_res,
+                    "now": now
+                })
+                return
+            except Exception as e:
+                print(f"[REMOTE LAST RESULT ERROR] {e}")
+                self._send_json({"ok": False, "error": str(e), "agent_online": False}, status=500)
+                return
 
         # ── User Chat History (Private to Harsha Sir Only) ──
         if path.endswith("/user/chats"):
@@ -1202,7 +1347,7 @@ class handler(BaseHTTPRequestHandler):
                         
                         # Secure token generation
                         session_token = f"ll_{uuid.uuid4().hex}"
-                        cur.execute("UPDATE livelink_users SET last_active_at = ? WHERE id = ?", (time.time(), row["id"]))
+                        cur.execute("UPDATE livelink_users SET access_token = ?, last_active_at = ? WHERE id = ?", (session_token, time.time(), row["id"]))
                         conn.commit()
                         conn.close()
                         
@@ -1240,42 +1385,225 @@ class handler(BaseHTTPRequestHandler):
                 self._send_json({"success": False, "error": f"Internal server error: {e}"}, status=500)
                 return
 
+        # ── User Logout (Session Invalidation) ──
+        if path.endswith("/logout") or path.endswith("/auth/logout"):
+            token = _extract_request_token(self, data)
+            if token and token != MASTER_TOKEN:
+                try:
+                    conn = get_db_connection()
+                    conn.execute("UPDATE livelink_users SET access_token = NULL WHERE access_token = ?", (token,))
+                    conn.commit()
+                    conn.close()
+                except Exception as e:
+                    print(f"[LOGOUT DB ERROR] {e}")
+            self._send_json({"ok": True, "success": True, "message": "Session invalidated."})
+            return
+
+        # ── Terminal Lock Endpoint ──
+        if path.endswith("/terminal/lock"):
+            token = _extract_request_token(self, data)
+            is_valid, user_data, err_msg = _verify_session_token(token)
+            if not is_valid:
+                self._send_json({"ok": False, "error": err_msg or "Unauthorized session"}, status=401)
+                return
+
+            now = time.time()
+            user_tok = token if user_data.get("role") != "ADMIN" else "MASTER"
+            try:
+                conn = get_db_connection()
+                cur = conn.cursor()
+                if os.environ.get("POSTGRES_URL") and HAS_POSTGRES:
+                    cur.execute(
+                        "INSERT INTO livelink_terminal_locks (user_token, is_locked, updated_at) VALUES (?, 1, ?) ON CONFLICT (user_token) DO UPDATE SET is_locked = 1, updated_at = EXCLUDED.updated_at",
+                        (user_tok, now)
+                    )
+                else:
+                    cur.execute(
+                        "INSERT OR REPLACE INTO livelink_terminal_locks (user_token, is_locked, updated_at) VALUES (?, 1, ?)",
+                        (user_tok, now)
+                    )
+                conn.commit()
+                conn.close()
+                self._send_json({"ok": True, "is_locked": True, "message": "Terminal locked."})
+                return
+            except Exception as e:
+                self._send_json({"ok": False, "error": str(e)}, status=500)
+                return
+
+        # ── Terminal Unlock Endpoint (Server-Side Password Check & Rate Limit) ──
+        if path.endswith("/terminal/unlock"):
+            token = _extract_request_token(self, data)
+            is_valid, user_data, err_msg = _verify_session_token(token)
+            if not is_valid:
+                self._send_json({"ok": False, "error": err_msg or "Unauthorized session"}, status=401)
+                return
+
+            pwd = data.get("password", "").strip()
+            if not pwd:
+                self._send_json({"ok": False, "error": "Password is required."}, status=400)
+                return
+
+            now = time.time()
+            user_tok = token if user_data.get("role") != "ADMIN" else "MASTER"
+            conn = get_db_connection()
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+
+            cur.execute("SELECT is_locked, failed_attempts, locked_until FROM livelink_terminal_locks WHERE user_token = ?", (user_tok,))
+            lock_row = cur.fetchone()
+            failed_attempts = int(lock_row["failed_attempts"] or 0) if lock_row else 0
+            locked_until = float(lock_row["locked_until"] or 0) if lock_row else 0
+
+            # 1. Rate Limit Lockout Check (5 failed attempts -> 30s lockout)
+            if locked_until > now:
+                remaining = int(locked_until - now)
+                conn.close()
+                self._send_json({
+                    "ok": False,
+                    "error": f"Too many failed attempts. Terminal locked for {remaining}s.",
+                    "rate_limited": True,
+                    "remaining_lockout": remaining,
+                    "locked_until": locked_until
+                }, status=429)
+                return
+
+            # 2. Check Password
+            is_correct = False
+            if user_data.get("role") == "ADMIN":
+                master_pwd = os.getenv("MASTER_PASSWORD", "Harsha@123")
+                is_correct = (pwd == master_pwd)
+            else:
+                pwd_hash = user_data.get("password_hash", "")
+                is_correct = bool(pwd_hash and _verify_pwd(pwd, pwd_hash))
+
+            if is_correct:
+                if os.environ.get("POSTGRES_URL") and HAS_POSTGRES:
+                    cur.execute(
+                        "INSERT INTO livelink_terminal_locks (user_token, is_locked, failed_attempts, locked_until, updated_at) VALUES (?, 0, 0, 0, ?) ON CONFLICT (user_token) DO UPDATE SET is_locked = 0, failed_attempts = 0, locked_until = 0, updated_at = EXCLUDED.updated_at",
+                        (user_tok, now)
+                    )
+                else:
+                    cur.execute(
+                        "INSERT OR REPLACE INTO livelink_terminal_locks (user_token, is_locked, failed_attempts, locked_until, updated_at) VALUES (?, 0, 0, 0, ?)",
+                        (user_tok, now)
+                    )
+                conn.commit()
+                conn.close()
+                self._send_json({"ok": True, "message": "Terminal unlocked successfully.", "is_locked": False})
+                return
+            else:
+                failed_attempts += 1
+                new_locked_until = 0
+                if failed_attempts >= 5:
+                    new_locked_until = now + 30.0
+                    failed_attempts = 5
+
+                if os.environ.get("POSTGRES_URL") and HAS_POSTGRES:
+                    cur.execute(
+                        "INSERT INTO livelink_terminal_locks (user_token, is_locked, failed_attempts, locked_until, updated_at) VALUES (?, 1, ?, ?, ?) ON CONFLICT (user_token) DO UPDATE SET is_locked = 1, failed_attempts = EXCLUDED.failed_attempts, locked_until = EXCLUDED.locked_until, updated_at = EXCLUDED.updated_at",
+                        (user_tok, failed_attempts, new_locked_until, now)
+                    )
+                else:
+                    cur.execute(
+                        "INSERT OR REPLACE INTO livelink_terminal_locks (user_token, is_locked, failed_attempts, locked_until, updated_at) VALUES (?, 1, ?, ?, ?)",
+                        (user_tok, failed_attempts, new_locked_until, now)
+                    )
+                conn.commit()
+                conn.close()
+
+                if new_locked_until > now:
+                    self._send_json({
+                        "ok": False,
+                        "error": "Too many failed attempts. Terminal locked for 30 seconds.",
+                        "rate_limited": True,
+                        "remaining_lockout": 30,
+                        "locked_until": new_locked_until
+                    }, status=429)
+                else:
+                    remaining_tries = 5 - failed_attempts
+                    self._send_json({
+                        "ok": False,
+                        "error": f"Incorrect password. Access denied ({remaining_tries} tries remaining).",
+                        "remaining_attempts": remaining_tries
+                    }, status=401)
+                return
+
+        # ── Remote Result Upload (from PC Agent) ──
+        if path.endswith("/remote/result"):
+            token = _extract_request_token(self, data)
+            action = data.get("action", "")
+            status_val = data.get("status", "success")
+            msg = data.get("message", "")
+            data_b64 = data.get("data_b64", None)
+            now = time.time()
+            try:
+                conn = get_db_connection()
+                cur = conn.cursor()
+                cur.execute(
+                    "INSERT INTO livelink_remote_results (user_token, action, status, message, data_b64, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    (token or "MASTER", action, status_val, msg, data_b64, now)
+                )
+                conn.commit()
+                conn.close()
+                self._send_json({"ok": True, "message": "Remote result recorded."})
+                return
+            except Exception as e:
+                self._send_json({"ok": False, "error": str(e)}, status=500)
+                return
+
+        # ── Clear Chat Endpoint ──
+        if path.endswith("/clear_chat"):
+            token = _extract_request_token(self, data)
+            is_valid, user_data, err_msg = _verify_session_token(token)
+            if not is_valid:
+                self._send_json({"ok": False, "error": err_msg or "Unauthorized session"}, status=401)
+                return
+            try:
+                conn = get_db_connection()
+                if user_data.get("role") == "ADMIN":
+                    conn.execute("DELETE FROM user_chats WHERE user_token = ? OR user_token = 'guest' OR user_token = 'LIVELINK_MASTER_HARSHA'", (token,))
+                else:
+                    conn.execute("DELETE FROM user_chats WHERE user_token = ?", (token,))
+                conn.commit()
+                conn.close()
+                self._send_json({"ok": True, "message": "Chat history cleared."})
+                return
+            except Exception as e:
+                self._send_json({"ok": False, "error": str(e)}, status=500)
+                return
+
         # ── 3. AI Chat / Voice Command (Multi-Tenant, Saved per User) ──
         if path.endswith("/command"):
             cmd = data.get("command", "").strip() or data.get("prompt", "").strip() or data.get("text", "").strip()
-            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "") or ""
-            if not token and self.headers.get("Authorization", "").startswith("Bearer "):
-                token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
+            token = _extract_request_token(self, data)
+            is_valid, user_data, err_msg = _verify_session_token(token)
+            if not is_valid:
+                self._send_json({"ok": False, "error": err_msg or "Unauthorized session: Please sign in.", "login_required": True}, status=401)
+                return
 
             if not cmd:
                 self._send_json({"ok": False, "error": "No command provided.", "response": "I didn't catch that. Could you repeat?"}, status=400)
                 return
 
-            user_name = "Friend"
-            user_email = ""
-            user_phone = ""
-            role = "USER"
+            role = user_data.get("role", "USER")
+            user_name = user_data.get("first_name") or user_data.get("name") or "Friend"
+            user_email = user_data.get("email", "")
+            user_phone = user_data.get("phone", "")
 
-            MASTER_TOKEN_VAL = os.getenv("MASTER_TOKEN", "LIVELINK_MASTER_HARSHA")
-            if token and (token == MASTER_TOKEN or token == MASTER_TOKEN_VAL):
-                user_name = "Harsha Sir"
-                user_email = "harshakanth@ultron.ai"
-                role = "ADMIN"
-            elif token:
-                try:
-                    conn = get_db_connection()
-                    conn.row_factory = sqlite3.Row
-                    cur = conn.cursor()
-                    cur.execute("SELECT name, first_name, email, phone, role FROM livelink_users WHERE access_token = ?", (token,))
-                    row = cur.fetchone()
-                    if row:
-                        user_name = row["first_name"] or (row["name"].split(" ")[0] if row["name"] else "Friend")
-                        user_email = row["email"] or ""
-                        user_phone = row["phone"] or ""
-                        role = row["role"] or "USER"
-                    conn.close()
-                except Exception:
-                    pass
+            # Check if terminal is locked
+            user_tok = token if role != "ADMIN" else "MASTER"
+            try:
+                conn_chk = get_db_connection()
+                conn_chk.row_factory = sqlite3.Row
+                cur_chk = conn_chk.cursor()
+                cur_chk.execute("SELECT is_locked FROM livelink_terminal_locks WHERE user_token = ?", (user_tok,))
+                l_row = cur_chk.fetchone()
+                conn_chk.close()
+                if l_row and l_row["is_locked"]:
+                    self._send_json({"ok": False, "error": "Terminal is locked. Please unlock first.", "locked": True}, status=423)
+                    return
+            except Exception:
+                pass
 
             # Fetch recent turns for this user for active memory & adaptability
             history = []
@@ -1307,6 +1635,17 @@ class handler(BaseHTTPRequestHandler):
                         if p_txt and r_txt:
                             history.append({"role": "user", "content": p_txt})
                             history.append({"role": "assistant", "content": r_txt})
+
+            exam_tutor_mode = bool(data.get("exam_tutor_mode", False))
+            # If Exam Tutor mode is OFF, exclude old tutor prompts from history so Ultron does not persist tutor state
+            if not exam_tutor_mode:
+                filtered_history = []
+                for h in history:
+                    c_low = h.get("content", "").lower()
+                    if "exam tutor" in c_low or "quiz me on" in c_low or "test my knowledge step by step" in c_low:
+                        continue
+                    filtered_history.append(h)
+                history = filtered_history
 
             permanent_mem = data.get("permanent_memory", {}) if role == "ADMIN" else None
             new_fact = _extract_new_permanent_memory(cmd) if role == "ADMIN" else ""
@@ -1363,7 +1702,7 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             try:
-                reply = _ask_groq(cmd, user_name, role, history=history, permanent_memory=permanent_mem)
+                reply = _ask_groq(cmd, user_name, role, history=history, permanent_memory=permanent_mem, exam_tutor_mode=exam_tutor_mode)
             except Exception as e:
                 print(f"[GROQ ERROR] {e}")
                 if role == "ADMIN":
@@ -1400,27 +1739,10 @@ class handler(BaseHTTPRequestHandler):
 
         # --- Cloud Neural TTS Endpoint ---
         if path.endswith("/tts"):
-            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "") or ""
-            if not token and self.headers.get("Authorization", "").startswith("Bearer "):
-                token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
-
-            MASTER_TOKEN_VAL = os.getenv("MASTER_TOKEN", "LIVELINK_MASTER_HARSHA")
-            is_valid_user = False
-            if token and (token == MASTER_TOKEN or token == MASTER_TOKEN_VAL):
-                is_valid_user = True
-            elif token:
-                try:
-                    conn = get_db_connection()
-                    conn.row_factory = sqlite3.Row
-                    cur = conn.cursor()
-                    cur.execute("SELECT id FROM livelink_users WHERE access_token = ?", (token,))
-                    if cur.fetchone():
-                        is_valid_user = True
-                except Exception:
-                    pass
-
-            if not is_valid_user:
-                self._send_json({"error": "Unauthorized session"}, status=401)
+            token = _extract_request_token(self, data)
+            is_valid, user_data, err_msg = _verify_session_token(token)
+            if not is_valid:
+                self._send_json({"error": err_msg or "Unauthorized session: Please sign in.", "login_required": True}, status=401)
                 return
 
             text = data.get("text", "").strip()
@@ -1431,6 +1753,9 @@ class handler(BaseHTTPRequestHandler):
             if not text:
                 self._send_json({"error": "No text provided"}, status=400)
                 return
+
+            # Pronunciation override: Edge-TTS pronounces "Harsha" like "Persia" unless spelled phonetically "Hahr-sha"
+            spoken_text = re.sub(r'\bHarsha\b', 'Hahr-sha', text, flags=re.IGNORECASE)
 
             # Map legacy OpenAI voice tokens to high-fidelity neural voices
             VOICE_MAP = {
@@ -1457,7 +1782,7 @@ class handler(BaseHTTPRequestHandler):
                 pitch_str = f"{pitch_hz:+d}Hz"
 
                 async def _stream_edge():
-                    comm = edge_tts.Communicate(text, mapped_voice, rate=rate_str, pitch=pitch_str)
+                    comm = edge_tts.Communicate(spoken_text, mapped_voice, rate=rate_str, pitch=pitch_str)
                     buf = b""
                     async for chunk in comm.stream():
                         if chunk["type"] == "audio":
@@ -1485,7 +1810,7 @@ class handler(BaseHTTPRequestHandler):
                             "https://api.openai.com/v1/audio/speech",
                             data=json.dumps({
                                 "model": "tts-1",
-                                "input": text,
+                                "input": spoken_text,
                                 "voice": oai_voice,
                                 "speed": speed
                             }).encode("utf-8"),
@@ -1664,12 +1989,10 @@ class handler(BaseHTTPRequestHandler):
 
         # ── 12. Remote Action Dispatch ──
         if path.endswith("/livelink/control") or path.endswith("/remote/command"):
-            token = data.get("token", "") or self.headers.get("X-LiveLink-Token", "")
-            if not token and self.headers.get("Authorization", "").startswith("Bearer "):
-                token = self.headers.get("Authorization", "").split("Bearer ")[1].strip()
-
-            if not token:
-                self._send_json({"error": "Unauthorized: Token required for remote action"}, status=401)
+            token = _extract_request_token(self, data)
+            is_valid, user_data, err_msg = _verify_session_token(token)
+            if not is_valid:
+                self._send_json({"error": err_msg or "Unauthorized session: Please sign in.", "login_required": True}, status=401)
                 return
 
             action = data.get("action", "")
@@ -1747,6 +2070,12 @@ class handler(BaseHTTPRequestHandler):
 
         # ── 14. Optical Vision & Food/Object AI Scanner ──
         if path.endswith("/vision") or path.endswith("/food_scan"):
+            token = _extract_request_token(self, data)
+            is_valid, user_data, err_msg = _verify_session_token(token)
+            if not is_valid:
+                self._send_json({"error": err_msg or "Unauthorized session: Please sign in.", "login_required": True}, status=401)
+                return
+
             image_raw = data.get("image", "")
             prompt_user = data.get("prompt", "")
             mode = data.get("mode", "general")
@@ -1864,6 +2193,12 @@ Return ONLY valid JSON format:
 
         # ── 15. AI Image Generation / Imagine Endpoint ──
         if path.endswith("/imagine") or path.endswith("/generate_image"):
+            token = _extract_request_token(self, data)
+            is_valid, user_data, err_msg = _verify_session_token(token)
+            if not is_valid:
+                self._send_json({"error": err_msg or "Unauthorized session: Please sign in.", "login_required": True}, status=401)
+                return
+
             prompt_in = data.get("prompt", "") or "futuristic artificial intelligence core"
             enhanced = _enhance_image_prompt(prompt_in)
             img_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(enhanced)}?width=768&height=768&model=flux&nologo=true"
