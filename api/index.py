@@ -790,10 +790,13 @@ class handler(BaseHTTPRequestHandler):
                     self._send_json({
                         "ok": True,
                         "is_locked": is_locked,
+                        "locked": is_locked,
+                        "status": "locked" if is_locked else "unlocked",
                         "failed_attempts": failed_attempts,
                         "locked_until": locked_until,
                         "is_rate_limited": (locked_until > now),
                         "remaining_lockout": max(0, int(locked_until - now)),
+                        "retry_after": max(0, int(locked_until - now)),
                         "now": now
                     })
                     return
@@ -1424,7 +1427,7 @@ class handler(BaseHTTPRequestHandler):
                     )
                 conn.commit()
                 conn.close()
-                self._send_json({"ok": True, "is_locked": True, "message": "Terminal locked."})
+                self._send_json({"ok": True, "is_locked": True, "locked": True, "status": "locked", "message": "Terminal locked."})
                 return
             except Exception as e:
                 self._send_json({"ok": False, "error": str(e)}, status=500)
@@ -1463,6 +1466,7 @@ class handler(BaseHTTPRequestHandler):
                     "error": f"Too many failed attempts. Terminal locked for {remaining}s.",
                     "rate_limited": True,
                     "remaining_lockout": remaining,
+                    "retry_after": remaining,
                     "locked_until": locked_until
                 }, status=429)
                 return
@@ -1489,7 +1493,7 @@ class handler(BaseHTTPRequestHandler):
                     )
                 conn.commit()
                 conn.close()
-                self._send_json({"ok": True, "message": "Terminal unlocked successfully.", "is_locked": False})
+                self._send_json({"ok": True, "message": "Terminal unlocked successfully.", "status": "unlocked", "is_locked": False, "locked": False})
                 return
             else:
                 failed_attempts += 1
@@ -1517,6 +1521,7 @@ class handler(BaseHTTPRequestHandler):
                         "error": "Too many failed attempts. Terminal locked for 30 seconds.",
                         "rate_limited": True,
                         "remaining_lockout": 30,
+                        "retry_after": 30,
                         "locked_until": new_locked_until
                     }, status=429)
                 else:
@@ -1524,7 +1529,8 @@ class handler(BaseHTTPRequestHandler):
                     self._send_json({
                         "ok": False,
                         "error": f"Incorrect password. Access denied ({remaining_tries} tries remaining).",
-                        "remaining_attempts": remaining_tries
+                        "remaining_attempts": remaining_tries,
+                        "attempts_remaining": remaining_tries
                     }, status=401)
                 return
 

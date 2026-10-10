@@ -1710,7 +1710,7 @@
                     btn.disabled = false;
                 }
 
-                if (status === 200 && data.status === 'unlocked') {
+                if (status === 200 && (data.status === 'unlocked' || data.is_locked === false || data.ok)) {
                     const lockModal = document.getElementById('ultron-screen-lock-modal');
                     if (lockModal) lockModal.style.display = 'none';
                     if (err) err.style.display = 'none';
@@ -1724,7 +1724,7 @@
                         input.classList.add('shake');
                         setTimeout(() => input.classList.remove('shake'), 450);
                     }
-                    let remaining = data.retry_after || 30;
+                    let remaining = data.retry_after || data.remaining_lockout || 30;
                     if (btn) btn.disabled = true;
                     if (err) {
                         err.innerText = `Too many failed attempts. Locked for ${remaining}s.`;
@@ -1755,7 +1755,8 @@
                         input.focus();
                     }
                     if (err) {
-                        const rem = data.attempts_remaining !== undefined ? ` (${data.attempts_remaining} tries left)` : '';
+                        const triesLeft = data.attempts_remaining !== undefined ? data.attempts_remaining : data.remaining_attempts;
+                        const rem = triesLeft !== undefined ? ` (${triesLeft} tries left)` : '';
                         err.innerText = (data.error || "Incorrect credentials. Access denied.") + rem;
                         err.style.display = 'block';
                     }
@@ -2769,7 +2770,7 @@
             })
             .then(r => r.json())
             .then(termData => {
-                if (termData.locked) {
+                if (termData && (termData.locked || termData.is_locked)) {
                     const lockModal = document.getElementById('ultron-screen-lock-modal');
                     if (lockModal) lockModal.style.display = 'flex';
                 }
